@@ -19,7 +19,7 @@ RUN dotnet restore
 # Stage 3: Build and publish .NET app
 FROM restore AS build
 COPY src/ .
-COPY --from=frontend-build /wwwroot/ MentalMetal.Web/wwwroot/
+COPY --from=frontend-build /wwwroot/browser/ MentalMetal.Web/wwwroot/
 RUN dotnet publish MentalMetal.Web/MentalMetal.Web.csproj -c Release -o /app/publish --no-restore
 
 # Stage 4: Runtime
