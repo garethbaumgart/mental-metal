@@ -77,7 +77,7 @@ import { ThemeService } from '../services/theme.service';
     </nav>
 
     <div class="p-3 border-t sidebar-border">
-      <button
+      <button type="button"
         class="flex items-center gap-3 px-3 py-2 rounded-md text-sm w-full theme-toggle"
         (click)="themeService.toggle()"
         [attr.aria-label]="themeService.isDark() ? 'Switch to light mode' : 'Switch to dark mode'">
