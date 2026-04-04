@@ -14,7 +14,7 @@ export class ThemeService {
       return;
     }
 
-    const stored = localStorage.getItem('theme');
+    const stored = this.readStorage('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const dark = stored === 'dark' || (!stored && prefersDark);
     this.applyTheme(dark);
@@ -30,6 +30,22 @@ export class ThemeService {
       return;
     }
     this.document.documentElement.classList.toggle('dark', dark);
-    localStorage.setItem('theme', dark ? 'dark' : 'light');
+    this.writeStorage('theme', dark ? 'dark' : 'light');
+  }
+
+  private readStorage(key: string): string | null {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  }
+
+  private writeStorage(key: string, value: string): void {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // localStorage may be unavailable in private browsing
+    }
   }
 }

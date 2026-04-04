@@ -8,7 +8,7 @@
   <!-- Mobile sidebar overlay -->
   @if (sidebarOpen()) {
     <div class="fixed inset-0 z-40 lg:hidden">
-      <div class="absolute inset-0 bg-black/50" (click)="sidebarOpen.set(false)"></div>
+      <div class="absolute inset-0 sidebar-scrim" (click)="sidebarOpen.set(false)"></div>
       <aside class="relative z-50 flex flex-col w-64 h-full shell-panel">
         <app-sidebar (navClick)="sidebarOpen.set(false)" />
       </aside>

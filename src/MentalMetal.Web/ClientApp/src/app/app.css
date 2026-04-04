@@ -15,3 +15,7 @@
 .hamburger-btn {
   color: var(--p-text-color);
 }
+
+.sidebar-scrim {
+  background-color: var(--p-mask-background);
+}

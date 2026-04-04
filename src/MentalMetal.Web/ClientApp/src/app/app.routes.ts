@@ -7,4 +7,5 @@ export const routes: Routes = [
   { path: 'people', loadComponent: () => import('./pages/placeholder.page').then(m => m.PlaceholderPage), data: { title: 'People' } },
   { path: 'initiatives', loadComponent: () => import('./pages/placeholder.page').then(m => m.PlaceholderPage), data: { title: 'Initiatives' } },
   { path: 'queue', loadComponent: () => import('./pages/placeholder.page').then(m => m.PlaceholderPage), data: { title: 'My Queue' } },
+  { path: '**', redirectTo: 'dashboard' },
 ];
