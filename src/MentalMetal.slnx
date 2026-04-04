@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="MentalMetal.Domain/MentalMetal.Domain.csproj" />
+  <Project Path="MentalMetal.Application/MentalMetal.Application.csproj" />
+  <Project Path="MentalMetal.Infrastructure/MentalMetal.Infrastructure.csproj" />
+  <Project Path="MentalMetal.Web/MentalMetal.Web.csproj" />
+</Solution>
