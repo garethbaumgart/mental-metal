@@ -1,0 +1,41 @@
+<div class="flex h-screen" style="background-color: var(--p-surface-ground); color: var(--p-text-color)">
+
+  <!-- Sidebar: always visible on desktop -->
+  <aside class="hidden lg:flex flex-col w-64 border-r shrink-0"
+         style="background-color: var(--p-surface-0); border-color: var(--p-surface-200)">
+    <app-sidebar />
+  </aside>
+
+  <!-- Mobile sidebar overlay -->
+  @if (sidebarOpen()) {
+    <div class="fixed inset-0 z-40 lg:hidden">
+      <div class="absolute inset-0 bg-black/50" (click)="sidebarOpen.set(false)"></div>
+      <aside class="relative z-50 flex flex-col w-64 h-full"
+             style="background-color: var(--p-surface-0)">
+        <app-sidebar (navClick)="sidebarOpen.set(false)" />
+      </aside>
+    </div>
+  }
+
+  <!-- Main content area -->
+  <div class="flex flex-col flex-1 min-w-0">
+
+    <!-- Header -->
+    <header class="flex items-center gap-4 h-14 px-4 border-b shrink-0"
+            style="background-color: var(--p-surface-0); border-color: var(--p-surface-200)">
+      <button class="lg:hidden p-2 rounded-md"
+              style="color: var(--p-text-color)"
+              (click)="sidebarOpen.set(true)"
+              aria-label="Open navigation menu">
+        <i class="pi pi-bars text-lg"></i>
+      </button>
+      <span class="text-sm font-medium" style="color: var(--p-text-muted-color)">Mental Metal</span>
+    </header>
+
+    <!-- Page content -->
+    <main class="flex-1 overflow-y-auto p-6">
+      <router-outlet />
+    </main>
+
+  </div>
+</div>

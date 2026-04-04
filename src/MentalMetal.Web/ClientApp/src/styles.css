@@ -1,0 +1,16 @@
+@import "tailwindcss";
+@plugin "tailwindcss-primeui";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@import "primeicons/primeicons.css";
+
+/* Fix PrimeIcons font-size inheritance under Tailwind v4 layers */
+.pi {
+  font-size: inherit !important;
+}
+
+@theme {
+  /* Only define tokens that PrimeNG does NOT already cover.
+     PrimeNG tokens (--p-primary-color, --p-surface-*, etc.) are
+     automatically available as Tailwind utilities via tailwindcss-primeui. */
+}
