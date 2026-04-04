@@ -3,4 +3,6 @@
   <Project Path="MentalMetal.Application/MentalMetal.Application.csproj" />
   <Project Path="MentalMetal.Infrastructure/MentalMetal.Infrastructure.csproj" />
   <Project Path="MentalMetal.Web/MentalMetal.Web.csproj" />
+  <Project Path="../tests/MentalMetal.Domain.Tests/MentalMetal.Domain.Tests.csproj" />
+  <Project Path="../tests/MentalMetal.Application.Tests/MentalMetal.Application.Tests.csproj" />
 </Solution>
