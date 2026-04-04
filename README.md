@@ -4,7 +4,7 @@ An AI-powered command center for engineering managers who are too busy to stay o
 
 ## The Problem
 
-Your information is scattered across your head, Google Docs, Confluence, Jira, Slack, and meeting transcripts. By Friday you've forgotten what you promised on Monday. Performance review time is a scramble. You don't know what you've delegated or what's overdue. You've tried tools before but you're too busy to maintain them.
+Your information is scattered across your head, Google Docs, Confluence, Jira, Google Chat, and meeting transcripts. By Friday you've forgotten what you promised on Monday. Performance review time is a scramble. You don't know what you've delegated or what's overdue. You've tried tools before but you're too busy to maintain them.
 
 **Mental Metal fixes this.** It passively accumulates context from your day -- meeting transcripts, quick notes, ad-hoc captures -- and uses AI to build a living, queryable picture of your people, projects, and priorities. You capture raw; it organizes, links, and surfaces what matters.
 
@@ -59,27 +59,14 @@ cd ClientApp
 npm install
 ```
 
-### Database
-
-Create a PostgreSQL database. Default connection expects:
-
-```
-Host=localhost; Port=5432; Database=mentalmetaldb; Username=postgres; Password=postgres
-```
-
-Override via `src/MentalMetal.Web/appsettings.Development.json`.
-
 ### Run
 
 ```bash
-# Terminal 1 — API (serves on http://localhost:5289)
-cd src/MentalMetal.Web
-dotnet run
-
-# Terminal 2 — Angular dev server (serves on http://localhost:4200, proxies /api to backend)
-cd src/MentalMetal.Web/ClientApp
-npm start
+# Start the full dev stack (PostgreSQL + API + Angular with hot reload)
+docker compose --profile dev-stack up
 ```
+
+The app is available at `http://localhost:4200`. The API serves on `http://localhost:5289`.
 
 ### Test
 
