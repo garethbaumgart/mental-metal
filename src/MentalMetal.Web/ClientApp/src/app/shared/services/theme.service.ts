@@ -26,6 +26,9 @@ export class ThemeService {
 
   private applyTheme(dark: boolean): void {
     this.isDark.set(dark);
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
     this.document.documentElement.classList.toggle('dark', dark);
     localStorage.setItem('theme', dark ? 'dark' : 'light');
   }
