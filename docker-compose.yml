@@ -45,7 +45,7 @@ services:
     container_name: mentalmetal-frontend-dev
     profiles: ["dev-stack"]
     working_dir: /app
-    command: sh -c "npm ci && API_TARGET=http://api:5002 npx ng serve --host 0.0.0.0 --poll 2000"
+    command: sh -c "[ -d node_modules ] || npm ci && API_TARGET=http://api:5002 npx ng serve --host 0.0.0.0 --poll 2000"
     ports:
       - "4200:4200"
     volumes:
