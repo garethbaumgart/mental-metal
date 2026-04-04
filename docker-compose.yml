@@ -1,0 +1,71 @@
+volumes:
+  postgres_dev_data:
+
+services:
+  postgres-dev:
+    image: postgres:17-alpine
+    container_name: mentalmetal-db-dev
+    profiles: ["dev", "dev-stack"]
+    environment:
+      POSTGRES_USER: mentalmetal
+      POSTGRES_PASSWORD: devTestPassword
+      POSTGRES_DB: mentalmetal
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mentalmetal -d mentalmetal"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    container_name: mentalmetal-api-dev
+    profiles: ["dev-stack"]
+    working_dir: /src/MentalMetal.Web
+    command: dotnet watch run
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5002
+      DOTNET_USE_POLLING_FILE_WATCHER: "true"
+      ConnectionStrings__DefaultConnection: "Host=postgres-dev;Port=5432;Database=mentalmetal;Username=mentalmetal;Password=devTestPassword"
+    ports:
+      - "5002:5002"
+    volumes:
+      - ./src:/src
+      - ~/.microsoft/usersecrets:/root/.microsoft/usersecrets:ro
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+
+  frontend:
+    image: node:22-alpine
+    container_name: mentalmetal-frontend-dev
+    profiles: ["dev-stack"]
+    working_dir: /app
+    command: sh -c "[ -d node_modules ] || npm ci; API_TARGET=http://api:5002 npx ng serve --host 0.0.0.0 --poll 2000"
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./src/MentalMetal.Web/ClientApp:/app
+      - /app/node_modules
+    depends_on:
+      - api
+
+  postgres-e2e:
+    image: postgres:17-alpine
+    container_name: mentalmetal-db-e2e
+    profiles: ["e2e"]
+    environment:
+      POSTGRES_USER: mentalmetal
+      POSTGRES_PASSWORD: e2eTestPassword
+      POSTGRES_DB: mentalmetal_e2e
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mentalmetal -d mentalmetal_e2e"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
