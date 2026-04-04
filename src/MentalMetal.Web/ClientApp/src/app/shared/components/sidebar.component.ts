@@ -29,7 +29,7 @@ import { ThemeService } from '../services/theme.service';
     }
 
     .sidebar-link-active {
-      background-color: var(--p-primary-50, rgba(59, 130, 246, 0.08));
+      background-color: var(--p-primary-50);
       border-left: 3px solid var(--p-primary-color);
     }
 
