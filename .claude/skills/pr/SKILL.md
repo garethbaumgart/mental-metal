@@ -27,18 +27,21 @@ Get the PR up early so CI and review bots start working in parallel.
    ```bash
    git push -u origin <branch-name>
    ```
-2. Check if a PR already exists for this branch:
+2. Check if a PR already exists for this branch and capture the PR number:
    ```bash
-   gh pr list --head <branch-name> --json number,url -q '.[0]'
+   PR_NUMBER="$(gh pr list --head <branch-name> --json number -q '.[0].number')"
    ```
-3. If a PR already exists, update it instead of creating a new one:
+3. If a PR already exists (`PR_NUMBER` is set), update it instead of creating a new one:
    ```bash
-   gh pr edit <pr-number> --body "$(cat <<'EOF'
+   gh pr edit "$PR_NUMBER" --body "$(cat <<'EOF'
    ...updated body...
    EOF
    )"
    ```
-   If no PR exists, create one in the next step.
+   If no PR exists, create one in step 5 and capture the number afterwards:
+   ```bash
+   PR_NUMBER="$(gh pr view --json number -q '.number')"
+   ```
 4. If `openspec/specs/` exists, look for a spec related to this branch. If the directory does not exist, skip this step.
 5. Create the PR using this template:
 
@@ -82,7 +85,7 @@ Run available test suites and **abort if any fail**:
 
 2. **Frontend tests** (only if `src/MentalMetal.Web/ClientApp/angular.json` exists):
    ```bash
-   cd src/MentalMetal.Web/ClientApp && npx ng test --watch=false
+   (cd src/MentalMetal.Web/ClientApp && npx ng test --watch=false)
    ```
    If the ClientApp directory does not exist, skip this step.
 
@@ -125,13 +128,13 @@ After pushing, actively monitor and address feedback.
 Poll CI status until all checks complete:
 
 ```bash
-gh pr checks <pr-number>
+gh pr checks $PR_NUMBER
 ```
 
 If CI fails:
 1. Identify the failed check(s) and extract the run ID from the link field:
    ```bash
-   gh pr checks <pr-number> --json name,state,link
+   gh pr checks $PR_NUMBER --json name,state,link
    ```
 2. Read the failure logs using the run ID from the link URL (last numeric segment):
    ```bash
@@ -146,9 +149,9 @@ If CI fails:
 Poll for reviewer comments every 2 minutes, for up to 5 cycles (10 minutes total). If all comments have been addressed after a cycle, stop polling and proceed:
 
 ```bash
-gh api repos/:owner/:repo/pulls/<pr-number>/comments --jq '.[] | "[\(.user.login)] \(.path) L\(.line // "?"): \(.body[0:300])"'
-gh api repos/:owner/:repo/pulls/<pr-number>/reviews --jq '.[] | "[\(.user.login)] \(.state): \(.body[0:300])"'
-gh api repos/:owner/:repo/issues/<pr-number>/comments --jq '.[] | "[\(.user.login)] \(.body[0:300])"'
+gh api repos/{owner}/{repo}/pulls/$PR_NUMBER/comments --jq '.[] | "[\(.user.login)] \(.path) L\(.line // "?"): \(.body[0:300])"'
+gh api repos/{owner}/{repo}/pulls/$PR_NUMBER/reviews --jq '.[] | "[\(.user.login)] \(.state): \(.body[0:300])"'
+gh api repos/{owner}/{repo}/issues/$PR_NUMBER/comments --jq '.[] | "[\(.user.login)] \(.body[0:300])"'
 ```
 
 ### 5c. Address Review Comments
@@ -179,7 +182,7 @@ The review loop stops when one of these conditions is met:
 
 - **PR is approved** by the user — proceed to squash merge:
   ```bash
-  gh pr merge <pr-number> --squash --delete-branch
+  gh pr merge $PR_NUMBER --squash --delete-branch
   ```
 - **User cancels** — leave the PR open, report current status and any unaddressed comments
 - **Docs-only PRs** (all changed files match `*.md`, `*.txt`, `docs/**`) — merge immediately without waiting for user approval
