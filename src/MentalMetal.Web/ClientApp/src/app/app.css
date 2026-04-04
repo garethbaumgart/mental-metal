@@ -1,1 +1,17 @@
+.shell {
+  background-color: var(--p-surface-ground);
+  color: var(--p-text-color);
+}
 
+.shell-panel {
+  background-color: var(--p-surface-0);
+  border-color: var(--p-surface-200);
+}
+
+.header-title {
+  color: var(--p-text-muted-color);
+}
+
+.hamburger-btn {
+  color: var(--p-text-color);
+}

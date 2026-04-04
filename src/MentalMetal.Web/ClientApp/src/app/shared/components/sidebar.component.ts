@@ -12,60 +12,73 @@ import { ThemeService } from '../services/theme.service';
       display: flex;
       flex-direction: column;
       height: 100%;
+      color: var(--p-text-color);
+    }
+
+    .sidebar-border {
+      border-color: var(--p-surface-200);
+    }
+
+    .sidebar-brand {
+      color: var(--p-primary-color);
     }
 
     nav a {
-      transition: background-color 0.15s ease;
+      color: var(--p-text-color);
+      transition: background-color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .sidebar-link-active {
+      background-color: var(--p-primary-50, rgba(59, 130, 246, 0.08));
+      border-left: 3px solid var(--p-primary-color);
+    }
+
+    .theme-toggle {
+      color: var(--p-text-color);
     }
   `],
   template: `
-    <div class="flex items-center gap-3 p-5 border-b" style="border-color: var(--p-surface-200)">
-      <i class="pi pi-bolt text-xl" style="color: var(--p-primary-color)"></i>
-      <span class="text-lg font-semibold" style="color: var(--p-text-color)">Mental Metal</span>
+    <div class="flex items-center gap-3 p-5 border-b sidebar-border">
+      <i class="pi pi-bolt text-xl sidebar-brand"></i>
+      <span class="text-lg font-semibold">Mental Metal</span>
     </div>
 
     <nav class="flex-1 p-3 flex flex-col gap-1">
-      <a routerLink="/dashboard" routerLinkActive="font-semibold"
+      <a routerLink="/dashboard" routerLinkActive="font-semibold sidebar-link-active"
          class="flex items-center gap-3 px-3 py-2 rounded-md text-sm"
-         style="color: var(--p-text-color)"
          (click)="navClick.emit()">
         <i class="pi pi-home"></i>
         <span>Dashboard</span>
       </a>
-      <a routerLink="/capture" routerLinkActive="font-semibold"
+      <a routerLink="/capture" routerLinkActive="font-semibold sidebar-link-active"
          class="flex items-center gap-3 px-3 py-2 rounded-md text-sm"
-         style="color: var(--p-text-color)"
          (click)="navClick.emit()">
         <i class="pi pi-pencil"></i>
         <span>Capture</span>
       </a>
-      <a routerLink="/people" routerLinkActive="font-semibold"
+      <a routerLink="/people" routerLinkActive="font-semibold sidebar-link-active"
          class="flex items-center gap-3 px-3 py-2 rounded-md text-sm"
-         style="color: var(--p-text-color)"
          (click)="navClick.emit()">
         <i class="pi pi-users"></i>
         <span>People</span>
       </a>
-      <a routerLink="/initiatives" routerLinkActive="font-semibold"
+      <a routerLink="/initiatives" routerLinkActive="font-semibold sidebar-link-active"
          class="flex items-center gap-3 px-3 py-2 rounded-md text-sm"
-         style="color: var(--p-text-color)"
          (click)="navClick.emit()">
         <i class="pi pi-flag"></i>
         <span>Initiatives</span>
       </a>
-      <a routerLink="/queue" routerLinkActive="font-semibold"
+      <a routerLink="/queue" routerLinkActive="font-semibold sidebar-link-active"
          class="flex items-center gap-3 px-3 py-2 rounded-md text-sm"
-         style="color: var(--p-text-color)"
          (click)="navClick.emit()">
         <i class="pi pi-list-check"></i>
         <span>My Queue</span>
       </a>
     </nav>
 
-    <div class="p-3 border-t" style="border-color: var(--p-surface-200)">
+    <div class="p-3 border-t sidebar-border">
       <button
-        class="flex items-center gap-3 px-3 py-2 rounded-md text-sm w-full"
-        style="color: var(--p-text-color)"
+        class="flex items-center gap-3 px-3 py-2 rounded-md text-sm w-full theme-toggle"
         (click)="themeService.toggle()"
         [attr.aria-label]="themeService.isDark() ? 'Switch to light mode' : 'Switch to dark mode'">
         <i [class]="themeService.isDark() ? 'pi pi-sun' : 'pi pi-moon'"></i>
