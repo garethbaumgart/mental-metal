@@ -7,6 +7,8 @@ description: Create a PR, run tests, self-review, monitor CI and review feedback
 
 Automates the full PR lifecycle: branch verification, PR creation, pre-flight tests, self code review, review monitoring, and merge.
 
+> **Note:** This skill is scoped to the Mental Metal repository stack (.NET backend + Angular frontend). Paths and commands below reflect that structure.
+
 ---
 
 ## Step 1: Verify Branch and Uncommitted Changes
@@ -30,53 +32,54 @@ Get the PR up early so CI and review bots start working in parallel.
    gh pr list --head <branch-name> --json number,url -q '.[0]'
    ```
 3. If a PR exists, update its body. If not, create one.
-4. Look for an OpenSpec spec related to this branch by checking `openspec/specs/` for a matching spec file.
+4. If `openspec/specs/` exists, look for a spec related to this branch. If the directory does not exist, skip this step.
 5. Create the PR using this template:
 
    ```bash
    gh pr create --base main --title "<short title under 70 chars>" --body "$(cat <<'EOF'
-   ## Summary
+## Summary
 
-   <1-3 sentences describing what this PR does and why>
+<1-3 sentences describing what this PR does and why>
 
-   **Spec**: [<spec-name>](openspec/specs/<spec-name>/spec.md)
+**Spec**: [<spec-name>](openspec/specs/<spec-name>/spec.md)
 
-   ## Changes
+## Changes
 
-   - <bullet list of key changes>
+- <bullet list of key changes>
 
-   ## Test Plan
+## Test Plan
 
-   - [ ] `dotnet test` passes
-   - [ ] `ng test --watch=false` passes
-   - [ ] <feature-specific verification steps>
+- [ ] `dotnet test` passes
+- [ ] `ng test --watch=false` passes
+- [ ] <feature-specific verification steps>
 
-   ---
-   🤖 Generated with [Claude Code](https://claude.com/claude-code)
-   EOF
-   )"
+---
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"
    ```
 
-   - If no OpenSpec spec is found, omit the **Spec** line entirely.
+   - If no OpenSpec spec is found (or `openspec/specs/` does not exist), omit the **Spec** line entirely.
    - Review `git log main..HEAD` and `git diff main...HEAD` to write an accurate summary and change list.
 
 ---
 
 ## Step 3: Pre-Flight — Run Tests
 
-Run all test suites and **abort if any fail**:
+Run available test suites and **abort if any fail**:
 
-1. **Backend tests:**
+1. **Backend tests** (always run):
    ```bash
    dotnet test src/MentalMetal.slnx
    ```
 
-2. **Frontend tests:**
+2. **Frontend tests** (only if `src/MentalMetal.Web/ClientApp/angular.json` exists):
    ```bash
    cd src/MentalMetal.Web/ClientApp && npx ng test --watch=false
    ```
+   If the ClientApp directory does not exist, skip this step.
 
-**STOP if either test suite fails.** Diagnose and fix the failures, then re-run. Do not proceed past this step with failing tests.
+**STOP if any test suite fails.** Diagnose and fix the failures, then re-run. Do not proceed past this step with failing tests.
 
 After fixing, commit and push the fixes.
 
@@ -95,7 +98,7 @@ Check for:
 - **Code duplication** — extract shared logic if the same pattern appears 3+ times
 - **Missing error handling** — at system boundaries (user input, external APIs)
 - **Security issues** — unsanitised input, exposed secrets, SQL injection, XSS
-- **Codebase convention violations** — check CLAUDE.md for banned patterns and required conventions
+- **Codebase convention violations** — if `CLAUDE.md` exists, check it for banned patterns and required conventions; otherwise follow the repository conventions documented in this checklist
 - **EF Core pitfalls** — `HashSet.Contains()` and `.ToLowerInvariant()` are not SQL-translatable; use `List<T>.Contains()` and `.ToLower()`
 - **Angular pitfalls** — race conditions in async calls, timezone-safe date handling, plain properties instead of signals
 - **Banned Angular patterns** — `*ngIf`, `*ngFor`, `*ngSwitch`, `[ngClass]` (must use `@if`, `@for`, `@switch`, `[class.x]="expr"`)
@@ -119,14 +122,18 @@ gh pr checks <pr-number>
 ```
 
 If CI fails:
-1. Read the failure logs: `gh pr checks <pr-number> --fail 2>&1`
-2. Diagnose and fix the issue
-3. Re-run Step 3 (tests) locally before pushing
-4. Push fixes and restart the monitoring loop
+1. Identify the failed check(s):
+   ```bash
+   gh pr checks <pr-number> --json name,state,link
+   ```
+2. Read the failure logs with `gh run view <run-id> --log-failed`
+3. Diagnose and fix the issue
+4. Re-run Step 3 (tests) locally before pushing
+5. Push fixes and restart the monitoring loop
 
 ### 5b. Monitor for Reviews
 
-Poll for reviewer comments every 2 minutes, up to 10 minutes per cycle:
+Poll for reviewer comments every 2 minutes, for up to 5 cycles (10 minutes total). If all comments have been addressed after a cycle, stop polling and proceed:
 
 ```bash
 gh api repos/{owner}/{repo}/pulls/<pr-number>/comments --jq '.[] | "[\(.user.login)] \(.path) L\(.line // "?"): \(.body[0:300])"'
@@ -149,7 +156,7 @@ For each review comment:
 
 After addressing all comments:
 
-1. Re-run Step 3 (tests) — `dotnet test` and `ng test --watch=false`
+1. Re-run Step 3 (tests)
 2. Commit all fixes in a single commit with a message like: "Address review feedback: <summary>"
 3. Push to the remote branch
 4. Restart the review monitoring loop from Step 5a — wait for reviewers to review the latest commit
@@ -165,7 +172,7 @@ The review loop stops when one of these conditions is met:
   gh pr merge <pr-number> --squash --delete-branch
   ```
 - **User cancels** — leave the PR open, report current status and any unaddressed comments
-- **Markdown-only PRs** (no code changes) — merge immediately without waiting for user approval
+- **Docs-only PRs** (all changed files match `*.md`, `*.txt`, `docs/**`) — merge immediately without waiting for user approval
 
 ---
 
@@ -179,4 +186,4 @@ The review loop stops when one of these conditions is met:
 | PR already exists for branch | Update the existing PR body instead of creating a duplicate. |
 | No OpenSpec spec found | Omit the Spec line from the PR body. Proceed normally. |
 | CI fails after PR creation | Read logs, fix issues, push fixes, re-monitor. |
-| Review polling timeout (10 min) | If no unaddressed comments remain, proceed. Otherwise keep waiting. |
+| Review polling timeout (10 min) | If no unaddressed comments remain, proceed. Otherwise ask the user whether to keep waiting. |
