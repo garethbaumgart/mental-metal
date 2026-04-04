@@ -4,9 +4,12 @@ on:
   pull_request:
     branches: [main]
     paths-ignore:
-      - '**.md'
+      - '**/*.md'
       - 'docs/**'
       - '.claude/**'
+
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
