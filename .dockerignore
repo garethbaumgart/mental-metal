@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/.angular/
+**/dist/
+.git/
+.github/
+design/
+docs/
+docker/
+*.md
+.DS_Store
+.env*
+coverage/
+TestResults/
