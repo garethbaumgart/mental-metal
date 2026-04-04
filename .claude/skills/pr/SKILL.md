@@ -7,7 +7,7 @@ description: Create a PR, run tests, self-review, monitor CI and review feedback
 
 Automates the full PR lifecycle: branch verification, PR creation, pre-flight tests, self code review, review monitoring, and merge.
 
-> **Note:** This skill is scoped to the Mental Metal repository stack (.NET backend + Angular frontend). Paths and commands below reflect that structure.
+> **Note:** This skill is scoped to the Mental Metal repository (.NET backend, Angular frontend when present). Frontend steps are conditional — they are skipped automatically when the Angular project does not yet exist.
 
 ---
 
@@ -31,7 +31,14 @@ Get the PR up early so CI and review bots start working in parallel.
    ```bash
    gh pr list --head <branch-name> --json number,url -q '.[0]'
    ```
-3. If a PR exists, update its body. If not, create one.
+3. If a PR already exists, update it instead of creating a new one:
+   ```bash
+   gh pr edit <pr-number> --body "$(cat <<'EOF'
+   ...updated body...
+   EOF
+   )"
+   ```
+   If no PR exists, create one in the next step.
 4. If `openspec/specs/` exists, look for a spec related to this branch. If the directory does not exist, skip this step.
 5. Create the PR using this template:
 
@@ -49,8 +56,8 @@ Get the PR up early so CI and review bots start working in parallel.
 
 ## Test Plan
 
-- [ ] `dotnet test` passes
-- [ ] `ng test --watch=false` passes
+- [ ] `dotnet test src/MentalMetal.slnx` passes
+- [ ] `ng test --watch=false` passes (if frontend exists)
 - [ ] <feature-specific verification steps>
 
 ---
@@ -122,11 +129,14 @@ gh pr checks <pr-number>
 ```
 
 If CI fails:
-1. Identify the failed check(s):
+1. Identify the failed check(s) and extract the run ID from the link field:
    ```bash
    gh pr checks <pr-number> --json name,state,link
    ```
-2. Read the failure logs with `gh run view <run-id> --log-failed`
+2. Read the failure logs using the run ID from the link URL (last numeric segment):
+   ```bash
+   gh run view <run-id> --log-failed
+   ```
 3. Diagnose and fix the issue
 4. Re-run Step 3 (tests) locally before pushing
 5. Push fixes and restart the monitoring loop
@@ -136,9 +146,9 @@ If CI fails:
 Poll for reviewer comments every 2 minutes, for up to 5 cycles (10 minutes total). If all comments have been addressed after a cycle, stop polling and proceed:
 
 ```bash
-gh api repos/{owner}/{repo}/pulls/<pr-number>/comments --jq '.[] | "[\(.user.login)] \(.path) L\(.line // "?"): \(.body[0:300])"'
-gh api repos/{owner}/{repo}/pulls/<pr-number>/reviews --jq '.[] | "[\(.user.login)] \(.state): \(.body[0:300])"'
-gh api repos/{owner}/{repo}/issues/<pr-number>/comments --jq '.[] | "[\(.user.login)] \(.body[0:300])"'
+gh api repos/:owner/:repo/pulls/<pr-number>/comments --jq '.[] | "[\(.user.login)] \(.path) L\(.line // "?"): \(.body[0:300])"'
+gh api repos/:owner/:repo/pulls/<pr-number>/reviews --jq '.[] | "[\(.user.login)] \(.state): \(.body[0:300])"'
+gh api repos/:owner/:repo/issues/<pr-number>/comments --jq '.[] | "[\(.user.login)] \(.body[0:300])"'
 ```
 
 ### 5c. Address Review Comments
