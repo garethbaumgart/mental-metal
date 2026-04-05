@@ -45,8 +45,9 @@ module "neondb" {
 module "secrets" {
   source = "../../modules/secret-manager"
 
-  project_id = var.project_id
-  secrets = {
+  project_id   = var.project_id
+  secret_names = ["DATABASE_URL"]
+  secret_values = {
     "DATABASE_URL" = coalesce(var.database_connection_string, module.neondb.connection_uri)
   }
   accessor_service_account = var.service_account_email
