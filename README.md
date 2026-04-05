@@ -39,8 +39,7 @@ A project management tool, calendar app, communication tool, or note-taking app.
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
 - [Node.js 18+](https://nodejs.org/) with npm
-- [PostgreSQL 12+](https://www.postgresql.org/) running locally
-- [Docker](https://www.docker.com/) (optional, for local dev stack)
+- [Docker](https://www.docker.com/) (provides PostgreSQL via docker-compose)
 
 ### Setup
 
@@ -66,7 +65,7 @@ npm install
 docker compose --profile dev-stack up
 ```
 
-The app is available at `http://localhost:4200`. The API serves on `http://localhost:5289`.
+The app is available at `http://localhost:4200`. The API serves on `http://localhost:5002`.
 
 ### Test
 
@@ -77,7 +76,7 @@ cd src/MentalMetal.Web/ClientApp && npm test   # Angular tests
 
 ## Project Structure
 
-```
+```text
 src/
   MentalMetal.Domain/          # Aggregates, value objects, domain events
   MentalMetal.Application/     # Commands, queries, DTOs, domain services
@@ -94,7 +93,7 @@ docs/                          # Product brief
 
 All product features are built using [OpenSpec](https://github.com/anthropics/openspec), a spec-driven development workflow. Scaffolding and infrastructure work lives outside this process, but every user-facing feature follows the full cycle:
 
-```
+```text
 openspec propose <feature>     # Write a proposal with motivation and scope
 openspec design <feature>      # Flesh out the design, API contracts, and domain changes
 openspec tasks <feature>       # Break into implementable tasks
