@@ -1,0 +1,9 @@
+project_id = "mental-metal"
+image      = "australia-southeast1-docker.pkg.dev/mental-metal/mental-metal/app:latest"
+
+# Optional: provide an existing Neon project to reuse
+# neon_project_id = "your-neon-project-id"
+# neon_branch_id  = "your-neon-branch-id"
+
+# Secret values (e.g. DATABASE_URL) are managed out-of-band via gcloud or CI/CD,
+# not through Terraform, to avoid storing them in state.
