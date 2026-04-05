@@ -96,6 +96,24 @@ Run available test suites and **abort if any fail**:
 
 After fixing, commit and push the fixes.
 
+### 3a. Verify Linked Issue Test Plans
+
+Check if the PR is linked to an issue that contains a test plan:
+
+```bash
+gh pr view $PR_NUMBER --json body,closingIssuesReferences --jq '.closingIssuesReferences[].number'
+```
+
+For each linked issue, read its body and look for test plan checkboxes. Execute every test plan item and check it off on the issue:
+
+```bash
+# Read the issue body:
+gh issue view <issue-number> --json body -q '.body'
+# After verifying each item, update the issue body with the checkbox checked off.
+```
+
+If no linked issues exist or they have no test plan, skip this step.
+
 ---
 
 ## Step 4: Self Code Review
@@ -162,10 +180,17 @@ gh api repos/{owner}/{repo}/issues/$PR_NUMBER/comments --jq '.[] | "[\(.user.log
 
 For each review comment:
 
-1. Read the full comment to understand the feedback
-2. Evaluate whether the feedback is valid and actionable
-3. If valid: make the code change
-4. If by-design or out-of-scope: reply with a clear explanation of why
+1. **Acknowledge the comment** — add an 👀 (eyes) emoji reaction so the author has visual confirmation it has been seen:
+   ```bash
+   # For inline review comments:
+   gh api repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions -f content=eyes
+   # For issue-level comments:
+   gh api repos/{owner}/{repo}/issues/comments/{comment_id}/reactions -f content=eyes
+   ```
+2. Read the full comment to understand the feedback
+3. Evaluate whether the feedback is valid and actionable
+4. If valid: make the code change
+5. If by-design or out-of-scope: reply with a clear explanation of why
 
 **Batch fixes:** Collect all comments from a review round, fix them all, then commit and push once. Each push triggers new review cycles from bots.
 
