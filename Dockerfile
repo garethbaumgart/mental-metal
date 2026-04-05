@@ -25,9 +25,8 @@ RUN dotnet publish MentalMetal.Web/MentalMetal.Web.csproj -c Release -o /app/pub
 # Stage 4: Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
-RUN adduser --disabled-password --no-create-home appuser
 COPY --from=build /app/publish .
-USER appuser
+USER $APP_UID
 EXPOSE 8080
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENTRYPOINT ["dotnet", "MentalMetal.Web.dll"]
