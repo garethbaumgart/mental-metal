@@ -1,6 +1,7 @@
 name: Infrastructure — Staging
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
