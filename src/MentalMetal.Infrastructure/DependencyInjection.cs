@@ -11,7 +11,7 @@ public static class DependencyInjection
         this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? Environment.GetEnvironmentVariable("DATABASE_URL")
+            ?? ConvertDatabaseUrl(Environment.GetEnvironmentVariable("DATABASE_URL"))
             ?? throw new InvalidOperationException(
                 "Database connection string is not configured. Set 'ConnectionStrings:DefaultConnection' or 'DATABASE_URL'.");
 
@@ -19,5 +19,30 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString));
 
         return services;
+    }
+
+    private static string? ConvertDatabaseUrl(string? url)
+    {
+        if (url is null || !url.StartsWith("postgres", StringComparison.OrdinalIgnoreCase))
+            return url;
+
+        var uri = new Uri(url);
+        var userInfo = uri.UserInfo.Split(':');
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+
+        var builder = new Npgsql.NpgsqlConnectionStringBuilder
+        {
+            Host = uri.Host,
+            Port = uri.Port > 0 ? uri.Port : 5432,
+            Database = uri.AbsolutePath.TrimStart('/'),
+            Username = Uri.UnescapeDataString(userInfo[0]),
+            Password = Uri.UnescapeDataString(userInfo[1]),
+        };
+
+        var sslMode = query["sslmode"];
+        if (sslMode is not null)
+            builder.SslMode = Enum.Parse<Npgsql.SslMode>(sslMode, ignoreCase: true);
+
+        return builder.ConnectionString;
     }
 }
