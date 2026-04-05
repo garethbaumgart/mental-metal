@@ -25,7 +25,7 @@ env:
   TF_WORKING_DIR: infra/environments/staging
   TF_VAR_project_id: mental-metal
   TF_VAR_neon_org_id: ${{ secrets.NEON_ORG_ID }}
-  TF_VAR_image: australia-southeast1-docker.pkg.dev/mental-metal/mental-metal/app:latest
+  TF_VAR_image: us-docker.pkg.dev/cloudrun/container/hello:latest
   NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
 
 jobs:

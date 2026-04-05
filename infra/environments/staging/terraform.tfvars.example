@@ -1,5 +1,6 @@
 project_id = "mental-metal"
-image      = "australia-southeast1-docker.pkg.dev/mental-metal/mental-metal/app:latest"
+# Use Google's hello container for initial deploy; replaced by app image once CI/CD builds it
+image      = "us-docker.pkg.dev/cloudrun/container/hello:latest"
 
 # Optional: provide an existing Neon project to reuse
 # neon_project_id = "your-neon-project-id"

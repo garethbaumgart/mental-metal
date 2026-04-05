@@ -17,6 +17,12 @@ variable "neon_branch_id" {
 
 }
 
+variable "neon_endpoint_host" {
+  description = "Existing Neon endpoint host. Required when reusing an existing project."
+  type        = string
+  default     = null
+}
+
 variable "database_name" {
   description = "Name of the database to create"
   type        = string
