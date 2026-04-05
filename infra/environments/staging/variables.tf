@@ -9,6 +9,12 @@ variable "region" {
   default     = "australia-southeast1"
 }
 
+variable "neon_org_id" {
+  description = "Neon organization ID"
+  type        = string
+  sensitive   = true
+}
+
 variable "neon_project_id" {
   description = "Existing Neon project ID (optional, creates new if null)"
   type        = string
