@@ -11,7 +11,7 @@
 - Never mutate signal values directly — always create new references via `.update()` or `.set()`
 
 ### Theming — colours
-- **PrimeNG is the single source of truth for all colours.** Defined via `definePreset(Aura, {...})` in `app.config.ts`, consumed as CSS variables (`--p-primary-color`, `--p-surface-*`, etc.)
+- **PrimeNG is the single source of truth for all colours.** Defined via `definePreset(Material, {...})` in `app.config.ts`, consumed as CSS variables (`--p-primary-color`, `--p-surface-*`, etc.)
 - **`tailwindcss-primeui` bridges PrimeNG tokens to Tailwind utilities.** Use `bg-primary`, `text-primary`, `bg-surface-50`, `text-muted-color`, etc.
 - **NEVER** use hardcoded Tailwind colour utilities (`bg-gray-100`, `text-violet-600`, etc.)
 - **NEVER** define custom `--color-*` CSS variables that duplicate PrimeNG tokens
@@ -67,7 +67,7 @@
 ## Theming Quick Reference
 
 ```
-SOURCE OF TRUTH:    PrimeNG definePreset(Aura, {...}) in app.config.ts
+SOURCE OF TRUTH:    PrimeNG definePreset(Material, {...}) in app.config.ts
 BRIDGE TO TAILWIND: tailwindcss-primeui plugin in styles.css
 DARK MODE:          .dark class on <html> — toggled by ThemeService
 LAYER ORDER:        base < primeng < utilities
