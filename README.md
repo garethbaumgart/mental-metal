@@ -38,7 +38,7 @@ A project management tool, calendar app, communication tool, or note-taking app.
 ### Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- [Node.js 18+](https://nodejs.org/) with npm
+- [Node.js 20.19+ or 22+](https://nodejs.org/) with npm
 - [Docker](https://www.docker.com/) (provides PostgreSQL via docker-compose)
 
 ### Setup
@@ -70,8 +70,8 @@ The app is available at `http://localhost:4200`. The API serves on `http://local
 ### Test
 
 ```bash
-dotnet test                                    # .NET tests
-cd src/MentalMetal.Web/ClientApp && npm test   # Angular tests
+dotnet test src/MentalMetal.slnx                                    # .NET tests
+cd src/MentalMetal.Web/ClientApp && npx ng test --watch=false        # Angular tests
 ```
 
 ## Project Structure
@@ -83,7 +83,7 @@ src/
   MentalMetal.Infrastructure/  # EF Core, repositories, external integrations
   MentalMetal.Web/             # Minimal API endpoints + Angular SPA
     ClientApp/                 # Angular 21 app
-design/                        # Domain model, spec plan, dev approach
+design/                        # Domain model, relationships, spec plan, OpenSpec config
 docs/                          # Product brief
 ```
 
@@ -104,7 +104,12 @@ openspec spec <feature>        # Define BDD scenarios that become acceptance tes
   PR → CI → Review → Merge
 ```
 
-A feature is "done" when: the OpenSpec spec exists with BDD scenarios, all scenarios pass as tests, the PR is reviewed and merged, and exploratory testing passes.
+A feature is "done" when:
+
+- The OpenSpec spec exists with BDD scenarios
+- All scenarios pass as tests
+- The PR is reviewed and merged
+- Exploratory testing passes
 
 ### Guidelines
 
