@@ -28,6 +28,7 @@ variable "neon_branch_id" {
 }
 
 variable "image" {
-  description = "Container image to deploy to Cloud Run"
+  description = "Container image to deploy to Cloud Run (managed by CD pipeline)"
   type        = string
+  default     = "us-docker.pkg.dev/cloudrun/container/hello:latest"
 }

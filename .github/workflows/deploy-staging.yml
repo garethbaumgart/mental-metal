@@ -1,0 +1,136 @@
+name: Deploy — Staging
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.claude/**'
+      - 'infra/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+env:
+  REGION: australia-southeast1
+  PROJECT_ID: mental-metal
+  IMAGE_REPO: australia-southeast1-docker.pkg.dev/mental-metal/mental-metal
+  SERVICE_NAME: mental-metal-staging
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # --- Build & Test ---
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore .NET dependencies
+        run: dotnet restore src/MentalMetal.slnx
+
+      - name: Build .NET solution
+        run: dotnet build src/MentalMetal.slnx --no-restore
+
+      - name: Run backend tests
+        run: dotnet test src/MentalMetal.slnx --no-build --verbosity normal
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: src/MentalMetal.Web/ClientApp/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: src/MentalMetal.Web/ClientApp
+
+      - name: Run frontend tests
+        run: npx ng test --watch=false
+        working-directory: src/MentalMetal.Web/ClientApp
+
+      # --- Authenticate to GCP ---
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      # --- Build & Push Docker Image ---
+
+      - name: Build Docker image
+        run: docker build -t ${{ env.IMAGE_REPO }}/app:${{ github.sha }} -t ${{ env.IMAGE_REPO }}/app:latest .
+
+      - name: Push Docker image
+        run: |
+          docker push ${{ env.IMAGE_REPO }}/app:${{ github.sha }}
+          docker push ${{ env.IMAGE_REPO }}/app:latest
+
+      # --- Run EF Core Migrations ---
+
+      - name: Get database URL
+        run: |
+          DB_URL=$(gcloud secrets versions access latest --secret=STAGING_DATABASE_URL --project=${{ env.PROJECT_ID }})
+          echo "::add-mask::$DB_URL"
+          echo "DATABASE_URL=$DB_URL" >> $GITHUB_ENV
+
+      - name: Run EF Core migrations
+        run: |
+          dotnet tool restore
+          dotnet ef database update --project src/MentalMetal.Infrastructure --startup-project src/MentalMetal.Web
+        env:
+          ConnectionStrings__DefaultConnection: ${{ env.DATABASE_URL }}
+
+      # --- Deploy to Cloud Run ---
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image ${{ env.IMAGE_REPO }}/app:${{ github.sha }} \
+            --region ${{ env.REGION }} \
+            --project ${{ env.PROJECT_ID }} \
+            --quiet
+
+      - name: Verify deployment
+        run: |
+          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --region ${{ env.REGION }} \
+            --project ${{ env.PROJECT_ID }} \
+            --format 'value(status.url)')
+          echo "Service URL: $SERVICE_URL"
+          STATUS_CODE=$(curl -sS -o /dev/null -w '%{http_code}' \
+            --retry 5 --retry-delay 3 --retry-max-time 60 \
+            --retry-all-errors "$SERVICE_URL")
+          echo "Status code: $STATUS_CODE"
+          if [ "$STATUS_CODE" -lt 200 ] || [ "$STATUS_CODE" -ge 400 ]; then
+            echo "Deployment verification failed with status $STATUS_CODE"
+            exit 1
+          fi
+
