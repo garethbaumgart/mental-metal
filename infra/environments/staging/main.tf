@@ -8,7 +8,7 @@ terraform {
     }
     neon = {
       source  = "kislerdm/neon"
-      version = "~> 0.6"
+      version = "~> 0.13"
     }
   }
 }

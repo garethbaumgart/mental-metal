@@ -5,9 +5,11 @@ output "connection_uri" {
 }
 
 output "project_id" {
-  value = local.project_id
+  description = "Neon project ID"
+  value       = local.project_id
 }
 
 output "branch_id" {
-  value = local.branch_id
+  description = "Neon branch ID"
+  value       = local.branch_id
 }
