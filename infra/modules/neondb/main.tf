@@ -15,6 +15,7 @@ resource "neon_project" "this" {
 
   name      = "mental-metal"
   region_id = "aws-ap-southeast-2"
+  org_id    = var.neon_org_id
 }
 
 locals {
