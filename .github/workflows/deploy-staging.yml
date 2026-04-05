@@ -125,9 +125,12 @@ jobs:
             --project ${{ env.PROJECT_ID }} \
             --format 'value(status.url)')
           echo "Service URL: $SERVICE_URL"
-          STATUS_CODE=$(curl -s -o /dev/null -w '%{http_code}' "$SERVICE_URL")
+          STATUS_CODE=$(curl -sS -o /dev/null -w '%{http_code}' \
+            --retry 5 --retry-delay 3 --retry-max-time 60 \
+            --retry-all-errors "$SERVICE_URL")
           echo "Status code: $STATUS_CODE"
           if [ "$STATUS_CODE" -lt 200 ] || [ "$STATUS_CODE" -ge 400 ]; then
             echo "Deployment verification failed with status $STATUS_CODE"
             exit 1
           fi
+
