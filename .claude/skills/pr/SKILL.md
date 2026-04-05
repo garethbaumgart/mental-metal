@@ -1,13 +1,29 @@
 ---
 name: pr
-description: Create a PR, run tests, self-review, monitor CI and review feedback, then merge when approved.
+description: Verify branch, run tests, self-review, push, create PR, monitor CI and review feedback, then merge when approved.
 ---
 
 # /pr — Pull Request Skill
 
-Automates the full PR lifecycle: branch verification, PR creation, pre-flight tests, self code review, review monitoring, and merge.
+Automates the full PR lifecycle: branch verification, **pre-flight tests and self-review first**, then push and PR creation, then mandatory CI/review monitoring, and merge.
+
+**Workflow order:** Step 1 → Step 2 (tests) → Step 3 (self-review) → Step 4 (push + create/update PR) → Step 5 (monitor). Do not open the PR until Steps 2–3 pass; the last substantive action before reporting to the user should be Step 5 (or its pending/failed outcome).
 
 > **Note:** This skill is scoped to the Mental Metal repository (.NET backend, Angular frontend when present). Frontend steps are conditional — they are skipped automatically when the Angular project does not yet exist.
+
+## Definition of done (non-negotiable)
+
+The `/pr` workflow is **not complete** until **Step 5** has run **at least once** for the PR you opened or updated. Do **not** treat “PR created” or “tests passed locally” as the end state.
+
+**Before you stop or tell the user the task is finished, you MUST:**
+
+1. Capture `PR_NUMBER` (from `gh pr create` output, `gh pr view`, or `gh pr list --head <branch>`).
+2. Run **`gh pr checks $PR_NUMBER`** (or `gh pr view $PR_NUMBER --json statusCheckRollup`) and report the result to the user.
+3. Fetch review and comment signals **once** (inline review comments, PR reviews, issue comments) using the commands in Step 5b — or state that there are none yet.
+4. If any check is **failed**: follow Step 5a (logs, fix, re-test, push) — do not stop green.
+5. If any check is **pending**: say so explicitly, give the PR link, and say that CI/bots may still be running; offer to poll again or tell the user what to watch. **Do not imply everything is green** when checks are pending.
+
+**Exception:** The user explicitly asks only to open the PR or “create the PR without waiting for CI” — then skip Step 5 and say that monitoring was skipped by request.
 
 ---
 
@@ -19,9 +35,54 @@ Automates the full PR lifecycle: branch verification, PR creation, pre-flight te
 
 ---
 
-## Step 2: Create the PR
+## Step 2: Pre-Flight — Run Tests
 
-Get the PR up early so CI and review bots start working in parallel.
+Run available test suites **before** pushing or opening a PR. **Abort if any fail:**
+
+1. **Backend tests** (always run):
+   ```bash
+   dotnet test src/MentalMetal.slnx
+   ```
+
+2. **Frontend tests** (only if `src/MentalMetal.Web/ClientApp/angular.json` exists):
+   ```bash
+   (cd src/MentalMetal.Web/ClientApp && npx ng test --watch=false)
+   ```
+   If the ClientApp directory does not exist, skip this step.
+
+**STOP if any test suite fails.** Diagnose and fix the failures, then re-run this step. Do not proceed past this step with failing tests.
+
+After fixing, **commit** locally. **Push** only in Step 4 (after Step 3).
+
+---
+
+## Step 3: Self Code Review
+
+Review the full diff against main before pushing or opening the PR:
+
+```bash
+git diff main...HEAD
+```
+
+Check for:
+
+- **Code duplication** — extract shared logic if the same pattern appears 3+ times
+- **Missing error handling** — at system boundaries (user input, external APIs)
+- **Security issues** — unsanitised input, exposed secrets, SQL injection, XSS
+- **Codebase convention violations** — if `CLAUDE.md` exists, check it for banned patterns and required conventions; otherwise follow the repository conventions documented in this checklist
+- **EF Core pitfalls** — `HashSet.Contains()` and `.ToLowerInvariant()` are not SQL-translatable; use `List<T>.Contains()` and `.ToLower()`
+- **Angular pitfalls** — race conditions in async calls, timezone-safe date handling, plain properties instead of signals
+- **Banned Angular patterns** — `*ngIf`, `*ngFor`, `*ngSwitch`, `[ngClass]` (must use `@if`, `@for`, `@switch`, `[class.x]="expr"`)
+- **Banned colour patterns** — hardcoded Tailwind colours (`bg-gray-100`), custom `--color-*` CSS variables, `dark:` prefix
+- **Boy Scout Rule** — fix banned patterns in lines you're already changing, but do NOT expand scope to unrelated code
+
+Apply all fixes immediately. **Commit** before proceeding. **Push** in Step 4.
+
+---
+
+## Step 4: Push and Create or Update the PR
+
+Run this **only after** Steps 2–3 pass. Opening the PR is what starts remote CI and bots; local quality gates should already be green.
 
 1. Push all commits to the remote branch:
    ```bash
@@ -38,12 +99,12 @@ Get the PR up early so CI and review bots start working in parallel.
    EOF
    )"
    ```
-   If no PR exists, create one in step 5 and capture the number afterwards:
+   If no PR exists yet, create it in substep (5) below, then capture the number:
    ```bash
    PR_NUMBER="$(gh pr view --json number -q '.number')"
    ```
 4. If `openspec/specs/` exists, look for a spec related to this branch. If the directory does not exist, skip this step.
-5. Create the PR using this template:
+5. **Create** the PR (only if none exists) using this template:
 
    ```bash
    gh pr create --base main --title "<short title under 70 chars>" --body "$(cat <<'EOF'
@@ -72,64 +133,25 @@ EOF
    - If no OpenSpec spec is found (or `openspec/specs/` does not exist), omit the **Spec** line entirely.
    - Review `git log main..HEAD` and `git diff main...HEAD` to write an accurate summary and change list.
 
----
-
-## Step 3: Pre-Flight — Run Tests
-
-Run available test suites and **abort if any fail**:
-
-1. **Backend tests** (always run):
-   ```bash
-   dotnet test src/MentalMetal.slnx
-   ```
-
-2. **Frontend tests** (only if `src/MentalMetal.Web/ClientApp/angular.json` exists):
-   ```bash
-   (cd src/MentalMetal.Web/ClientApp && npx ng test --watch=false)
-   ```
-   If the ClientApp directory does not exist, skip this step.
-
-**STOP if any test suite fails.** Diagnose and fix the failures, then re-run. Do not proceed past this step with failing tests.
-
-After fixing, commit and push the fixes.
+6. **Set `PR_NUMBER`** for the rest of the workflow (`gh pr view --json number -q '.number'` or parse from `gh pr create` output). You need it for **Step 5** — do not end the session without running Step 5 (see Definition of done).
 
 ---
 
-## Step 4: Self Code Review
+## Step 5: Monitor CI and Review Comments (Review Loop) — **MANDATORY**
 
-Review the full diff against main before proceeding:
+Do this **in the same session** as Step 4 unless the user opted out (see Definition of done). Skipping this step is a failure to follow the skill.
 
-```bash
-git diff main...HEAD
-```
-
-Check for:
-
-- **Code duplication** — extract shared logic if the same pattern appears 3+ times
-- **Missing error handling** — at system boundaries (user input, external APIs)
-- **Security issues** — unsanitised input, exposed secrets, SQL injection, XSS
-- **Codebase convention violations** — if `CLAUDE.md` exists, check it for banned patterns and required conventions; otherwise follow the repository conventions documented in this checklist
-- **EF Core pitfalls** — `HashSet.Contains()` and `.ToLowerInvariant()` are not SQL-translatable; use `List<T>.Contains()` and `.ToLower()`
-- **Angular pitfalls** — race conditions in async calls, timezone-safe date handling, plain properties instead of signals
-- **Banned Angular patterns** — `*ngIf`, `*ngFor`, `*ngSwitch`, `[ngClass]` (must use `@if`, `@for`, `@switch`, `[class.x]="expr"`)
-- **Banned colour patterns** — hardcoded Tailwind colours (`bg-gray-100`), custom `--color-*` CSS variables, `dark:` prefix
-- **Boy Scout Rule** — fix banned patterns in lines you're already changing, but do NOT expand scope to unrelated code
-
-Apply all fixes immediately. Commit and push before proceeding.
-
----
-
-## Step 5: Monitor CI and Review Comments (Review Loop)
-
-After pushing, actively monitor and address feedback.
+After the PR exists (Step 4), actively monitor and address feedback.
 
 ### 5a. Wait for CI
 
-Poll CI status until all checks complete:
+Poll CI status until all checks complete **or** until it is clear some checks are still pending after a reasonable wait (see below):
 
 ```bash
 gh pr checks $PR_NUMBER
 ```
+
+**Polling:** If checks are pending, wait **60–120 seconds** and re-run `gh pr checks` up to **5 times** (~10 minutes). If still pending, report status and stop — do not claim all checks passed.
 
 If CI fails:
 1. Identify the failed check(s) and extract the run ID from the link field:
@@ -141,7 +163,7 @@ If CI fails:
    gh run view <run-id> --log-failed
    ```
 3. Diagnose and fix the issue
-4. Re-run Step 3 (tests) locally before pushing
+4. Re-run Step 2 (tests) locally before pushing
 5. Push fixes and restart the monitoring loop
 
 ### 5b. Monitor for Reviews
@@ -169,7 +191,7 @@ For each review comment:
 
 After addressing all comments:
 
-1. Re-run Step 3 (tests)
+1. Re-run Step 2 (tests)
 2. Commit all fixes in a single commit with a message like: "Address review feedback: <summary>"
 3. Push to the remote branch
 4. Restart the review monitoring loop from Step 5a — wait for reviewers to review the latest commit
@@ -193,6 +215,7 @@ The review loop stops when one of these conditions is met:
 
 | Scenario | Behaviour |
 |----------|-----------|
+| Temptation to stop after `gh pr create` | **Invalid.** Run Step 5 or explicitly invoke the Definition of done exception. |
 | `dotnet test` fails | Stop. Fix failures. Re-run. Do not proceed. |
 | `ng test --watch=false` fails | Stop. Fix failures. Re-run. Do not proceed. |
 | `git push` fails | Report the error. Likely a rebase/conflict issue — prompt user. |
