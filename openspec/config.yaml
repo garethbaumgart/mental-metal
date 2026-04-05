@@ -1,8 +1,8 @@
 schema: spec-driven
 
 context: |
-  # My Work Companion
-  An AI-powered command centre for engineering managers.
+  # Mental Metal
+  An AI-powered command center for engineering managers.
 
   ## Key references (read these for full context)
   - docs/product-brief.md — What we're building and why, all 11 features, success criteria
