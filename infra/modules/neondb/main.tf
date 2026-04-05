@@ -44,8 +44,7 @@ resource "neon_database" "this" {
   owner_name = neon_role.this.name
 }
 
-resource "neon_endpoint" "this" {
-  project_id = local.project_id
-  branch_id  = local.branch_id
-  type       = "read_write"
+locals {
+  # Use the default endpoint host from the project
+  endpoint_host = var.neon_project_id != null ? var.neon_endpoint_host : neon_project.this[0].database_host
 }
