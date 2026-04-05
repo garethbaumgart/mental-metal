@@ -11,6 +11,7 @@ public static class DependencyInjection
         this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")
+            ?? Environment.GetEnvironmentVariable("DATABASE_URL")
             ?? throw new InvalidOperationException(
                 "Database connection string 'DefaultConnection' is not configured.");
 

@@ -15,6 +15,11 @@ resource "google_cloud_run_v2_service" "this" {
   location            = var.region
   deletion_protection = false
 
+  # Image is managed by the CD pipeline — prevent Terraform from reverting it
+  lifecycle {
+    ignore_changes = [template[0].containers[0].image]
+  }
+
   template {
     service_account = var.runtime_service_account
 
