@@ -38,7 +38,7 @@ A project management tool, calendar app, communication tool, or note-taking app.
 ### Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- [Node.js 20.19+ or 22+](https://nodejs.org/) with npm
+- [Node.js 22+](https://nodejs.org/) with npm
 - [Docker](https://www.docker.com/) (provides PostgreSQL via docker-compose)
 
 ### Setup
