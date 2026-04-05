@@ -71,6 +71,7 @@ EOF
 
    - If no OpenSpec spec is found (or `openspec/specs/` does not exist), omit the **Spec** line entirely.
    - Review `git log main..HEAD` and `git diff main...HEAD` to write an accurate summary and change list.
+   - **CRITICAL: This is a public repository.** Never include sensitive information in the PR title, body, or comments. This includes GCP org/project IDs, billing account IDs, API keys, connection strings, internal domain names, email addresses, or any PII. Use generic descriptions instead.
 
 ---
 
@@ -108,6 +109,7 @@ Check for:
 - **Code duplication** — extract shared logic if the same pattern appears 3+ times
 - **Missing error handling** — at system boundaries (user input, external APIs)
 - **Security issues** — unsanitised input, exposed secrets, SQL injection, XSS
+- **Sensitive information exposure** — this is a public repo. Scan the entire diff for GCP org/project IDs, billing account IDs, Neon API keys, connection strings, internal domain names, email addresses, IP addresses, or any other PII/credentials. Check code, comments, config files, PR body text, and commit messages. **STOP and remove any sensitive values before proceeding.** Use placeholders (e.g. `<your-gcp-org-id>`) or environment variables instead.
 - **Codebase convention violations** — if `CLAUDE.md` exists, check it for banned patterns and required conventions; otherwise follow the repository conventions documented in this checklist
 - **EF Core pitfalls** — `HashSet.Contains()` and `.ToLowerInvariant()` are not SQL-translatable; use `List<T>.Contains()` and `.ToLower()`
 - **Angular pitfalls** — race conditions in async calls, timezone-safe date handling, plain properties instead of signals
