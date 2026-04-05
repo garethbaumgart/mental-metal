@@ -9,6 +9,8 @@ Automates the full PR lifecycle: branch verification, PR creation, pre-flight te
 
 > **Note:** This skill is scoped to the Mental Metal repository (.NET backend, Angular frontend when present). Frontend steps are conditional — they are skipped automatically when the Angular project does not yet exist.
 
+> **Sensitive data categories (public repo):** GCP org/project IDs, billing account IDs, API keys (including Neon), connection strings, internal domain names, email addresses, IP addresses, or any other PII/credentials. When any step below references "sensitive information", it means this list. Use placeholders (e.g. `<your-gcp-org-id>`) or environment variables instead of real values.
+
 ---
 
 ## Step 1: Verify Branch and Uncommitted Changes
@@ -71,7 +73,7 @@ EOF
 
    - If no OpenSpec spec is found (or `openspec/specs/` does not exist), omit the **Spec** line entirely.
    - Review `git log main..HEAD` and `git diff main...HEAD` to write an accurate summary and change list.
-   - **CRITICAL: This is a public repository.** Never include sensitive information in the PR title, body, or comments. This includes GCP org/project IDs, billing account IDs, API keys, connection strings, internal domain names, email addresses, or any PII. Use generic descriptions instead.
+   - **CRITICAL: This is a public repository.** Never include sensitive information (see categories above) in the PR title, body, or comments. Use generic descriptions instead.
 
 ---
 
@@ -109,7 +111,7 @@ Check for:
 - **Code duplication** — extract shared logic if the same pattern appears 3+ times
 - **Missing error handling** — at system boundaries (user input, external APIs)
 - **Security issues** — unsanitised input, exposed secrets, SQL injection, XSS
-- **Sensitive information exposure** — this is a public repo. Scan the entire diff for GCP org/project IDs, billing account IDs, Neon API keys, connection strings, internal domain names, email addresses, IP addresses, or any other PII/credentials. Check code, comments, config files, PR body text, and commit messages. **STOP and remove any sensitive values before proceeding.** Use placeholders (e.g. `<your-gcp-org-id>`) or environment variables instead.
+- **Sensitive information exposure** — this is a public repo. Scan the entire diff for any sensitive data categories listed above. Also review commit messages (`git log main..HEAD`) and the PR body (`gh pr view $PR_NUMBER --json body -q '.body'`) since these are not included in the diff. **STOP and remove any sensitive values before proceeding.**
 - **Codebase convention violations** — if `CLAUDE.md` exists, check it for banned patterns and required conventions; otherwise follow the repository conventions documented in this checklist
 - **EF Core pitfalls** — `HashSet.Contains()` and `.ToLowerInvariant()` are not SQL-translatable; use `List<T>.Contains()` and `.ToLower()`
 - **Angular pitfalls** — race conditions in async calls, timezone-safe date handling, plain properties instead of signals
