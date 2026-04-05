@@ -105,8 +105,6 @@ jobs:
         run: |
           dotnet tool restore
           dotnet ef database update --project src/MentalMetal.Infrastructure --startup-project src/MentalMetal.Web
-        env:
-          ConnectionStrings__DefaultConnection: ${{ env.DATABASE_URL }}
 
       # --- Deploy to Cloud Run ---
 
