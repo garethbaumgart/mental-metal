@@ -40,14 +40,17 @@ The `/pr` workflow is **not complete** until **Step 5** has run **at least once*
 Run available test suites **before** pushing or opening a PR. **Abort if any fail:**
 
 1. **Backend tests** (always run):
+
    ```bash
    dotnet test src/MentalMetal.slnx
    ```
 
 2. **Frontend tests** (only if `src/MentalMetal.Web/ClientApp/angular.json` exists):
+
    ```bash
    (cd src/MentalMetal.Web/ClientApp && npx ng test --watch=false)
    ```
+
    If the ClientApp directory does not exist, skip this step.
 
 **STOP if any test suite fails.** Diagnose and fix the failures, then re-run this step. Do not proceed past this step with failing tests.
@@ -100,6 +103,7 @@ Run this **only after** Steps 2–3 pass. Opening the PR is what starts remote C
    )"
    ```
    If no PR exists yet, create it in substep (5) below, then capture the number:
+
    ```bash
    PR_NUMBER="$(gh pr view --json number -q '.number')"
    ```
