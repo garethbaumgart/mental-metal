@@ -120,7 +120,6 @@ A feature is "done" when: the OpenSpec spec exists with BDD scenarios, all scena
 - [`docs/product-brief.md`](docs/product-brief.md) -- vision, features, success criteria
 - [`design/domain-model.md`](design/domain-model.md) -- DDD aggregates and relationships
 - [`design/spec-plan.md`](design/spec-plan.md) -- feature tiers and dependencies
-- [`design/dev-approach.md`](design/dev-approach.md) -- workflow and tooling
 
 ## License
 
