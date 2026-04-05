@@ -44,7 +44,7 @@ public static class DependencyInjection
         return services;
     }
 
-    private static string? ConvertDatabaseUrl(string? url)
+    internal static string? ConvertDatabaseUrl(string? url)
     {
         if (url is null || !url.StartsWith("postgres", StringComparison.OrdinalIgnoreCase))
             return url;
