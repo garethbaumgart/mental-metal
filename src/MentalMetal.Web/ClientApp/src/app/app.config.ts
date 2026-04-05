@@ -5,11 +5,11 @@ import { authInterceptor } from './shared/services/auth.interceptor';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { providePrimeNG } from 'primeng/config';
 import { definePreset } from '@primeng/themes';
-import Aura from '@primeng/themes/aura';
+import Material from '@primeng/themes/material';
 
 import { routes } from './app.routes';
 
-const MentalMetalPreset = definePreset(Aura, {});
+const MentalMetalPreset = definePreset(Material, { preset: { primary: 'indigo' } });
 
 export const appConfig: ApplicationConfig = {
   providers: [

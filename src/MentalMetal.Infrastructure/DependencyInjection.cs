@@ -19,7 +19,7 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? Environment.GetEnvironmentVariable("DATABASE_URL")
             ?? throw new InvalidOperationException(
-                "Database connection string 'DefaultConnection' is not configured.");
+                "Database connection string is not configured. Set 'ConnectionStrings:DefaultConnection' or 'DATABASE_URL'.");
 
         services.AddDbContext<MentalMetalDbContext>(options =>
             options.UseNpgsql(connectionString));
