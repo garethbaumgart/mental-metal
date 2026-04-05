@@ -25,4 +25,4 @@ public sealed record UpdatePreferencesRequest(
     bool NotificationsEnabled,
     TimeOnly BriefingTime);
 
-public sealed record AuthTokenResponse(string AccessToken);
+public sealed record AuthTokenResponse(string AccessToken, string? RefreshToken = null);

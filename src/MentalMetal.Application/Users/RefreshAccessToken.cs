@@ -17,6 +17,6 @@ public sealed class RefreshAccessTokenHandler(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new AuthTokenResponse(result.AccessToken);
+        return new AuthTokenResponse(result.AccessToken, result.RefreshToken);
     }
 }

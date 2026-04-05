@@ -14,7 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddInfrastructure(builder.Configuration);
 
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
-    ?? new JwtSettings();
+    ?? throw new InvalidOperationException("JWT settings are not configured. Add a 'Jwt' section to appsettings.");
 
 builder.Services.AddAuthentication(options =>
     {
@@ -55,9 +55,16 @@ app.UseAuthorization();
 // --- Auth Endpoints ---
 
 app.MapGet("/api/auth/login", (string? returnUrl) =>
-    Results.Challenge(
-        new AuthenticationProperties { RedirectUri = $"/api/auth/callback?returnUrl={returnUrl ?? "/"}" },
-        [GoogleDefaults.AuthenticationScheme]));
+{
+    // Prevent open redirect — only allow local paths
+    var safeReturnUrl = returnUrl is not null && Uri.TryCreate(returnUrl, UriKind.Relative, out _)
+        ? returnUrl
+        : "/";
+
+    return Results.Challenge(
+        new AuthenticationProperties { RedirectUri = $"/api/auth/callback?returnUrl={safeReturnUrl}" },
+        [GoogleDefaults.AuthenticationScheme]);
+});
 
 app.MapGet("/api/auth/callback", async (
     HttpContext httpContext,
@@ -110,7 +117,19 @@ app.MapPost("/api/auth/refresh", async (
         return Results.Unauthorized();
     }
 
-    return Results.Ok(result);
+    // Rotate the refresh token cookie
+    if (result.RefreshToken is not null)
+    {
+        httpContext.Response.Cookies.Append("refresh_token", result.RefreshToken, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = DateTimeOffset.UtcNow.AddDays(7)
+        });
+    }
+
+    return Results.Ok(new { result.AccessToken });
 });
 
 app.MapPost("/api/auth/logout", async (

@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { AuthTokenResponse, UserProfile } from '../models/user.model';
 
 @Injectable({ providedIn: 'root' })
@@ -25,7 +26,7 @@ export class AuthService {
 
   async logout(): Promise<void> {
     try {
-      await this.http.post('/api/auth/logout', {}).toPromise();
+      await firstValueFrom(this.http.post('/api/auth/logout', {}));
     } catch {
       // Best effort — clear local state regardless
     }
@@ -37,9 +38,9 @@ export class AuthService {
 
   async refreshToken(): Promise<boolean> {
     try {
-      const result = await this.http
-        .post<AuthTokenResponse>('/api/auth/refresh', {})
-        .toPromise();
+      const result = await firstValueFrom(
+        this.http.post<AuthTokenResponse>('/api/auth/refresh', {}),
+      );
 
       if (result?.accessToken) {
         this.accessToken.set(result.accessToken);
@@ -60,7 +61,6 @@ export class AuthService {
     this.http.get<UserProfile>('/api/users/me').subscribe({
       next: (user) => this.currentUser.set(user),
       error: () => {
-        // Token might be invalid
         this.accessToken.set(null);
         this.currentUser.set(null);
         this.removeStoredToken();
@@ -77,8 +77,12 @@ export class AuthService {
       if (token) {
         this.accessToken.set(token);
         this.storeToken(token);
-        // Clean the hash from the URL
-        window.history.replaceState(null, '', window.location.pathname);
+        // Clean the hash from the URL, preserving query params
+        window.history.replaceState(
+          null,
+          '',
+          window.location.pathname + window.location.search,
+        );
       }
     }
   }

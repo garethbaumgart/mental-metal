@@ -13,7 +13,7 @@ public sealed partial class Email : ValueObject
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(value, nameof(value));
 
-        var normalized = value.Trim().ToLower();
+        var normalized = value.Trim().ToLowerInvariant();
 
         if (!EmailRegex().IsMatch(normalized))
             throw new ArgumentException($"'{value}' is not a valid email address.", nameof(value));
