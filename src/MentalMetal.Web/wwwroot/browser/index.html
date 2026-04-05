@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en" data-beasties-container>
+<head>
+  <meta charset="utf-8">
+  <title>Mental Metal</title>
+  <base href="/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <script>
+    // Apply dark mode before Angular bootstraps to prevent flash of light theme.
+    try {
+      var t = localStorage.getItem('theme');
+      var d = t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches);
+      if (d) document.documentElement.classList.add('dark');
+    } catch (e) {}
+  </script>
+<style>@layer properties;@layer theme,base,components,utilities;@layer theme{:root{--font-sans:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";--font-mono:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;--spacing:.25rem;--container-2xl:42rem;--text-sm:.875rem;--text-sm--line-height:calc(1.25 / .875);--text-lg:1.125rem;--text-lg--line-height:calc(1.75 / 1.125);--text-xl:1.25rem;--text-xl--line-height:calc(1.75 / 1.25);--text-2xl:1.5rem;--text-2xl--line-height:calc(2 / 1.5);--text-4xl:2.25rem;--text-4xl--line-height:calc(2.5 / 2.25);--font-weight-medium:500;--font-weight-semibold:600;--font-weight-bold:700;--radius-md:.375rem;--default-transition-duration:.15s;--default-transition-timing-function:cubic-bezier(.4, 0, .2, 1);--default-font-family:var(--font-sans);--default-mono-font-family:var(--font-mono)}}@layer base{*,:after,:before{box-sizing:border-box;margin:0;padding:0;border:0 solid}html{line-height:1.5;-webkit-text-size-adjust:100%;tab-size:4;font-family:var(--default-font-family, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji");font-feature-settings:var(--default-font-feature-settings, normal);font-variation-settings:var(--default-font-variation-settings, normal);-webkit-tap-highlight-color:transparent}}@layer utilities{}@layer primeng{@-webkit-keyframes fa-spin{0%{-webkit-transform:rotate(0deg);transform:rotate(0)}to{-webkit-transform:rotate(359deg);transform:rotate(359deg)}}}@property --tw-border-style{syntax:"*";inherits:false;initial-value:solid;}@property --tw-font-weight{syntax:"*";inherits:false;}@layer properties{@supports ((-webkit-hyphens: none) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color:rgb(from red r g b)))){*,:before,:after{--tw-border-style:solid;--tw-font-weight:initial}}}</style><link rel="stylesheet" href="styles-ICXKURCK.css" media="print" onload="this.media='all'"><noscript><link rel="stylesheet" href="styles-ICXKURCK.css"></noscript></head>
+<body>
+  <app-root></app-root>
+<link rel="modulepreload" href="chunk-S564E6T3.js"><link rel="modulepreload" href="chunk-4WP7HCMD.js"><link rel="modulepreload" href="chunk-APDUMELK.js"><link rel="modulepreload" href="chunk-CG5DNZS2.js"><script src="main-UFGA6KYC.js" type="module"></script></body>
+</html>

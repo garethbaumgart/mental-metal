@@ -1,15 +1,157 @@
+using System.Security.Claims;
+using System.Text;
+using MentalMetal.Application.Users;
 using MentalMetal.Infrastructure;
+using MentalMetal.Infrastructure.Auth;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddInfrastructure(builder.Configuration);
 
+var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
+    ?? new JwtSettings();
+
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret))
+        };
+    })
+    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
+    {
+        options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? "";
+        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "";
+        options.CallbackPath = "/api/auth/google-callback";
+    });
+
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
 
 app.UseStaticFiles();
 
-// API endpoints will be mapped here as features are added.
-// They must be registered before the SPA fallback.
+app.UseAuthentication();
+app.UseAuthorization();
+
+// --- Auth Endpoints ---
+
+app.MapGet("/api/auth/login", (string? returnUrl) =>
+    Results.Challenge(
+        new AuthenticationProperties { RedirectUri = $"/api/auth/callback?returnUrl={returnUrl ?? "/"}" },
+        [GoogleDefaults.AuthenticationScheme]));
+
+app.MapGet("/api/auth/callback", async (
+    HttpContext httpContext,
+    RegisterOrLoginUserHandler handler,
+    string? returnUrl) =>
+{
+    var result = await httpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+    if (!result.Succeeded)
+        return Results.Unauthorized();
+
+    var claims = result.Principal!.Claims.ToList();
+    var externalId = claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value
+        ?? throw new InvalidOperationException("Missing NameIdentifier claim from Google.");
+    var email = claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value ?? "";
+    var name = claims.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value ?? "";
+    var avatar = claims.FirstOrDefault(c => c.Type == "urn:google:picture")?.Value;
+
+    var authResult = await handler.HandleAsync(
+        new RegisterOrLoginCommand(externalId, email, name, avatar),
+        httpContext.RequestAborted);
+
+    httpContext.Response.Cookies.Append("refresh_token", authResult.RefreshToken, new CookieOptions
+    {
+        HttpOnly = true,
+        Secure = true,
+        SameSite = SameSiteMode.Strict,
+        Expires = DateTimeOffset.UtcNow.AddDays(7)
+    });
+
+    // Sign out of the temporary cookie scheme
+    await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+    // Redirect back to the SPA with the access token as a query param
+    var redirect = $"{returnUrl ?? "/"}#access_token={authResult.AccessToken}";
+    return Results.Redirect(redirect);
+});
+
+app.MapPost("/api/auth/refresh", async (
+    HttpContext httpContext,
+    RefreshAccessTokenHandler handler) =>
+{
+    var refreshToken = httpContext.Request.Cookies["refresh_token"];
+    if (string.IsNullOrEmpty(refreshToken))
+        return Results.Unauthorized();
+
+    var result = await handler.HandleAsync(refreshToken, httpContext.RequestAborted);
+    if (result is null)
+    {
+        httpContext.Response.Cookies.Delete("refresh_token");
+        return Results.Unauthorized();
+    }
+
+    return Results.Ok(result);
+});
+
+app.MapPost("/api/auth/logout", async (
+    HttpContext httpContext,
+    LogoutUserHandler handler) =>
+{
+    var refreshToken = httpContext.Request.Cookies["refresh_token"];
+    if (!string.IsNullOrEmpty(refreshToken))
+        await handler.HandleAsync(refreshToken, httpContext.RequestAborted);
+
+    httpContext.Response.Cookies.Delete("refresh_token");
+    return Results.Ok();
+}).RequireAuthorization();
+
+// --- User Endpoints ---
+
+app.MapGet("/api/users/me", async (
+    GetCurrentUserHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    var user = await handler.HandleAsync(cancellationToken);
+    return Results.Ok(user);
+}).RequireAuthorization();
+
+app.MapPut("/api/users/me/profile", async (
+    UpdateProfileRequest request,
+    UpdateUserProfileHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    await handler.HandleAsync(request, cancellationToken);
+    return Results.NoContent();
+}).RequireAuthorization();
+
+app.MapPut("/api/users/me/preferences", async (
+    UpdatePreferencesRequest request,
+    UpdateUserPreferencesHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    await handler.HandleAsync(request, cancellationToken);
+    return Results.NoContent();
+}).RequireAuthorization();
 
 // Return 404 for unmatched /api requests instead of serving the SPA shell.
 app.MapFallback("/api/{**catch-all}", () => Results.NotFound());
