@@ -8,10 +8,9 @@ variable "secret_names" {
   type        = list(string)
 }
 
-variable "secret_values" {
-  description = "Map of secret names to their values"
-  type        = map(string)
-  sensitive   = true
+variable "region" {
+  description = "Region for secret replication"
+  type        = string
 }
 
 variable "accessor_service_account" {

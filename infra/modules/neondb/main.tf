@@ -3,7 +3,8 @@ terraform {
 
   required_providers {
     neon = {
-      source = "kislerdm/neon"
+      source  = "kislerdm/neon"
+      version = "~> 0.6"
     }
   }
 }
@@ -26,6 +27,13 @@ resource "neon_role" "this" {
   project_id = local.project_id
   branch_id  = local.branch_id
   name       = var.role_name
+
+  lifecycle {
+    precondition {
+      condition     = var.neon_project_id == null || var.neon_branch_id != null
+      error_message = "neon_branch_id is required when neon_project_id is provided."
+    }
+  }
 }
 
 resource "neon_database" "this" {

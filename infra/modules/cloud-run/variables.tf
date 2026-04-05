@@ -18,8 +18,19 @@ variable "image" {
   type        = string
 }
 
+variable "runtime_service_account" {
+  description = "Service account email for the Cloud Run service to run as"
+  type        = string
+}
+
 variable "secret_ids" {
   description = "Map of environment variable name to Secret Manager secret ID"
   type        = map(string)
   default     = {}
+}
+
+variable "allow_public_access" {
+  description = "Whether to allow unauthenticated access to the service"
+  type        = bool
+  default     = false
 }

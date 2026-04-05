@@ -21,18 +21,6 @@ variable "neon_branch_id" {
   default     = null
 }
 
-variable "database_connection_string" {
-  description = "Override connection string instead of using NeonDB module output"
-  type        = string
-  default     = null
-  sensitive   = true
-}
-
-variable "service_account_email" {
-  description = "Service account email for Secret Manager access (created in bootstrap)"
-  type        = string
-}
-
 variable "image" {
   description = "Container image to deploy to Cloud Run"
   type        = string

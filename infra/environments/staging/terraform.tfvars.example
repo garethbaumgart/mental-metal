@@ -1,10 +1,9 @@
-project_id             = "mental-metal"
-service_account_email  = "github-actions-deploy@mental-metal.iam.gserviceaccount.com"
-image                  = "australia-southeast1-docker.pkg.dev/mental-metal/mental-metal/app:latest"
+project_id = "mental-metal"
+image      = "australia-southeast1-docker.pkg.dev/mental-metal/mental-metal/app:latest"
 
 # Optional: provide an existing Neon project to reuse
 # neon_project_id = "your-neon-project-id"
 # neon_branch_id  = "your-neon-branch-id"
 
-# Optional: override the connection string directly
-# database_connection_string = "postgres://user:pass@host/db?sslmode=require"
+# Secret values (e.g. DATABASE_URL) are managed out-of-band via gcloud or CI/CD,
+# not through Terraform, to avoid storing them in state.

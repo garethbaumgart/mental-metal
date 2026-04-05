@@ -8,6 +8,7 @@ variable "neon_branch_id" {
   description = "Existing Neon branch ID. Required when reusing an existing project."
   type        = string
   default     = null
+
 }
 
 variable "database_name" {

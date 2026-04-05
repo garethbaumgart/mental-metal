@@ -43,9 +43,10 @@ resource "google_service_account" "github_actions" {
 locals {
   sa_roles = [
     "roles/run.admin",
-    "roles/artifactregistry.writer",
-    "roles/secretmanager.secretAccessor",
+    "roles/artifactregistry.admin",
+    "roles/secretmanager.admin",
     "roles/iam.serviceAccountUser",
+    "roles/iam.serviceAccountAdmin",
   ]
 }
 

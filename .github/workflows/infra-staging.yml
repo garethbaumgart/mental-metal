@@ -24,7 +24,6 @@ concurrency:
 env:
   TF_WORKING_DIR: infra/environments/staging
   TF_VAR_project_id: mental-metal
-  TF_VAR_service_account_email: ${{ secrets.GCP_SERVICE_ACCOUNT }}
   TF_VAR_image: australia-southeast1-docker.pkg.dev/mental-metal/mental-metal/app:latest
   NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
 

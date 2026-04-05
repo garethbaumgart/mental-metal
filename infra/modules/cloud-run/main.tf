@@ -15,6 +15,8 @@ resource "google_cloud_run_v2_service" "this" {
   location = var.region
 
   template {
+    service_account = var.runtime_service_account
+
     scaling {
       min_instance_count = 0
     }
@@ -38,8 +40,9 @@ resource "google_cloud_run_v2_service" "this" {
   }
 }
 
-# Allow unauthenticated access
 resource "google_cloud_run_v2_service_iam_member" "public" {
+  count = var.allow_public_access ? 1 : 0
+
   project  = var.project_id
   location = var.region
   name     = google_cloud_run_v2_service.this.name

@@ -16,15 +16,18 @@ resource "google_secret_manager_secret" "this" {
   secret_id = each.value
 
   replication {
-    auto {}
+    user_managed {
+      replicas {
+        location = var.region
+      }
+    }
   }
-}
 
-resource "google_secret_manager_secret_version" "this" {
-  for_each = toset(var.secret_names)
-
-  secret      = google_secret_manager_secret.this[each.value].id
-  secret_data = var.secret_values[each.value]
+  # Secret values are managed out-of-band (via CI/CD or gcloud) to avoid
+  # storing sensitive data in Terraform state.
+  lifecycle {
+    ignore_changes = [labels]
+  }
 }
 
 resource "google_secret_manager_secret_iam_member" "accessor" {

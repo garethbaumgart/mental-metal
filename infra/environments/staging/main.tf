@@ -7,7 +7,8 @@ terraform {
       version = ">= 6.0"
     }
     neon = {
-      source = "kislerdm/neon"
+      source  = "kislerdm/neon"
+      version = "~> 0.6"
     }
   }
 }
@@ -18,6 +19,14 @@ provider "google" {
 }
 
 provider "neon" {}
+
+# --- Runtime Service Account ---
+
+resource "google_service_account" "cloud_run" {
+  project      = var.project_id
+  account_id   = "mental-metal-staging-run"
+  display_name = "Mental Metal Staging Cloud Run"
+}
 
 # --- Artifact Registry ---
 
@@ -45,12 +54,10 @@ module "neondb" {
 module "secrets" {
   source = "../../modules/secret-manager"
 
-  project_id   = var.project_id
-  secret_names = ["DATABASE_URL"]
-  secret_values = {
-    "DATABASE_URL" = coalesce(var.database_connection_string, module.neondb.connection_uri)
-  }
-  accessor_service_account = var.service_account_email
+  project_id               = var.project_id
+  region                   = var.region
+  secret_names             = ["DATABASE_URL"]
+  accessor_service_account = google_service_account.cloud_run.email
 }
 
 # --- Cloud Run ---
@@ -58,9 +65,11 @@ module "secrets" {
 module "cloud_run" {
   source = "../../modules/cloud-run"
 
-  project_id   = var.project_id
-  region       = var.region
-  service_name = "mental-metal-staging"
-  image        = var.image
-  secret_ids   = module.secrets.secret_ids
+  project_id              = var.project_id
+  region                  = var.region
+  service_name            = "mental-metal-staging"
+  image                   = var.image
+  secret_ids              = module.secrets.secret_ids
+  runtime_service_account = google_service_account.cloud_run.email
+  allow_public_access     = true
 }
