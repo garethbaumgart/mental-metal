@@ -54,7 +54,9 @@ public class RegisterOrLoginUserTests
 
         Assert.False(result.IsNewUser);
         Assert.Equal("access-token", result.AccessToken);
+        Assert.True(existingUser.LastLoginAt >= existingUser.CreatedAt);
         await _userRepository.DidNotReceive().AddAsync(Arg.Any<User>(), Arg.Any<CancellationToken>());
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]

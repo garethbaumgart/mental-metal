@@ -36,6 +36,19 @@ public class UpdateUserProfileTests
     }
 
     [Fact]
+    public async Task UserNotFound_ThrowsInvalidOperationException()
+    {
+        var userId = Guid.NewGuid();
+        _currentUserService.UserId.Returns(userId);
+        _userRepository.GetByIdAsync(userId, Arg.Any<CancellationToken>()).Returns((User?)null);
+
+        var request = new UpdateProfileRequest("Name", null, "UTC");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _handler.HandleAsync(request, CancellationToken.None));
+    }
+
+    [Fact]
     public async Task EmptyName_ThrowsArgumentException()
     {
         var user = User.Register("auth-123", "test@example.com", "Original", null);

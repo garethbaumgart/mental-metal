@@ -46,7 +46,7 @@ public sealed class User : AggregateRoot
         ArgumentException.ThrowIfNullOrWhiteSpace(timezone, nameof(timezone));
 
         if (!TimeZoneInfo.TryFindSystemTimeZoneById(timezone, out _))
-            throw new ArgumentException($"'{timezone}' is not a valid IANA timezone.", nameof(timezone));
+            throw new ArgumentException($"'{timezone}' is not a valid time zone.", nameof(timezone));
 
         Name = name.Trim();
         AvatarUrl = avatarUrl;

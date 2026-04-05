@@ -79,6 +79,6 @@
 
 ## 10. E2E Tests
 
-- [x] 10.1 E2E test: OAuth login flow (mock OAuth provider) — user lands on dashboard after login
+- [ ] 10.1 E2E test: OAuth login flow (mock OAuth provider) — user lands on dashboard after login (requires mock OAuth provider — deferred)
 - [x] 10.2 E2E test: Unauthenticated user redirected to login page
-- [x] 10.3 E2E test: User settings page — update profile and preferences
+- [ ] 10.3 E2E test: User settings page — update profile and preferences (requires authenticated session — deferred)

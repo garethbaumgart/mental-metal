@@ -30,7 +30,7 @@ public class RefreshAccessTokenTests
     }
 
     [Fact]
-    public async Task ExpiredToken_ReturnsNull()
+    public async Task ExpiredToken_ReturnsNullAndDoesNotPersist()
     {
         _tokenService.RefreshAsync("expired-token", Arg.Any<CancellationToken>())
             .Returns((TokenResult?)null);
@@ -38,10 +38,11 @@ public class RefreshAccessTokenTests
         var result = await _handler.HandleAsync("expired-token", CancellationToken.None);
 
         Assert.Null(result);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task ReusedToken_ReturnsNull()
+    public async Task ReusedToken_ReturnsNullAndDoesNotPersist()
     {
         _tokenService.RefreshAsync("reused-token", Arg.Any<CancellationToken>())
             .Returns((TokenResult?)null);
@@ -49,5 +50,6 @@ public class RefreshAccessTokenTests
         var result = await _handler.HandleAsync("reused-token", CancellationToken.None);
 
         Assert.Null(result);
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }

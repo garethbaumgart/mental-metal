@@ -54,6 +54,14 @@ app.UseAuthorization();
 
 // --- Auth Endpoints ---
 
+CookieOptions RefreshTokenCookieOptions() => new()
+{
+    HttpOnly = true,
+    Secure = !app.Environment.IsDevelopment(),
+    SameSite = SameSiteMode.Strict,
+    Expires = DateTimeOffset.UtcNow.AddDays(7)
+};
+
 app.MapGet("/api/auth/login", (string? returnUrl) =>
 {
     // Prevent open redirect — only allow local paths
@@ -86,13 +94,7 @@ app.MapGet("/api/auth/callback", async (
         new RegisterOrLoginCommand(externalId, email, name, avatar),
         httpContext.RequestAborted);
 
-    httpContext.Response.Cookies.Append("refresh_token", authResult.RefreshToken, new CookieOptions
-    {
-        HttpOnly = true,
-        Secure = true,
-        SameSite = SameSiteMode.Strict,
-        Expires = DateTimeOffset.UtcNow.AddDays(7)
-    });
+    httpContext.Response.Cookies.Append("refresh_token", authResult.RefreshToken, RefreshTokenCookieOptions());
 
     // Sign out of the temporary cookie scheme
     await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
@@ -120,13 +122,7 @@ app.MapPost("/api/auth/refresh", async (
     // Rotate the refresh token cookie
     if (result.RefreshToken is not null)
     {
-        httpContext.Response.Cookies.Append("refresh_token", result.RefreshToken, new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict,
-            Expires = DateTimeOffset.UtcNow.AddDays(7)
-        });
+        httpContext.Response.Cookies.Append("refresh_token", result.RefreshToken, RefreshTokenCookieOptions());
     }
 
     return Results.Ok(new { result.AccessToken });
@@ -142,7 +138,7 @@ app.MapPost("/api/auth/logout", async (
 
     httpContext.Response.Cookies.Delete("refresh_token");
     return Results.Ok();
-}).RequireAuthorization();
+});
 
 // --- User Endpoints ---
 
