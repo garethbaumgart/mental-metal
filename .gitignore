@@ -18,6 +18,7 @@ yarn-error.log*
 # Angular
 .angular/
 dist/
+src/MentalMetal.Web/wwwroot/
 
 # IDE / Editor files
 .vs/

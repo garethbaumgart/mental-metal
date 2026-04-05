@@ -1,4 +1,10 @@
+using MentalMetal.Application.Common;
+using MentalMetal.Application.Common.Auth;
+using MentalMetal.Application.Users;
+using MentalMetal.Domain.Users;
+using MentalMetal.Infrastructure.Auth;
 using MentalMetal.Infrastructure.Persistence;
+using MentalMetal.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +23,23 @@ public static class DependencyInjection
 
         services.AddDbContext<MentalMetalDbContext>(options =>
             options.UseNpgsql(connectionString));
+
+        services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
+
+        // Infrastructure services
+        services.AddHttpContextAccessor();
+        services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<MentalMetalDbContext>());
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<ITokenService, TokenService>();
+
+        // Application handlers
+        services.AddScoped<RegisterOrLoginUserHandler>();
+        services.AddScoped<GetCurrentUserHandler>();
+        services.AddScoped<UpdateUserProfileHandler>();
+        services.AddScoped<UpdateUserPreferencesHandler>();
+        services.AddScoped<RefreshAccessTokenHandler>();
+        services.AddScoped<LogoutUserHandler>();
 
         return services;
     }

@@ -131,4 +131,3 @@ jobs:
             echo "Deployment verification failed with status $STATUS_CODE"
             exit 1
           fi
-
