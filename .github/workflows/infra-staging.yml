@@ -26,6 +26,7 @@ env:
   TF_WORKING_DIR: infra/environments/staging
   TF_VAR_project_id: mental-metal
   TF_VAR_neon_org_id: ${{ secrets.NEON_ORG_ID }}
+  TF_VAR_neondb_owner_password: ${{ secrets.NEON_OWNER_PASSWORD }}
   NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
 
 jobs:

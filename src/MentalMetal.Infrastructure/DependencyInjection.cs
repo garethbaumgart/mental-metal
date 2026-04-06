@@ -44,27 +44,38 @@ public static class DependencyInjection
         return services;
     }
 
-    private static string? ConvertDatabaseUrl(string? url)
+    internal static string? ConvertDatabaseUrl(string? url)
     {
         if (url is null || !url.StartsWith("postgres", StringComparison.OrdinalIgnoreCase))
             return url;
 
-        var uri = new Uri(url);
-        var userInfo = uri.UserInfo.Split(':');
-        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        // Parse postgres:// URI manually — .NET's Uri class doesn't handle the postgres scheme reliably
+        var match = System.Text.RegularExpressions.Regex.Match(url.Trim(),
+            @"^postgres(?:ql)?://([^:]+):([^@]+)@([^/:]+)(?::(\d+))?/([^?]+)(?:\?(.*))?$");
+
+        if (!match.Success)
+            throw new InvalidOperationException(
+                $"DATABASE_URL is not a valid postgres:// URI (length={url.Length}, starts='{url[..Math.Min(20, url.Length)]}...')");
 
         var builder = new Npgsql.NpgsqlConnectionStringBuilder
         {
-            Host = uri.Host,
-            Port = uri.Port > 0 ? uri.Port : 5432,
-            Database = uri.AbsolutePath.TrimStart('/'),
-            Username = Uri.UnescapeDataString(userInfo[0]),
-            Password = Uri.UnescapeDataString(userInfo[1]),
+            Host = match.Groups[3].Value,
+            Port = match.Groups[4].Success ? int.Parse(match.Groups[4].Value) : 5432,
+            Database = match.Groups[5].Value,
+            Username = Uri.UnescapeDataString(match.Groups[1].Value),
+            Password = Uri.UnescapeDataString(match.Groups[2].Value),
         };
 
-        var sslMode = query["sslmode"];
-        if (sslMode is not null)
-            builder.SslMode = Enum.Parse<Npgsql.SslMode>(sslMode, ignoreCase: true);
+        if (match.Groups[6].Success)
+        {
+            var query = System.Web.HttpUtility.ParseQueryString(match.Groups[6].Value);
+            var sslMode = query["sslmode"];
+            if (sslMode is not null)
+                builder.SslMode = Enum.Parse<Npgsql.SslMode>(sslMode, ignoreCase: true);
+            var channelBinding = query["channel_binding"];
+            if (channelBinding is not null)
+                builder.ChannelBinding = Enum.Parse<Npgsql.ChannelBinding>(channelBinding, ignoreCase: true);
+        }
 
         return builder.ConnectionString;
     }

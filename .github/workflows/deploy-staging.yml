@@ -104,7 +104,9 @@ jobs:
       - name: Run EF Core migrations
         run: |
           dotnet tool restore
-          dotnet ef database update --project src/MentalMetal.Infrastructure --startup-project src/MentalMetal.Web
+          dotnet ef database update \
+            --project src/MentalMetal.Infrastructure \
+            --startup-project src/MentalMetal.Web
         env:
           ASPNETCORE_ENVIRONMENT: Production
 

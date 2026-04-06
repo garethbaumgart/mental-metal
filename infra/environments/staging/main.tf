@@ -43,11 +43,12 @@ module "artifact_registry" {
 module "neondb" {
   source = "../../modules/neondb"
 
-  neon_org_id     = var.neon_org_id
-  neon_project_id = var.neon_project_id
-  neon_branch_id  = var.neon_branch_id
-  database_name   = "mentalmetalstaging"
-  role_name       = "mentalmetalstaging"
+  neon_org_id            = var.neon_org_id
+  neon_project_id        = var.neon_project_id
+  neon_branch_id         = var.neon_branch_id
+  neon_endpoint_host     = var.neon_endpoint_host
+  database_name          = "mentalmetalstaging"
+  neondb_owner_password  = var.neondb_owner_password
 }
 
 # --- Secret Manager ---
@@ -57,7 +58,7 @@ module "secrets" {
 
   project_id               = var.project_id
   region                   = var.region
-  secret_names             = ["STAGING_DATABASE_URL"]
+  secret_names             = ["STAGING_DATABASE_URL", "STAGING_JWT_SECRET"]
   accessor_service_account = google_service_account.cloud_run.email
 }
 
@@ -70,7 +71,10 @@ module "cloud_run" {
   region                  = var.region
   service_name            = "mental-metal-staging"
   image                   = var.image
-  secret_ids              = { "DATABASE_URL" = "STAGING_DATABASE_URL" }
+  secret_ids              = {
+    "DATABASE_URL" = "STAGING_DATABASE_URL"
+    "Jwt__Secret"  = "STAGING_JWT_SECRET"
+  }
   runtime_service_account = google_service_account.cloud_run.email
   allow_public_access     = true
 }
