@@ -168,29 +168,17 @@ If CI fails:
    ```
 3. Diagnose and fix the issue
 4. Re-run Step 2 (tests) locally before pushing
-5. Push fixes — this counts as a new push, so **reset the monitoring loop** (go to Step 5a with a fresh 20-minute budget)
+5. Push fixes and restart the monitoring loop
 
 ### 5b. Monitor for Reviews
 
-Poll for reviewer comments every 2 minutes, for up to 10 cycles (20 minutes total). Check for **both** new comments **and** unresolved review threads:
+Poll for reviewer comments every 2 minutes, for up to 5 cycles (10 minutes total). If all comments have been addressed after a cycle, stop polling and proceed:
 
 ```bash
-# Inline review comments
 gh api repos/{owner}/{repo}/pulls/$PR_NUMBER/comments --jq '.[] | "[\(.user.login)] \(.path) L\(.line // "?"): \(.body[0:300])"'
-# Review summaries
 gh api repos/{owner}/{repo}/pulls/$PR_NUMBER/reviews --jq '.[] | "[\(.user.login)] \(.state): \(.body[0:300])"'
-# Issue-level comments
 gh api repos/{owner}/{repo}/issues/$PR_NUMBER/comments --jq '.[] | "[\(.user.login)] \(.body[0:300])"'
-# Unresolved threads (the authoritative signal for "are we done?")
-gh api graphql -f query='{ repository(owner: "{owner}", name: "{repo}") { pullRequest(number: '$PR_NUMBER') { reviewThreads(first: 50) { nodes { isResolved } } } } }' --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length'
 ```
-
-**The loop is not done until ALL of these are true:**
-1. CI checks are passing (not pending, not failed)
-2. Zero unresolved review threads
-3. No new reviews have arrived in the last polling cycle
-
-If all three conditions are met for two consecutive cycles, proceed. Otherwise keep polling.
 
 ### 5c. Address Review Comments
 
@@ -200,18 +188,17 @@ For each review comment:
 2. Evaluate whether the feedback is valid and actionable
 3. If valid: make the code change
 4. If by-design or out-of-scope: reply with a clear explanation of why
-5. React with 👀 on the comment and resolve the thread after addressing it
 
 **Batch fixes:** Collect all comments from a review round, fix them all, then commit and push once. Each push triggers new review cycles from bots.
 
-### 5d. Push Fixes and Re-Monitor — **RESET THE LOOP**
+### 5d. Push Fixes and Re-Monitor
 
 After addressing all comments:
 
 1. Re-run Step 2 (tests)
 2. Commit all fixes in a single commit with a message like: "Address review feedback: <summary>"
 3. Push to the remote branch
-4. **IMPORTANT: Every push triggers new bot review cycles.** Reset the monitoring loop timer to zero and restart from Step 5a with a fresh 20-minute budget. Do NOT carry over time from the previous loop — the push invalidates all prior "all clear" signals
+4. Restart the review monitoring loop from Step 5a — wait for reviewers to review the latest commit
 
 ---
 
@@ -239,5 +226,4 @@ The review loop stops when one of these conditions is met:
 | PR already exists for branch | Update the existing PR body instead of creating a duplicate. |
 | No OpenSpec spec found | Omit the Spec line from the PR body. Proceed normally. |
 | CI fails after PR creation | Read logs, fix issues, push fixes, re-monitor. |
-| Review polling timeout (20 min) | If no unaddressed comments and zero unresolved threads remain for 2 consecutive cycles, proceed. Otherwise ask the user whether to keep waiting. |
-| Push after fixing review comments | **Reset the 20-minute monitoring loop to zero.** Every push triggers new bot reviews — prior "all clear" signals are invalid. |
+| Review polling timeout (10 min) | If no unaddressed comments remain, proceed. Otherwise ask the user whether to keep waiting. |
