@@ -37,11 +37,6 @@ variable "neondb_owner_password" {
   description = "Password for the neondb_owner role (from Neon console)"
   type        = string
   sensitive   = true
-
-  validation {
-    condition     = length(var.neondb_owner_password) > 0
-    error_message = "neondb_owner_password must not be empty."
-  }
 }
 
 variable "image" {
