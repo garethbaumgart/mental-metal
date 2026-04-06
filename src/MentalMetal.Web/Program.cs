@@ -72,8 +72,10 @@ app.Use(async (context, next) =>
     }
     catch (AiProviderException ex) when (!context.Response.HasStarted)
     {
+        var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("AiErrorMiddleware");
+        logger.LogWarning(ex, "AI provider error from {Provider}", ex.Provider);
         context.Response.StatusCode = StatusCodes.Status502BadGateway;
-        await context.Response.WriteAsJsonAsync(new { error = ex.Message });
+        await context.Response.WriteAsJsonAsync(new { error = "AI provider request failed. Please try again or check your provider configuration." });
     }
 });
 
