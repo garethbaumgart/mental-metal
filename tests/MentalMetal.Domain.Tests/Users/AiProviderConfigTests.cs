@@ -43,6 +43,16 @@ public class AiProviderConfigTests
             new AiProviderConfig(AiProvider.Anthropic, "enc_key", model!, null));
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Create_ZeroOrNegativeMaxTokens_Allowed(int maxTokens)
+    {
+        // Domain doesn't enforce MaxTokens range — provider APIs will reject invalid values
+        var config = new AiProviderConfig(AiProvider.Anthropic, "enc_key", "model", maxTokens);
+        Assert.Equal(maxTokens, config.MaxTokens);
+    }
+
     [Fact]
     public void Equality_SameValues_AreEqual()
     {

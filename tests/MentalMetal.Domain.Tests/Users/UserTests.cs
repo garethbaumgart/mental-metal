@@ -159,6 +159,10 @@ public class UserTests
 
         Assert.Equal(AiProvider.OpenAI, user.AiProviderConfig!.Provider);
         Assert.Equal("gpt-4o", user.AiProviderConfig.Model);
+
+        var domainEvent = Assert.Single(user.DomainEvents);
+        var configured = Assert.IsType<AiProviderConfigured>(domainEvent);
+        Assert.Equal(AiProvider.OpenAI, configured.Provider);
     }
 
     [Theory]

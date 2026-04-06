@@ -20,7 +20,15 @@ public sealed class ValidateAiProviderHandler(IAiProviderValidator providerValid
         }
         catch (AiProviderException ex)
         {
-            return new ValidateAiProviderResponse(false, null, ex.Message);
+            var safeMessage = ex.StatusCode switch
+            {
+                401 => "Invalid API key. Please check your key and try again.",
+                403 => "Access denied. Your API key may not have the required permissions.",
+                404 => "Model not found. Please select a different model.",
+                429 => "Rate limit exceeded. Please try again later.",
+                _ => "Unable to connect to the AI provider. Please check your configuration."
+            };
+            return new ValidateAiProviderResponse(false, null, safeMessage);
         }
     }
 }

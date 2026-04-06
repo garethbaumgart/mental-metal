@@ -31,16 +31,16 @@ public class ValidateAiProviderTests
     }
 
     [Fact]
-    public async Task InvalidKey_ReturnsFailure()
+    public async Task InvalidKey_ReturnsSanitizedError()
     {
         _validator.ValidateAsync(AiProvider.Anthropic, "bad-key", "model", Arg.Any<CancellationToken>())
-            .ThrowsAsync(new AiProviderException(AiProvider.Anthropic, 401, "Invalid API key"));
+            .ThrowsAsync(new AiProviderException(AiProvider.Anthropic, 401, "raw internal error details"));
 
         var request = new ValidateAiProviderRequest("Anthropic", "bad-key", "model");
         var result = await _handler.HandleAsync(request, CancellationToken.None);
 
         Assert.False(result.Success);
-        Assert.Equal("Invalid API key", result.Error);
+        Assert.Equal("Invalid API key. Please check your key and try again.", result.Error);
     }
 
     [Fact]

@@ -41,6 +41,21 @@ public class ConfigureAiProviderTests
     }
 
     [Fact]
+    public async Task CaseInsensitiveProvider_Works()
+    {
+        var user = User.Register("auth-123", "test@example.com", "Name", null);
+        _currentUserService.UserId.Returns(user.Id);
+        _userRepository.GetByIdAsync(user.Id, Arg.Any<CancellationToken>()).Returns(user);
+        _encryptionService.Encrypt(Arg.Any<string>()).Returns("encrypted");
+
+        var request = new ConfigureAiProviderRequest("anthropic", "key", "model", null);
+
+        await _handler.HandleAsync(request, CancellationToken.None);
+
+        Assert.Equal(AiProvider.Anthropic, user.AiProviderConfig!.Provider);
+    }
+
+    [Fact]
     public async Task InvalidProvider_ThrowsArgumentException()
     {
         var user = User.Register("auth-123", "test@example.com", "Name", null);
