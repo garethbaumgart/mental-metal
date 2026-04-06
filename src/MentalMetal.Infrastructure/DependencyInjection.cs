@@ -49,22 +49,29 @@ public static class DependencyInjection
         if (url is null || !url.StartsWith("postgres", StringComparison.OrdinalIgnoreCase))
             return url;
 
-        var uri = new Uri(url);
-        var userInfo = uri.UserInfo.Split(':');
-        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        // Parse postgres:// URI manually — .NET's Uri class doesn't handle the postgres scheme reliably
+        var match = System.Text.RegularExpressions.Regex.Match(url,
+            @"^postgres(?:ql)?://([^:]+):([^@]+)@([^/:]+)(?::(\d+))?/([^?]+)(?:\?(.*))?$");
+
+        if (!match.Success)
+            return url;
 
         var builder = new Npgsql.NpgsqlConnectionStringBuilder
         {
-            Host = uri.Host,
-            Port = uri.Port > 0 ? uri.Port : 5432,
-            Database = uri.AbsolutePath.TrimStart('/'),
-            Username = Uri.UnescapeDataString(userInfo[0]),
-            Password = Uri.UnescapeDataString(userInfo[1]),
+            Host = match.Groups[3].Value,
+            Port = match.Groups[4].Success ? int.Parse(match.Groups[4].Value) : 5432,
+            Database = match.Groups[5].Value,
+            Username = Uri.UnescapeDataString(match.Groups[1].Value),
+            Password = Uri.UnescapeDataString(match.Groups[2].Value),
         };
 
-        var sslMode = query["sslmode"];
-        if (sslMode is not null)
-            builder.SslMode = Enum.Parse<Npgsql.SslMode>(sslMode, ignoreCase: true);
+        if (match.Groups[6].Success)
+        {
+            var query = System.Web.HttpUtility.ParseQueryString(match.Groups[6].Value);
+            var sslMode = query["sslmode"];
+            if (sslMode is not null)
+                builder.SslMode = Enum.Parse<Npgsql.SslMode>(sslMode, ignoreCase: true);
+        }
 
         return builder.ConnectionString;
     }
