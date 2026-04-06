@@ -55,11 +55,11 @@ public sealed class AiCompletionService(
             {
                 logger.LogWarning("Model {Model} not found for {Provider}, trying fallback",
                     candidateModel, provider);
-                continue;
             }
         }
 
-        // Should not reach here — last model throws without catch
+        // Unreachable in practice — the last model attempt throws without the catch filter matching.
+        // Required by the compiler since foreach doesn't guarantee iteration.
         throw new AiProviderException(provider, null, "All configured models are unavailable.");
     }
 

@@ -65,12 +65,12 @@ app.Use(async (context, next) =>
     {
         await next();
     }
-    catch (TasteLimitExceededException ex)
+    catch (TasteLimitExceededException ex) when (!context.Response.HasStarted)
     {
         context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
         await context.Response.WriteAsJsonAsync(new { error = ex.Message });
     }
-    catch (AiProviderException ex)
+    catch (AiProviderException ex) when (!context.Response.HasStarted)
     {
         context.Response.StatusCode = StatusCodes.Status502BadGateway;
         await context.Response.WriteAsJsonAsync(new { error = ex.Message });
