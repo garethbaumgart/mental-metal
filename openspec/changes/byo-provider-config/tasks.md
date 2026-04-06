@@ -1,35 +1,35 @@
 ## 1. Domain Layer
 
-- [ ] 1.1 Create `AiProvider` enum (Anthropic, OpenAI, Google) in Domain/Users
-- [ ] 1.2 Create `AiProviderConfig` value object (Provider, EncryptedApiKey, Model, MaxTokens?) extending ValueObject
-- [ ] 1.3 Add nullable `AiProviderConfig?` property to User aggregate (null by default on registration)
-- [ ] 1.4 Implement `User.ConfigureAiProvider(provider, encryptedApiKey, model, maxTokens?)` action with validation, raising `AiProviderConfigured` event
-- [ ] 1.5 Implement `User.RemoveAiProvider()` action raising `AiProviderRemoved` event (idempotent — no event if already null)
-- [ ] 1.6 Add `AiProviderConfigured` and `AiProviderRemoved` domain events
+- [x] 1.1 Create `AiProvider` enum (Anthropic, OpenAI, Google) in Domain/Users
+- [x] 1.2 Create `AiProviderConfig` value object (Provider, EncryptedApiKey, Model, MaxTokens?) extending ValueObject
+- [x] 1.3 Add nullable `AiProviderConfig?` property to User aggregate (null by default on registration)
+- [x] 1.4 Implement `User.ConfigureAiProvider(provider, encryptedApiKey, model, maxTokens?)` action with validation, raising `AiProviderConfigured` event
+- [x] 1.5 Implement `User.RemoveAiProvider()` action raising `AiProviderRemoved` event (idempotent — no event if already null)
+- [x] 1.6 Add `AiProviderConfigured` and `AiProviderRemoved` domain events
 
 ## 2. Domain Tests
 
-- [ ] 2.1 Test `AiProviderConfig` value object: creation, equality
-- [ ] 2.2 Test `User.ConfigureAiProvider`: sets config, raises event, validates inputs (empty key/model rejected)
-- [ ] 2.3 Test `User.RemoveAiProvider`: clears config, raises event, idempotent when already null
-- [ ] 2.4 Test `User.Register`: new user has null AiProviderConfig
+- [x] 2.1 Test `AiProviderConfig` value object: creation, equality
+- [x] 2.2 Test `User.ConfigureAiProvider`: sets config, raises event, validates inputs (empty key/model rejected)
+- [x] 2.3 Test `User.RemoveAiProvider`: clears config, raises event, idempotent when already null
+- [x] 2.4 Test `User.Register`: new user has null AiProviderConfig
 
 ## 3. Application Layer — Interfaces and Models
 
-- [ ] 3.1 Create `IApiKeyEncryptionService` interface in Application/Common (Encrypt, Decrypt methods)
-- [ ] 3.2 Create `IAiCompletionService` interface in Application/Common with `CompleteAsync(AiCompletionRequest, CancellationToken)` returning `AiCompletionResult`
-- [ ] 3.3 Create `AiCompletionRequest` record (SystemPrompt, UserPrompt, MaxTokens?, Temperature?)
-- [ ] 3.4 Create `AiCompletionResult` record (Content, InputTokens, OutputTokens, Model, Provider)
-- [ ] 3.5 Create `AiProviderException` and `TasteLimitExceededException` exception classes
+- [x] 3.1 Create `IApiKeyEncryptionService` interface in Application/Common (Encrypt, Decrypt methods)
+- [x] 3.2 Create `IAiCompletionService` interface in Application/Common with `CompleteAsync(AiCompletionRequest, CancellationToken)` returning `AiCompletionResult`
+- [x] 3.3 Create `AiCompletionRequest` record (SystemPrompt, UserPrompt, MaxTokens?, Temperature?)
+- [x] 3.4 Create `AiCompletionResult` record (Content, InputTokens, OutputTokens, Model, Provider)
+- [x] 3.5 Create `AiProviderException` and `TasteLimitExceededException` exception classes
 
 ## 4. Application Layer — Handlers
 
-- [ ] 4.1 Create `ConfigureAiProvider` handler — encrypts key, calls User.ConfigureAiProvider, persists
-- [ ] 4.2 Create `GetAiProviderStatus` handler — returns provider config (without key), taste budget remaining
-- [ ] 4.3 Create `ValidateAiProvider` handler — accepts provider/key/model, calls IAiCompletionService with test prompt, returns success/failure
-- [ ] 4.4 Create `RemoveAiProvider` handler — calls User.RemoveAiProvider, persists
-- [ ] 4.5 Create `GetAvailableModels` handler — returns models from config for a given provider
-- [ ] 4.6 Create DTOs: `ConfigureAiProviderRequest`, `AiProviderStatusResponse` (incl. taste budget), `ValidateAiProviderRequest`, `ValidateAiProviderResponse`, `AvailableModelsResponse`
+- [x] 4.1 Create `ConfigureAiProvider` handler — encrypts key, calls User.ConfigureAiProvider, persists
+- [x] 4.2 Create `GetAiProviderStatus` handler — returns provider config (without key), taste budget remaining
+- [x] 4.3 Create `ValidateAiProvider` handler — accepts provider/key/model, calls IAiProviderValidator with test prompt, returns success/failure
+- [x] 4.4 Create `RemoveAiProvider` handler — calls User.RemoveAiProvider, persists
+- [x] 4.5 Create `GetAvailableModels` handler — returns models from config for a given provider
+- [x] 4.6 Create DTOs: `ConfigureAiProviderRequest`, `AiProviderStatusResponse` (incl. taste budget), `ValidateAiProviderRequest`, `ValidateAiProviderResponse`, `AvailableModelsResponse`
 
 ## 5. Application Tests
 
