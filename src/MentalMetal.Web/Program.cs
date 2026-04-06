@@ -168,6 +168,8 @@ app.MapPut("/api/users/me/preferences", async (
     return Results.NoContent();
 }).RequireAuthorization();
 
+app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
+
 // Return 404 for unmatched /api requests instead of serving the SPA shell.
 app.MapFallback("/api/{**catch-all}", () => Results.NotFound());
 
