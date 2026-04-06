@@ -116,6 +116,11 @@ jobs:
 
       - name: Run EF Core migrations
         run: |
+          MIGRATIONS_DIR="src/MentalMetal.Infrastructure/Migrations"
+          if [ ! -d "$MIGRATIONS_DIR" ] || [ -z "$(ls -A "$MIGRATIONS_DIR"/*.cs 2>/dev/null)" ]; then
+            echo "No migrations found — skipping"
+            exit 0
+          fi
           dotnet tool restore
           dotnet ef database update \
             --project src/MentalMetal.Infrastructure \
