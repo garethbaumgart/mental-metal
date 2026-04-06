@@ -50,11 +50,12 @@ public static class DependencyInjection
             return url;
 
         // Parse postgres:// URI manually — .NET's Uri class doesn't handle the postgres scheme reliably
-        var match = System.Text.RegularExpressions.Regex.Match(url,
+        var match = System.Text.RegularExpressions.Regex.Match(url.Trim(),
             @"^postgres(?:ql)?://([^:]+):([^@]+)@([^/:]+)(?::(\d+))?/([^?]+)(?:\?(.*))?$");
 
         if (!match.Success)
-            return url;
+            throw new InvalidOperationException(
+                $"DATABASE_URL is not a valid postgres:// URI (length={url.Length}, starts='{url[..Math.Min(20, url.Length)]}...')");
 
         var builder = new Npgsql.NpgsqlConnectionStringBuilder
         {
@@ -71,6 +72,9 @@ public static class DependencyInjection
             var sslMode = query["sslmode"];
             if (sslMode is not null)
                 builder.SslMode = Enum.Parse<Npgsql.SslMode>(sslMode, ignoreCase: true);
+            var channelBinding = query["channel_binding"];
+            if (channelBinding is not null)
+                builder.ChannelBinding = Enum.Parse<Npgsql.ChannelBinding>(channelBinding, ignoreCase: true);
         }
 
         return builder.ConnectionString;
