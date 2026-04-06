@@ -35,13 +35,19 @@ builder.Services.AddAuthentication(options =>
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret))
         };
     })
-    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
-    {
-        options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? "";
-        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "";
-        options.CallbackPath = "/api/auth/google-callback";
-    });
+    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme);
+
+var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
+if (!string.IsNullOrEmpty(googleClientId))
+{
+    builder.Services.AddAuthentication()
+        .AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
+        {
+            options.ClientId = googleClientId;
+            options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? "";
+            options.CallbackPath = "/api/auth/google-callback";
+        });
+}
 
 builder.Services.AddAuthorization();
 
