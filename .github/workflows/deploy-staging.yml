@@ -101,12 +101,26 @@ jobs:
           echo "::add-mask::$DB_URL"
           echo "DATABASE_URL=$DB_URL" >> $GITHUB_ENV
 
+          # Convert postgres:// URI to Npgsql connection string for EF Core
+          CONN_STR=$(python3 -c "
+          from urllib.parse import urlparse, parse_qs
+          u = urlparse('$DB_URL')
+          parts = [f'Host={u.hostname}', f'Port={u.port or 5432}', f'Database={u.path.lstrip(\"/\")}',
+                   f'Username={u.username}', f'Password={u.password}']
+          q = parse_qs(u.query)
+          if 'sslmode' in q: parts.append(f'SSL Mode={q[\"sslmode\"][0].capitalize()}')
+          print(';'.join(parts))
+          ")
+          echo "::add-mask::$CONN_STR"
+          echo "NPGSQL_CONN_STR=$CONN_STR" >> $GITHUB_ENV
+
       - name: Run EF Core migrations
         run: |
           dotnet tool restore
-          dotnet ef database update --project src/MentalMetal.Infrastructure --startup-project src/MentalMetal.Web
-        env:
-          ASPNETCORE_ENVIRONMENT: Production
+          dotnet ef database update \
+            --project src/MentalMetal.Infrastructure \
+            --startup-project src/MentalMetal.Web \
+            --connection "$NPGSQL_CONN_STR"
 
       # --- Deploy to Cloud Run ---
 
