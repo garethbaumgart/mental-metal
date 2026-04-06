@@ -24,10 +24,11 @@ locals {
   branch_id = var.neon_project_id != null ? var.neon_branch_id : neon_project.this[0].default_branch_id
 }
 
-resource "neon_role" "this" {
+resource "neon_database" "this" {
   project_id = local.project_id
   branch_id  = local.branch_id
-  name       = var.role_name
+  name       = var.database_name
+  owner_name = "neondb_owner"
 
   lifecycle {
     precondition {
@@ -35,13 +36,6 @@ resource "neon_role" "this" {
       error_message = "neon_branch_id is required when neon_project_id is provided."
     }
   }
-}
-
-resource "neon_database" "this" {
-  project_id = local.project_id
-  branch_id  = local.branch_id
-  name       = var.database_name
-  owner_name = neon_role.this.name
 }
 
 locals {

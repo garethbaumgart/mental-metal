@@ -28,7 +28,8 @@ variable "database_name" {
   type        = string
 }
 
-variable "role_name" {
-  description = "Name of the database role to create"
+variable "neondb_owner_password" {
+  description = "Password for the neondb_owner role (from Neon console)"
   type        = string
+  sensitive   = true
 }
