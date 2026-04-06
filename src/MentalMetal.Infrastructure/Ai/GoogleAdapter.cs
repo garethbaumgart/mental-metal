@@ -20,7 +20,7 @@ public sealed class GoogleAdapter(IHttpClientFactory httpClientFactory) : IAiPro
         AiCompletionRequest request,
         CancellationToken cancellationToken)
     {
-        using var httpClient = httpClientFactory.CreateClient("GoogleAi");
+        var httpClient = httpClientFactory.CreateClient("GoogleAi");
         httpClient.DefaultRequestHeaders.Add("x-goog-api-key", apiKey);
         var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent";
 

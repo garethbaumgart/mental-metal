@@ -239,5 +239,5 @@ The review loop stops when one of these conditions is met:
 | PR already exists for branch | Update the existing PR body instead of creating a duplicate. |
 | No OpenSpec spec found | Omit the Spec line from the PR body. Proceed normally. |
 | CI fails after PR creation | Read logs, fix issues, push fixes, re-monitor. |
-| Review polling timeout (20 min) | If no unaddressed comments and zero unresolved threads remain for 2 consecutive cycles, proceed. Otherwise ask the user whether to keep waiting. |
+| Review polling timeout (20 min) | If CI is passing, zero unresolved threads, and no new reviews arrived in the last cycle — for 2 consecutive cycles — proceed. Otherwise ask the user whether to keep waiting. |
 | Push after fixing review comments | **Reset the 20-minute monitoring loop to zero.** Every push triggers new bot reviews — prior "all clear" signals are invalid. |
