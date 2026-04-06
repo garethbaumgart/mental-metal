@@ -7,7 +7,8 @@ public sealed class GetAvailableModelsHandler(IAiModelCatalog modelCatalog)
 {
     public AvailableModelsResponse Handle(string providerName)
     {
-        if (!Enum.TryParse<AiProvider>(providerName, ignoreCase: true, out var provider))
+        if (!Enum.TryParse<AiProvider>(providerName, ignoreCase: true, out var provider)
+            || !Enum.IsDefined(provider))
             throw new ArgumentException($"Unsupported AI provider: {providerName}");
 
         var models = modelCatalog.GetModels(provider);

@@ -8,7 +8,8 @@ public sealed class ValidateAiProviderHandler(IAiProviderValidator providerValid
     public async Task<ValidateAiProviderResponse> HandleAsync(
         ValidateAiProviderRequest request, CancellationToken cancellationToken)
     {
-        if (!Enum.TryParse<AiProvider>(request.Provider, ignoreCase: true, out var provider))
+        if (!Enum.TryParse<AiProvider>(request.Provider, ignoreCase: true, out var provider)
+            || !Enum.IsDefined(provider))
             return new ValidateAiProviderResponse(false, null, $"Unsupported provider: {request.Provider}");
 
         try

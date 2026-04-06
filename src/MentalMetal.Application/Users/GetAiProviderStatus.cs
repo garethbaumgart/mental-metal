@@ -15,7 +15,11 @@ public sealed class GetAiProviderStatusHandler(
             ?? throw new InvalidOperationException("Authenticated user not found.");
 
         var config = user.AiProviderConfig;
-        var remaining = await tasteBudgetService.GetRemainingAsync(user.Id, cancellationToken);
+
+        // Only query taste budget if user doesn't have their own key and taste is enabled
+        var remaining = config is null && tasteBudgetService.IsEnabled
+            ? await tasteBudgetService.GetRemainingAsync(user.Id, cancellationToken)
+            : tasteBudgetService.DailyLimit;
 
         return new AiProviderStatusResponse(
             IsConfigured: config is not null,

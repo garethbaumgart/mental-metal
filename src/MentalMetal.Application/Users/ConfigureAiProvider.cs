@@ -16,8 +16,11 @@ public sealed class ConfigureAiProviderHandler(
             currentUserService.UserId, cancellationToken)
             ?? throw new InvalidOperationException("Authenticated user not found.");
 
-        if (!Enum.TryParse<AiProvider>(request.Provider, ignoreCase: true, out var provider))
+        if (!Enum.TryParse<AiProvider>(request.Provider, ignoreCase: true, out var provider)
+            || !Enum.IsDefined(provider))
             throw new ArgumentException($"Unsupported AI provider: {request.Provider}");
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.ApiKey, nameof(request.ApiKey));
 
         var encryptedKey = encryptionService.Encrypt(request.ApiKey);
 
