@@ -21,7 +21,8 @@ public sealed class GoogleAdapter : IAiProviderAdapter
         CancellationToken cancellationToken)
     {
         using var httpClient = new HttpClient();
-        var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
+        httpClient.DefaultRequestHeaders.Add("x-goog-api-key", apiKey);
+        var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent";
 
         var body = new GeminiRequest
         {

@@ -223,7 +223,7 @@ app.MapGet("/api/ai/models", (
     {
         return Results.BadRequest(new { error = $"Unsupported provider: {provider}" });
     }
-});
+}).RequireAuthorization();
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
 

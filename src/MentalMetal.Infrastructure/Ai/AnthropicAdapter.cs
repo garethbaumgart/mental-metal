@@ -33,8 +33,13 @@ public sealed class AnthropicAdapter : IAiProviderAdapter
                 temperature: request.Temperature.HasValue ? (double)request.Temperature.Value : null,
                 cancellationToken: cancellationToken);
 
-            var firstBlock = response.Content.FirstOrDefault();
-            var text = firstBlock.IsText ? firstBlock.Text.Text : "";
+            var text = "";
+            if (response.Content.Count > 0)
+            {
+                var firstBlock = response.Content[0];
+                if (firstBlock.IsText)
+                    text = firstBlock.Text.Text;
+            }
 
             return new AiCompletionResult(
                 Content: text,

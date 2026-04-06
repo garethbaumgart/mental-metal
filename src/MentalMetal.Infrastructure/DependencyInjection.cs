@@ -27,7 +27,11 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString));
 
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
-        services.Configure<AiProviderSettings>(configuration.GetSection(AiProviderSettings.SectionName));
+        services.AddOptions<AiProviderSettings>()
+            .Bind(configuration.GetSection(AiProviderSettings.SectionName))
+            .Validate(s => !string.IsNullOrWhiteSpace(s.EncryptionKey),
+                "AiProvider:EncryptionKey is required. Generate with: openssl rand -base64 32")
+            .ValidateOnStart();
 
         // Infrastructure services
         services.AddHttpContextAccessor();

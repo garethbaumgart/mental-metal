@@ -6,7 +6,27 @@ namespace MentalMetal.Infrastructure.Ai;
 
 public sealed class AesApiKeyEncryptionService(IOptions<AiProviderSettings> settings) : IApiKeyEncryptionService
 {
-    private readonly byte[] _key = Convert.FromBase64String(settings.Value.EncryptionKey);
+    private readonly byte[] _key = ValidateKey(settings.Value.EncryptionKey);
+
+    private static byte[] ValidateKey(string base64Key)
+    {
+        byte[] key;
+        try
+        {
+            key = Convert.FromBase64String(base64Key);
+        }
+        catch (FormatException)
+        {
+            throw new InvalidOperationException(
+                "AiProvider:EncryptionKey is not valid Base64. Generate a 32-byte key: openssl rand -base64 32");
+        }
+
+        if (key.Length != 32)
+            throw new InvalidOperationException(
+                $"AiProvider:EncryptionKey must be exactly 32 bytes (AES-256). Got {key.Length} bytes. Generate with: openssl rand -base64 32");
+
+        return key;
+    }
 
     public string Encrypt(string plaintext)
     {

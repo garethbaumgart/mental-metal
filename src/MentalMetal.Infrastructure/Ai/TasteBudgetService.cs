@@ -24,7 +24,7 @@ public sealed class TasteBudgetService(
         var budget = await dbContext.AiTasteBudgets
             .FirstOrDefaultAsync(b => b.UserId == userId && b.Date == today, cancellationToken);
 
-        return DailyLimit - (budget?.OperationsUsed ?? 0);
+        return Math.Max(0, DailyLimit - (budget?.OperationsUsed ?? 0));
     }
 
     public async Task DecrementAsync(Guid userId, CancellationToken cancellationToken)
@@ -49,5 +49,6 @@ public sealed class TasteBudgetService(
         }
 
         budget.OperationsUsed++;
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 }
