@@ -41,6 +41,7 @@ public static class DependencyInjection
         services.AddScoped<ITokenService, TokenService>();
 
         // AI provider services
+        services.AddHttpClient("GoogleAi");
         services.AddSingleton<IApiKeyEncryptionService, AesApiKeyEncryptionService>();
         services.AddSingleton<AiModelCatalog>();
         services.AddSingleton<IAiModelCatalog>(sp => sp.GetRequiredService<AiModelCatalog>());

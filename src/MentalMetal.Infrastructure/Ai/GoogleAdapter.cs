@@ -6,7 +6,7 @@ using MentalMetal.Domain.Users;
 
 namespace MentalMetal.Infrastructure.Ai;
 
-public sealed class GoogleAdapter : IAiProviderAdapter
+public sealed class GoogleAdapter(IHttpClientFactory httpClientFactory) : IAiProviderAdapter
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -20,7 +20,7 @@ public sealed class GoogleAdapter : IAiProviderAdapter
         AiCompletionRequest request,
         CancellationToken cancellationToken)
     {
-        using var httpClient = new HttpClient();
+        using var httpClient = httpClientFactory.CreateClient("GoogleAi");
         httpClient.DefaultRequestHeaders.Add("x-goog-api-key", apiKey);
         var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent";
 

@@ -48,6 +48,6 @@ public sealed class AiModelCatalog(IOptions<AiProviderSettings> settings) : IAiM
     {
         // Convert "claude-sonnet-4-20250514" to "Claude Sonnet 4 20250514" etc.
         return string.Join(' ', modelId.Split('-').Select(p =>
-            p.Length > 0 ? char.ToUpper(p[0]) + p[1..] : p));
+            p.Length > 0 ? char.ToUpperInvariant(p[0]) + p[1..] : p));
     }
 }

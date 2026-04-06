@@ -50,6 +50,12 @@ namespace MentalMetal.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AiTasteBudgets", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_AiTasteBudgets_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(

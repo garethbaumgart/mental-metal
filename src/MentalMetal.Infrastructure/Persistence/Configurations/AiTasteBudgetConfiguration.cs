@@ -1,3 +1,4 @@
+using MentalMetal.Domain.Users;
 using MentalMetal.Infrastructure.Ai;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -11,6 +12,11 @@ public sealed class AiTasteBudgetConfiguration : IEntityTypeConfiguration<AiTast
         builder.ToTable("AiTasteBudgets");
 
         builder.HasKey(b => b.Id);
+
+        builder.HasOne<User>()
+            .WithMany()
+            .HasForeignKey(b => b.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasIndex(b => new { b.UserId, b.Date })
             .IsUnique();

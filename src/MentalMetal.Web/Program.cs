@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text;
+using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.Users;
 using MentalMetal.Infrastructure;
 using MentalMetal.Infrastructure.Auth;
@@ -57,6 +58,24 @@ app.UseStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (TasteLimitExceededException ex)
+    {
+        context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        await context.Response.WriteAsJsonAsync(new { error = ex.Message });
+    }
+    catch (AiProviderException ex)
+    {
+        context.Response.StatusCode = StatusCodes.Status502BadGateway;
+        await context.Response.WriteAsJsonAsync(new { error = ex.Message });
+    }
+});
 
 // --- Auth Endpoints ---
 

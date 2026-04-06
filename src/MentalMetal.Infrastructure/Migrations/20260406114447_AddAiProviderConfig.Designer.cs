@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MentalMetal.Infrastructure.Migrations
 {
     [DbContext(typeof(MentalMetalDbContext))]
-    [Migration("20260406111851_AddAiProviderConfig")]
+    [Migration("20260406114447_AddAiProviderConfig")]
     partial class AddAiProviderConfig
     {
         /// <inheritdoc />
@@ -212,6 +212,15 @@ namespace MentalMetal.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Preferences")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MentalMetal.Infrastructure.Ai.AiTasteBudget", b =>
+                {
+                    b.HasOne("MentalMetal.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 #pragma warning restore 612, 618

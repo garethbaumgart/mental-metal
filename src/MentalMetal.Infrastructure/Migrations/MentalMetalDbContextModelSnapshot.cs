@@ -211,6 +211,15 @@ namespace MentalMetal.Infrastructure.Migrations
                     b.Navigation("Preferences")
                         .IsRequired();
                 });
+
+            modelBuilder.Entity("MentalMetal.Infrastructure.Ai.AiTasteBudget", b =>
+                {
+                    b.HasOne("MentalMetal.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
 #pragma warning restore 612, 618
         }
     }

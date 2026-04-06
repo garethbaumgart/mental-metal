@@ -33,22 +33,14 @@ public sealed class TasteBudgetService(
             return;
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var budget = await dbContext.AiTasteBudgets
-            .FirstOrDefaultAsync(b => b.UserId == userId && b.Date == today, cancellationToken);
 
-        if (budget is null)
-        {
-            budget = new AiTasteBudget
-            {
-                Id = Guid.NewGuid(),
-                UserId = userId,
-                Date = today,
-                OperationsUsed = 0
-            };
-            dbContext.AiTasteBudgets.Add(budget);
-        }
-
-        budget.OperationsUsed++;
-        await dbContext.SaveChangesAsync(cancellationToken);
+        // Upsert: insert or increment, conflict-safe against the unique (UserId, Date) index
+        await dbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+            INSERT INTO "AiTasteBudgets" ("Id", "UserId", "Date", "OperationsUsed")
+            VALUES ({Guid.NewGuid()}, {userId}, {today}, 1)
+            ON CONFLICT ("UserId", "Date")
+            DO UPDATE SET "OperationsUsed" = "AiTasteBudgets"."OperationsUsed" + 1
+            """, cancellationToken);
     }
 }
