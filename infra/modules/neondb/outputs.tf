@@ -1,6 +1,6 @@
 output "connection_uri" {
   description = "PostgreSQL connection string"
-  value       = "postgres://${neon_role.this.name}:${neon_role.this.password}@${local.endpoint_host}/${neon_database.this.name}?sslmode=require"
+  value       = "postgres://neondb_owner:${var.neondb_owner_password}@${local.endpoint_host}/${neon_database.this.name}?sslmode=require"
   sensitive   = true
 }
 

@@ -43,11 +43,11 @@ module "artifact_registry" {
 module "neondb" {
   source = "../../modules/neondb"
 
-  neon_org_id     = var.neon_org_id
-  neon_project_id = var.neon_project_id
-  neon_branch_id  = var.neon_branch_id
-  database_name   = "mentalmetalstaging"
-  role_name       = "mentalmetalstaging"
+  neon_org_id            = var.neon_org_id
+  neon_project_id        = var.neon_project_id
+  neon_branch_id         = var.neon_branch_id
+  database_name          = "mentalmetalstaging"
+  neondb_owner_password  = var.neondb_owner_password
 }
 
 # --- Secret Manager ---

@@ -27,6 +27,12 @@ variable "neon_branch_id" {
   default     = null
 }
 
+variable "neondb_owner_password" {
+  description = "Password for the neondb_owner role (from Neon console)"
+  type        = string
+  sensitive   = true
+}
+
 variable "image" {
   description = "Container image to deploy to Cloud Run (managed by CD pipeline)"
   type        = string
