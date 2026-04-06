@@ -58,7 +58,7 @@ module "secrets" {
 
   project_id               = var.project_id
   region                   = var.region
-  secret_names             = ["STAGING_DATABASE_URL"]
+  secret_names             = ["STAGING_DATABASE_URL", "STAGING_JWT_SECRET"]
   accessor_service_account = google_service_account.cloud_run.email
 }
 
@@ -71,7 +71,10 @@ module "cloud_run" {
   region                  = var.region
   service_name            = "mental-metal-staging"
   image                   = var.image
-  secret_ids              = { "DATABASE_URL" = "STAGING_DATABASE_URL" }
+  secret_ids              = {
+    "DATABASE_URL" = "STAGING_DATABASE_URL"
+    "Jwt__Secret"  = "STAGING_JWT_SECRET"
+  }
   runtime_service_account = google_service_account.cloud_run.email
   allow_public_access     = true
 }
