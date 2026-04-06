@@ -123,6 +123,99 @@ public class UserTests
     }
 
     [Fact]
+    public void Register_HasNullAiProviderConfig()
+    {
+        var user = User.Register("auth-123", "test@example.com", "Name", null);
+
+        Assert.Null(user.AiProviderConfig);
+    }
+
+    [Fact]
+    public void ConfigureAiProvider_SetsConfigAndRaisesEvent()
+    {
+        var user = User.Register("auth-123", "test@example.com", "Name", null);
+        user.ClearDomainEvents();
+
+        user.ConfigureAiProvider(AiProvider.Anthropic, "enc_key", "claude-sonnet-4-20250514", 4096);
+
+        Assert.NotNull(user.AiProviderConfig);
+        Assert.Equal(AiProvider.Anthropic, user.AiProviderConfig.Provider);
+        Assert.Equal("claude-sonnet-4-20250514", user.AiProviderConfig.Model);
+
+        var domainEvent = Assert.Single(user.DomainEvents);
+        var configured = Assert.IsType<AiProviderConfigured>(domainEvent);
+        Assert.Equal(user.Id, configured.UserId);
+        Assert.Equal(AiProvider.Anthropic, configured.Provider);
+    }
+
+    [Fact]
+    public void ConfigureAiProvider_ReplacesExistingConfig()
+    {
+        var user = User.Register("auth-123", "test@example.com", "Name", null);
+        user.ConfigureAiProvider(AiProvider.Anthropic, "enc_key_1", "claude-sonnet-4-20250514", null);
+        user.ClearDomainEvents();
+
+        user.ConfigureAiProvider(AiProvider.OpenAI, "enc_key_2", "gpt-4o", null);
+
+        Assert.Equal(AiProvider.OpenAI, user.AiProviderConfig!.Provider);
+        Assert.Equal("gpt-4o", user.AiProviderConfig.Model);
+
+        var domainEvent = Assert.Single(user.DomainEvents);
+        var configured = Assert.IsType<AiProviderConfigured>(domainEvent);
+        Assert.Equal(AiProvider.OpenAI, configured.Provider);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void ConfigureAiProvider_EmptyKey_Throws(string? key)
+    {
+        var user = User.Register("auth-123", "test@example.com", "Name", null);
+
+        Assert.ThrowsAny<ArgumentException>(() =>
+            user.ConfigureAiProvider(AiProvider.Anthropic, key!, "model", null));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void ConfigureAiProvider_EmptyModel_Throws(string? model)
+    {
+        var user = User.Register("auth-123", "test@example.com", "Name", null);
+
+        Assert.ThrowsAny<ArgumentException>(() =>
+            user.ConfigureAiProvider(AiProvider.Anthropic, "enc_key", model!, null));
+    }
+
+    [Fact]
+    public void RemoveAiProvider_ClearsConfigAndRaisesEvent()
+    {
+        var user = User.Register("auth-123", "test@example.com", "Name", null);
+        user.ConfigureAiProvider(AiProvider.Anthropic, "enc_key", "model", null);
+        user.ClearDomainEvents();
+
+        user.RemoveAiProvider();
+
+        Assert.Null(user.AiProviderConfig);
+        var domainEvent = Assert.Single(user.DomainEvents);
+        Assert.IsType<AiProviderRemoved>(domainEvent);
+    }
+
+    [Fact]
+    public void RemoveAiProvider_WhenNull_IsIdempotent()
+    {
+        var user = User.Register("auth-123", "test@example.com", "Name", null);
+        user.ClearDomainEvents();
+
+        user.RemoveAiProvider();
+
+        Assert.Null(user.AiProviderConfig);
+        Assert.Empty(user.DomainEvents);
+    }
+
+    [Fact]
     public void RecordLogin_UpdatesLastLoginAt()
     {
         var user = User.Register("auth-123", "test@example.com", "Name", null);

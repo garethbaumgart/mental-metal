@@ -9,6 +9,7 @@ public sealed class User : AggregateRoot
     public string Name { get; private set; } = null!;
     public string? AvatarUrl { get; private set; }
     public UserPreferences Preferences { get; private set; } = null!;
+    public AiProviderConfig? AiProviderConfig { get; private set; }
     public string Timezone { get; private set; } = null!;
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset LastLoginAt { get; private set; }
@@ -62,6 +63,21 @@ public sealed class User : AggregateRoot
         Preferences = preferences;
 
         RaiseDomainEvent(new PreferencesUpdated(Id));
+    }
+
+    public void ConfigureAiProvider(AiProvider provider, string encryptedApiKey, string model, int? maxTokens = null)
+    {
+        AiProviderConfig = new AiProviderConfig(provider, encryptedApiKey, model, maxTokens);
+        RaiseDomainEvent(new AiProviderConfigured(Id, provider));
+    }
+
+    public void RemoveAiProvider()
+    {
+        if (AiProviderConfig is null)
+            return;
+
+        AiProviderConfig = null;
+        RaiseDomainEvent(new AiProviderRemoved(Id));
     }
 
     public void RecordLogin()
