@@ -33,11 +33,11 @@
 
 ## 5. Application Tests
 
-- [ ] 5.1 Test `ConfigureAiProvider` handler: encrypts key, saves config, persists via UoW
-- [ ] 5.2 Test `GetAiProviderStatus`: returns status for configured/unconfigured users, includes taste budget
-- [ ] 5.3 Test `ValidateAiProvider`: success and failure paths
-- [ ] 5.4 Test `RemoveAiProvider`: clears config, persists
-- [ ] 5.5 Test `GetAvailableModels`: returns correct models per provider, rejects invalid provider
+- [x] 5.1 Test `ConfigureAiProvider` handler: encrypts key, saves config, persists via UoW
+- [x] 5.2 Test `GetAiProviderStatus`: returns status for configured/unconfigured users, includes taste budget
+- [x] 5.3 Test `ValidateAiProvider`: success and failure paths
+- [x] 5.4 Test `RemoveAiProvider`: clears config, persists
+- [x] 5.5 Test `GetAvailableModels`: returns correct models per provider, rejects invalid provider
 
 ## 6. Infrastructure — Encryption
 
