@@ -1,5 +1,6 @@
 using MentalMetal.Application.Common;
 using MentalMetal.Domain.Users;
+using MentalMetal.Infrastructure.Ai;
 using MentalMetal.Infrastructure.Auth;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,6 +13,7 @@ public sealed class MentalMetalDbContext(
 {
     public DbSet<User> Users => Set<User>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<AiTasteBudget> AiTasteBudgets => Set<AiTasteBudget>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

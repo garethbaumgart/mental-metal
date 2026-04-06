@@ -51,6 +51,25 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
                 .HasColumnName("PreferencesBriefingTime");
         });
 
+        builder.OwnsOne(u => u.AiProviderConfig, ai =>
+        {
+            ai.Property(a => a.Provider)
+                .HasColumnName("AiProviderProvider")
+                .HasConversion<string>()
+                .HasMaxLength(20);
+
+            ai.Property(a => a.EncryptedApiKey)
+                .HasColumnName("AiProviderEncryptedApiKey")
+                .HasMaxLength(1024);
+
+            ai.Property(a => a.Model)
+                .HasColumnName("AiProviderModel")
+                .HasMaxLength(100);
+
+            ai.Property(a => a.MaxTokens)
+                .HasColumnName("AiProviderMaxTokens");
+        });
+
         builder.Property(u => u.Timezone)
             .IsRequired()
             .HasMaxLength(100);

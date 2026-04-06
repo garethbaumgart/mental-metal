@@ -174,6 +174,57 @@ app.MapPut("/api/users/me/preferences", async (
     return Results.NoContent();
 }).RequireAuthorization();
 
+// --- AI Provider Endpoints ---
+
+app.MapGet("/api/users/me/ai-provider", async (
+    GetAiProviderStatusHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    var status = await handler.HandleAsync(cancellationToken);
+    return Results.Ok(status);
+}).RequireAuthorization();
+
+app.MapPut("/api/users/me/ai-provider", async (
+    ConfigureAiProviderRequest request,
+    ConfigureAiProviderHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    await handler.HandleAsync(request, cancellationToken);
+    return Results.NoContent();
+}).RequireAuthorization();
+
+app.MapPost("/api/users/me/ai-provider/validate", async (
+    ValidateAiProviderRequest request,
+    ValidateAiProviderHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    var result = await handler.HandleAsync(request, cancellationToken);
+    return Results.Ok(result);
+}).RequireAuthorization();
+
+app.MapDelete("/api/users/me/ai-provider", async (
+    RemoveAiProviderHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    await handler.HandleAsync(cancellationToken);
+    return Results.NoContent();
+}).RequireAuthorization();
+
+app.MapGet("/api/ai/models", (
+    string provider,
+    GetAvailableModelsHandler handler) =>
+{
+    try
+    {
+        var result = handler.Handle(provider);
+        return Results.Ok(result);
+    }
+    catch (ArgumentException)
+    {
+        return Results.BadRequest(new { error = $"Unsupported provider: {provider}" });
+    }
+});
+
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
 
 // Return 404 for unmatched /api requests instead of serving the SPA shell.

@@ -7,6 +7,7 @@ public sealed record UserProfileResponse(
     string? AvatarUrl,
     string Timezone,
     UserPreferencesDto Preferences,
+    bool HasAiProvider,
     DateTimeOffset CreatedAt,
     DateTimeOffset LastLoginAt);
 
