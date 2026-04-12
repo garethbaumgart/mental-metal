@@ -1,5 +1,5 @@
 import { test as baseTest, expect } from '@playwright/test';
-import { test as authTest, testLogin } from './fixtures/auth.fixture';
+import { test as authTest, API_BASE } from './fixtures/auth.fixture';
 
 baseTest.describe('Authentication — Unauthenticated', () => {
   baseTest('Unauthenticated user is redirected to login page', async ({ page }) => {
@@ -17,14 +17,14 @@ baseTest.describe('Authentication — Unauthenticated', () => {
   });
 
   baseTest('Protected API returns 401 without token', async ({ request }) => {
-    const response = await request.get('http://localhost:5002/api/users/me');
+    const response = await request.get(`${API_BASE}/api/users/me`);
     expect(response.status()).toBe(401);
   });
 
   baseTest('Auth refresh endpoint returns 401 without cookie', async ({
     request,
   }) => {
-    const response = await request.post('http://localhost:5002/api/auth/refresh');
+    const response = await request.post(`${API_BASE}/api/auth/refresh`);
     expect(response.status()).toBe(401);
   });
 });
@@ -37,16 +37,19 @@ authTest.describe('Authentication — Login Flow', () => {
     await expect(authenticatedPage).toHaveURL(/\/dashboard/);
   });
 
-  authTest('Authenticated user can access /api/users/me', async ({ authenticatedPage }) => {
-    const response = await authenticatedPage.request.get('http://localhost:5002/api/users/me', {
-      headers: {
-        Authorization: `Bearer ${await authenticatedPage.evaluate(() => localStorage.getItem('access_token'))}`,
-      },
+  authTest('Authenticated user can access /api/users/me', async ({ authenticatedPage, testUser }) => {
+    // Navigate first so localStorage init script runs for app origin
+    await authenticatedPage.goto('/dashboard');
+    await expect(authenticatedPage).toHaveURL(/\/dashboard/);
+
+    const token = await authenticatedPage.evaluate(() => localStorage.getItem('access_token'));
+    const response = await authenticatedPage.request.get(`${API_BASE}/api/users/me`, {
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     expect(response.ok()).toBeTruthy();
     const user = await response.json();
-    expect(user.email).toBe('e2e@test.local');
-    expect(user.name).toBe('E2E Test User');
+    expect(user.email).toBe(testUser.email);
+    expect(user.name).toBe(testUser.name);
   });
 });

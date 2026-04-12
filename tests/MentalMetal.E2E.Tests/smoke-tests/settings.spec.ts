@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures/auth.fixture';
+import { test, expect, API_BASE } from './fixtures/auth.fixture';
 
 test.describe('Settings Page', () => {
   test('Settings page loads with user profile data', async ({ authenticatedPage }) => {
@@ -27,7 +27,7 @@ test.describe('Settings Page', () => {
 
     // Verify the API reflects the change
     const token = await authenticatedPage.evaluate(() => localStorage.getItem('access_token'));
-    const response = await authenticatedPage.request.get('http://localhost:5002/api/users/me', {
+    const response = await authenticatedPage.request.get(`${API_BASE}/api/users/me`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const user = await response.json();
@@ -51,7 +51,7 @@ test.describe('Settings Page', () => {
 
     // Verify the API reflects the change
     const token = await authenticatedPage.evaluate(() => localStorage.getItem('access_token'));
-    const response = await authenticatedPage.request.get('http://localhost:5002/api/users/me', {
+    const response = await authenticatedPage.request.get(`${API_BASE}/api/users/me`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const user = await response.json();
