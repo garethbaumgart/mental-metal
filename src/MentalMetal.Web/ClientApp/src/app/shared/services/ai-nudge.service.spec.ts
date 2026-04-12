@@ -66,6 +66,20 @@ describe('AiNudgeService', () => {
     expect(nudgeService.nudgeState()).toBe('Fresh');
   });
 
+  it('should return isTasteUser=false when taste is disabled', () => {
+    providerService.status.set(makeStatus({
+      tasteBudget: { remaining: 0, dailyLimit: 5, isEnabled: false },
+    }));
+    expect(nudgeService.isTasteUser()).toBe(false);
+  });
+
+  it('should return isTasteUser=true when taste is enabled and not configured', () => {
+    providerService.status.set(makeStatus({
+      tasteBudget: { remaining: 3, dailyLimit: 5, isEnabled: true },
+    }));
+    expect(nudgeService.isTasteUser()).toBe(true);
+  });
+
   it('should dismiss and check dismissal with TTL', () => {
     expect(nudgeService.isDismissed('test')).toBe(false);
     nudgeService.dismiss('test', 7);

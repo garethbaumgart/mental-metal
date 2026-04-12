@@ -8,7 +8,7 @@ import {
   DestroyRef,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Subject, debounceTime, switchMap, takeUntil } from 'rxjs';
+import { Subject, EMPTY, debounceTime, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -51,15 +51,13 @@ import {
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         @for (provider of providers; track provider.name) {
           <p-card
-            [class]="selectedProvider() === provider.name ? 'border-2 border-primary' : 'border border-surface-200'"
-            class="cursor-pointer"
+            [class]="'cursor-pointer ' + (selectedProvider() === provider.name ? 'border-2 border-primary' : 'border border-surface-200')"
             (click)="selectProvider(provider.name)"
           >
             <div class="flex items-center gap-3">
               <p-radioButton
                 [value]="provider.name"
                 [(ngModel)]="selectedProviderModel"
-                (ngModelChange)="selectProvider($event)"
                 name="provider"
               />
               <i [class]="provider.icon + ' text-xl'"></i>
@@ -206,16 +204,17 @@ export class AiProviderSettingsComponent implements OnInit {
         switchMap(() => {
           const provider = this.selectedProvider();
           const model = this.selectedModel;
-          if (!provider || !this.apiKey || this.apiKey.length < 10) {
+          if (!provider || !this.apiKey || this.apiKey.length < 10 || !model) {
+            this.validating.set(false);
             this.validationResult.set(null);
             this.validationMessage.set(null);
-            return [];
+            return EMPTY;
           }
           this.validating.set(true);
           return this.aiProviderService.validate({
             provider,
             apiKey: this.apiKey,
-            model: model || 'default',
+            model,
           });
         }),
         takeUntilDestroyed(this.destroyRef),
@@ -245,6 +244,7 @@ export class AiProviderSettingsComponent implements OnInit {
     this.selectedProviderOption.set(
       this.providers.find((p) => p.name === provider) ?? null,
     );
+    this.selectedModel = '';
     this.loadModels(provider);
     // Reset validation when provider changes
     this.validationResult.set(null);
@@ -329,7 +329,7 @@ export class AiProviderSettingsComponent implements OnInit {
     });
   }
 
-  private loadModels(provider: string): void {
+  private loadModels(provider: AiProviderType): void {
     this.loadingModels.set(true);
     this.aiProviderService.getModels(provider).subscribe({
       next: (response) => {

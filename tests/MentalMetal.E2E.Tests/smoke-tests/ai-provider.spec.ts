@@ -1,5 +1,4 @@
 import { test, expect, API_BASE } from './fixtures/auth.fixture';
-import { test as baseTest } from '@playwright/test';
 
 test.describe('AI Provider Settings', () => {
   test('AI provider section is visible on settings page', async ({ authenticatedPage }) => {
@@ -24,14 +23,17 @@ test.describe('AI Provider Settings', () => {
   });
 });
 
-baseTest.describe('AI Models Endpoint', () => {
-  baseTest('GET /api/ai/models returns model list for valid provider', async ({ request }) => {
-    const response = await request.get(`${API_BASE}/api/ai/models`, {
+test.describe('AI Models Endpoint', () => {
+  test('GET /api/ai/models returns model list for valid provider', async ({ authenticatedPage, testUser }) => {
+    const response = await authenticatedPage.request.get(`${API_BASE}/api/ai/models`, {
       params: { provider: 'Anthropic' },
-      headers: { Authorization: 'Bearer test' },
+      headers: { Authorization: `Bearer ${testUser.accessToken}` },
     });
 
-    // May return 401 (needs real auth) or 200 with models — either confirms the endpoint exists
-    expect([200, 401]).toContain(response.status());
+    expect(response.ok()).toBeTruthy();
+    const body = await response.json();
+    expect(body.provider).toBe('Anthropic');
+    expect(body.models).toBeDefined();
+    expect(body.models.length).toBeGreaterThan(0);
   });
 });

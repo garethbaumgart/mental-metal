@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, output } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { AiNudgeService } from '../services/ai-nudge.service';
 
@@ -7,7 +7,7 @@ import { AiNudgeService } from '../services/ai-nudge.service';
   selector: 'app-ai-nudge-limited',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonModule, RouterLink],
+  imports: [ButtonModule],
   template: `
     @if (visible()) {
       <div class="flex flex-col items-center gap-4 p-6 rounded-lg bg-surface-50 border border-surface-200 text-center">
@@ -16,9 +16,7 @@ import { AiNudgeService } from '../services/ai-nudge.service';
           You've used your {{ dailyLimit() }} free AI operations today
         </p>
         <div class="flex gap-2">
-          <a routerLink="/settings">
-            <p-button label="Set Up AI Provider" />
-          </a>
+          <p-button label="Set Up AI Provider" (onClick)="goToSettings()" />
           <p-button
             label="Continue tomorrow"
             [outlined]="true"
@@ -31,10 +29,15 @@ import { AiNudgeService } from '../services/ai-nudge.service';
 })
 export class AiNudgeLimitedComponent {
   private readonly nudgeService = inject(AiNudgeService);
+  private readonly router = inject(Router);
   readonly dismissed = output<void>();
 
   readonly visible = computed(() => this.nudgeService.nudgeState() === 'Limited');
   readonly dailyLimit = computed(() => this.nudgeService.tasteDailyLimit());
+
+  goToSettings(): void {
+    this.router.navigate(['/settings']);
+  }
 
   continueTomorrow(): void {
     this.dismissed.emit();

@@ -20,8 +20,9 @@ export class AiNudgeService {
   });
 
   readonly isTasteUser = computed(() => {
-    const state = this.nudgeState();
-    return state === 'Fresh' || state === 'Tasting' || state === 'Limited';
+    const status = this.aiProviderService.status();
+    if (!status || status.isConfigured) return false;
+    return status.tasteBudget.isEnabled;
   });
 
   readonly tasteRemaining = computed(() => {
@@ -37,7 +38,7 @@ export class AiNudgeService {
       const raw = localStorage.getItem(DISMISS_PREFIX + nudgeType);
       if (!raw) return false;
       const expiry = parseInt(raw, 10);
-      if (Date.now() > expiry) {
+      if (isNaN(expiry) || Date.now() > expiry) {
         localStorage.removeItem(DISMISS_PREFIX + nudgeType);
         return false;
       }
