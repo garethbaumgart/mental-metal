@@ -1,4 +1,6 @@
-## ADDED Requirements
+# Capture Text
+
+## Requirements
 
 ### Requirement: Create a capture
 
