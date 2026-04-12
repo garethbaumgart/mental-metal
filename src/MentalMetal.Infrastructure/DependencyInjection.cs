@@ -1,4 +1,5 @@
 using MentalMetal.Application.Captures;
+using MentalMetal.Application.Commitments;
 using MentalMetal.Application.Common;
 using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.Common.Auth;
@@ -6,6 +7,7 @@ using MentalMetal.Application.Initiatives;
 using MentalMetal.Application.People;
 using MentalMetal.Application.Users;
 using MentalMetal.Domain.Captures;
+using MentalMetal.Domain.Commitments;
 using MentalMetal.Domain.Initiatives;
 using MentalMetal.Domain.People;
 using MentalMetal.Domain.Users;
@@ -47,6 +49,7 @@ public static class DependencyInjection
         services.AddScoped<IPersonRepository, PersonRepository>();
         services.AddScoped<IInitiativeRepository, InitiativeRepository>();
         services.AddScoped<ICaptureRepository, CaptureRepository>();
+        services.AddScoped<ICommitmentRepository, CommitmentRepository>();
         services.AddScoped<ITokenService, TokenService>();
 
         // AI provider services
@@ -97,6 +100,17 @@ public static class DependencyInjection
         services.AddScoped<CompleteMilestoneHandler>();
         services.AddScoped<LinkPersonHandler>();
         services.AddScoped<UnlinkPersonHandler>();
+
+        // Commitment handlers
+        services.AddScoped<CreateCommitmentHandler>();
+        services.AddScoped<GetCommitmentByIdHandler>();
+        services.AddScoped<GetUserCommitmentsHandler>();
+        services.AddScoped<UpdateCommitmentHandler>();
+        services.AddScoped<CompleteCommitmentHandler>();
+        services.AddScoped<CancelCommitmentHandler>();
+        services.AddScoped<ReopenCommitmentHandler>();
+        services.AddScoped<UpdateCommitmentDueDateHandler>();
+        services.AddScoped<LinkCommitmentToInitiativeHandler>();
 
         // Capture handlers
         services.AddScoped<CreateCaptureHandler>();
