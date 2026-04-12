@@ -1,7 +1,12 @@
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json.Serialization;
 using MentalMetal.Application.Common.Ai;
+using MentalMetal.Application.Initiatives;
+using MentalMetal.Application.People;
 using MentalMetal.Application.Users;
+using MentalMetal.Domain.Initiatives;
+using MentalMetal.Domain.People;
 using MentalMetal.Infrastructure;
 using MentalMetal.Infrastructure.Auth;
 using Microsoft.AspNetCore.Authentication;
@@ -12,6 +17,9 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -281,6 +289,369 @@ app.MapGet("/api/ai/models", (
     catch (ArgumentException)
     {
         return Results.BadRequest(new { error = $"Unsupported provider: {provider}" });
+    }
+}).RequireAuthorization();
+
+// --- People Endpoints ---
+
+app.MapPost("/api/people", async (
+    CreatePersonRequest request,
+    CreatePersonHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(request, cancellationToken);
+        return Results.Created($"/api/people/{response.Id}", response);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapGet("/api/people", async (
+    PersonType? type,
+    bool includeArchived,
+    GetPeopleHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    var list = await handler.HandleAsync(type, includeArchived, cancellationToken);
+    return Results.Ok(list);
+}).RequireAuthorization();
+
+app.MapGet("/api/people/{id:guid}", async (
+    Guid id,
+    GetPersonHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    var response = await handler.HandleAsync(id, cancellationToken);
+    return response is not null ? Results.Ok(response) : Results.NotFound();
+}).RequireAuthorization();
+
+app.MapPut("/api/people/{id:guid}", async (
+    Guid id,
+    UpdatePersonRequest request,
+    UpdatePersonProfileHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("archived"))
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("already exists"))
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPut("/api/people/{id:guid}/type", async (
+    Guid id,
+    ChangeTypeRequest request,
+    ChangePersonTypeHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException)
+    {
+        return Results.NotFound();
+    }
+}).RequireAuthorization();
+
+app.MapPut("/api/people/{id:guid}/career-details", async (
+    Guid id,
+    CareerDetailsRequest request,
+    UpdateCareerDetailsHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException)
+    {
+        return Results.NotFound();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPut("/api/people/{id:guid}/candidate-details", async (
+    Guid id,
+    CandidateDetailsRequest request,
+    UpdateCandidateDetailsHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException)
+    {
+        return Results.NotFound();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/people/{id:guid}/advance-pipeline", async (
+    Guid id,
+    AdvancePipelineRequest request,
+    AdvanceCandidatePipelineHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException)
+    {
+        return Results.NotFound();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/people/{id:guid}/archive", async (
+    Guid id,
+    ArchivePersonHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        await handler.HandleAsync(id, cancellationToken);
+        return Results.NoContent();
+    }
+    catch (InvalidOperationException)
+    {
+        return Results.NotFound();
+    }
+}).RequireAuthorization();
+
+// --- Initiative Endpoints ---
+
+app.MapPost("/api/initiatives", async (
+    CreateInitiativeRequest request,
+    CreateInitiativeHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(request, cancellationToken);
+        return Results.Created($"/api/initiatives/{response.Id}", response);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapGet("/api/initiatives", async (
+    InitiativeStatus? status,
+    GetInitiativesHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    var list = await handler.HandleAsync(status, cancellationToken);
+    return Results.Ok(list);
+}).RequireAuthorization();
+
+app.MapGet("/api/initiatives/{id:guid}", async (
+    Guid id,
+    GetInitiativeHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    var response = await handler.HandleAsync(id, cancellationToken);
+    return response is not null ? Results.Ok(response) : Results.NotFound();
+}).RequireAuthorization();
+
+app.MapPut("/api/initiatives/{id:guid}", async (
+    Guid id,
+    UpdateTitleRequest request,
+    UpdateInitiativeTitleHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPut("/api/initiatives/{id:guid}/status", async (
+    Guid id,
+    ChangeStatusRequest request,
+    ChangeInitiativeStatusHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/initiatives/{id:guid}/milestones", async (
+    Guid id,
+    MilestoneRequest request,
+    AddMilestoneHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPut("/api/initiatives/{id:guid}/milestones/{milestoneId:guid}", async (
+    Guid id,
+    Guid milestoneId,
+    MilestoneRequest request,
+    UpdateMilestoneHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, milestoneId, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapDelete("/api/initiatives/{id:guid}/milestones/{milestoneId:guid}", async (
+    Guid id,
+    Guid milestoneId,
+    RemoveMilestoneHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, milestoneId, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/initiatives/{id:guid}/milestones/{milestoneId:guid}/complete", async (
+    Guid id,
+    Guid milestoneId,
+    CompleteMilestoneHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, milestoneId, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/initiatives/{id:guid}/link-person", async (
+    Guid id,
+    LinkPersonRequest request,
+    LinkPersonHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapDelete("/api/initiatives/{id:guid}/link-person/{personId:guid}", async (
+    Guid id,
+    Guid personId,
+    UnlinkPersonHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, personId, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
     }
 }).RequireAuthorization();
 
