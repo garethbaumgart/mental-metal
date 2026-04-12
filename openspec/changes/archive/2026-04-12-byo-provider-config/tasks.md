@@ -41,47 +41,47 @@
 
 ## 6. Infrastructure — Encryption
 
-- [x] 6.1 Create `AesApiKeyEncryptionService` implementing `IApiKeyEncryptionService` (AES-256-GCM, Base64 nonce:ciphertext:tag format)
-- [x] 6.2 Add `AiProviderSettings` options class with EncryptionKey, TasteKey config, and per-provider model config (DefaultModel, FallbackModels)
-- [x] 6.3 Add startup validation — fail fast if `AiProvider:EncryptionKey` is missing (taste key is optional — disabled if not set)
-- [x] 6.4 Register encryption service in DI
+- [ ] 6.1 Create `AesApiKeyEncryptionService` implementing `IApiKeyEncryptionService` (AES-256-GCM, Base64 nonce:ciphertext:tag format)
+- [ ] 6.2 Add `AiProviderSettings` options class with EncryptionKey, TasteKey config, and per-provider model config (DefaultModel, FallbackModels)
+- [ ] 6.3 Add startup validation — fail fast if `AiProvider:EncryptionKey` is missing (taste key is optional — disabled if not set)
+- [ ] 6.4 Register encryption service in DI
 
 ## 7. Infrastructure — Provider Adapters and Completion Service
 
-- [x] 7.1 Add NuGet packages: Anthropic SDK, OpenAI SDK
-- [x] 7.2 Create internal `IAiProviderAdapter` interface (CompleteAsync with decrypted key, model, request)
-- [x] 7.3 Implement `AnthropicAdapter` using Anthropic .NET SDK
-- [x] 7.4 Implement `OpenAiAdapter` using OpenAI .NET SDK
-- [x] 7.5 Implement `GoogleAdapter` using HttpClient with Gemini REST API
-- [x] 7.6 Create `AiCompletionService` implementing `IAiCompletionService` — resolves current user's config or taste key, decrypts key, dispatches to correct adapter, implements model fallback chain (retry on model-not-found only)
-- [x] 7.7 Register AI services in DI
+- [ ] 7.1 Add NuGet packages: Anthropic SDK, OpenAI SDK
+- [ ] 7.2 Create internal `IAiProviderAdapter` interface (CompleteAsync with decrypted key, model, request)
+- [ ] 7.3 Implement `AnthropicAdapter` using Anthropic .NET SDK
+- [ ] 7.4 Implement `OpenAiAdapter` using OpenAI .NET SDK
+- [ ] 7.5 Implement `GoogleAdapter` using HttpClient with Gemini REST API
+- [ ] 7.6 Create `AiCompletionService` implementing `IAiCompletionService` — resolves current user's config or taste key, decrypts key, dispatches to correct adapter, implements model fallback chain (retry on model-not-found only)
+- [ ] 7.7 Register AI services in DI
 
 ## 8. Infrastructure — Taste Budget Tracking
 
-- [x] 8.1 Create `AiTasteBudget` entity (UserId, Date, OperationsUsed) — infrastructure concern, not a domain entity
-- [x] 8.2 Create `AiTasteBudgetConfiguration` EF Core config
-- [x] 8.3 Create `ITasteBudgetService` interface and implementation — check/decrement budget, per-user per-day
-- [x] 8.4 Register taste budget service in DI
+- [ ] 8.1 Create `AiTasteBudget` entity (UserId, Date, OperationsUsed) — infrastructure concern, not a domain entity
+- [ ] 8.2 Create `AiTasteBudgetConfiguration` EF Core config
+- [ ] 8.3 Create `ITasteBudgetService` interface and implementation — check/decrement budget, per-user per-day
+- [ ] 8.4 Register taste budget service in DI
 
 ## 9. Infrastructure — Persistence
 
-- [x] 9.1 Add `AiProviderConfig` owned entity configuration to `UserConfiguration` (OwnsOne with encrypted key column)
-- [x] 9.2 Create EF Core migration for AiProviderConfig columns on Users table and AiTasteBudgets table
-- [x] 9.3 Add `hasAiProvider` to `GetCurrentUser` response DTO
+- [ ] 9.1 Add `AiProviderConfig` owned entity configuration to `UserConfiguration` (OwnsOne with encrypted key column)
+- [ ] 9.2 Create EF Core migration for AiProviderConfig columns on Users table and AiTasteBudgets table
+- [ ] 9.3 Add `hasAiProvider` to `GetCurrentUser` response DTO
 
 ## 10. Web Layer — API Endpoints
 
-- [x] 10.1 Map `PUT /api/users/me/ai-provider` — configure provider (encrypt key, save)
-- [x] 10.2 Map `GET /api/users/me/ai-provider` — get provider status and taste budget
-- [x] 10.3 Map `POST /api/users/me/ai-provider/validate` — validate key/model via test completion
-- [x] 10.4 Map `DELETE /api/users/me/ai-provider` — remove provider config
-- [x] 10.5 Map `GET /api/ai/models?provider={provider}` — list available models from config
-- [x] 10.6 Register new application handlers in DI
+- [ ] 10.1 Map `PUT /api/users/me/ai-provider` — configure provider (encrypt key, save)
+- [ ] 10.2 Map `GET /api/users/me/ai-provider` — get provider status and taste budget
+- [ ] 10.3 Map `POST /api/users/me/ai-provider/validate` — validate key/model via test completion
+- [ ] 10.4 Map `DELETE /api/users/me/ai-provider` — remove provider config
+- [ ] 10.5 Map `GET /api/ai/models?provider={provider}` — list available models from config
+- [ ] 10.6 Register new application handlers in DI
 
 ## 11. Configuration and Documentation
 
-- [x] 11.1 Add AI provider configuration section to `appsettings.json` (encryption key, taste key, per-provider model defaults and fallbacks)
-- [x] 11.2 Add AI provider configuration section to `appsettings.Development.json` with development defaults
+- [ ] 11.1 Add AI provider configuration section to `appsettings.json` (encryption key, taste key, per-provider model defaults and fallbacks)
+- [ ] 11.2 Add AI provider configuration section to `appsettings.Development.json` with development defaults
 - [ ] 11.3 Document AI provider configuration in README (encryption key, taste key setup, model config, environment variables)
 
 ## 12. Frontend — AI Provider Settings

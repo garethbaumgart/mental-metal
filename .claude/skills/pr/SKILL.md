@@ -168,50 +168,47 @@ If CI fails:
    ```
 3. Diagnose and fix the issue
 4. Re-run Step 2 (tests) locally before pushing
-5. Push fixes — this counts as a new push, so **reset the monitoring loop** (go to Step 5a with a fresh 20-minute budget)
+5. Push fixes and restart the monitoring loop
 
 ### 5b. Monitor for Reviews
 
-Poll for reviewer comments every 2 minutes, for up to 10 cycles (20 minutes total). Check for **both** new comments **and** unresolved review threads:
+Poll for reviewer comments every 2 minutes. You must complete **5 consecutive clean cycles** (no new actionable comments) before declaring the PR ready. Each cycle runs all three commands below and compares the results against the previous cycle:
 
 ```bash
-# Inline review comments
 gh api repos/{owner}/{repo}/pulls/$PR_NUMBER/comments --jq '.[] | "[\(.user.login)] \(.path) L\(.line // "?"): \(.body[0:300])"'
-# Review summaries
 gh api repos/{owner}/{repo}/pulls/$PR_NUMBER/reviews --jq '.[] | "[\(.user.login)] \(.state): \(.body[0:300])"'
-# Issue-level comments
 gh api repos/{owner}/{repo}/issues/$PR_NUMBER/comments --jq '.[] | "[\(.user.login)] \(.body[0:300])"'
-# Unresolved threads (the authoritative signal for "are we done?")
-gh api graphql -f query='{ repository(owner: "{owner}", name: "{repo}") { pullRequest(number: '$PR_NUMBER') { reviewThreads(first: 50) { nodes { isResolved } } } } }' --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length'
 ```
 
-**The loop is not done until ALL of these are true:**
-1. CI checks are passing (not pending, not failed)
-2. Zero unresolved review threads
-3. No new reviews have arrived in the last polling cycle
+**Clean cycle rules:**
 
-If all three conditions are met for two consecutive cycles, proceed. Otherwise keep polling.
+- **Actionable** means any comment requiring a code/content change OR a reply — this includes nitpicks and trivial suggestions (per Step 5c)
+- A cycle is **clean** if no new actionable review comments appeared since the previous cycle
+- If a new actionable comment appears, address it (Step 5c), push fixes (Step 5d), and **reset the counter to 0**
+- Only after 5 consecutive clean cycles may you report the PR as ready to merge
+- Track and report the cycle count to the user (e.g., "Clean cycle 3/5, no new comments")
+- **Docs-only PRs** are exempt from the 5-cycle requirement (see Step 6 stop conditions)
 
 ### 5c. Address Review Comments
 
-For each review comment:
+For each review comment — **including nitpicks and trivial suggestions**:
 
 1. Read the full comment to understand the feedback
 2. Evaluate whether the feedback is valid and actionable
-3. If valid: make the code change
+3. If valid (including nitpicks): make the code change — nitpicks are low-effort fixes that improve code quality; always address them
 4. If by-design or out-of-scope: reply with a clear explanation of why
-5. React with 👀 on the comment and resolve the thread after addressing it
+5. React with 👀 on each comment as you address it
 
 **Batch fixes:** Collect all comments from a review round, fix them all, then commit and push once. Each push triggers new review cycles from bots.
 
-### 5d. Push Fixes and Re-Monitor — **RESET THE LOOP**
+### 5d. Push Fixes and Re-Monitor
 
 After addressing all comments:
 
 1. Re-run Step 2 (tests)
 2. Commit all fixes in a single commit with a message like: "Address review feedback: <summary>"
 3. Push to the remote branch
-4. **IMPORTANT: Every push triggers new bot review cycles.** Reset the monitoring loop timer to zero and restart from Step 5a with a fresh 20-minute budget. Do NOT carry over time from the previous loop — the push invalidates all prior "all clear" signals
+4. Restart the review monitoring loop from Step 5a — wait for reviewers to review the latest commit
 
 ---
 
@@ -239,5 +236,4 @@ The review loop stops when one of these conditions is met:
 | PR already exists for branch | Update the existing PR body instead of creating a duplicate. |
 | No OpenSpec spec found | Omit the Spec line from the PR body. Proceed normally. |
 | CI fails after PR creation | Read logs, fix issues, push fixes, re-monitor. |
-| Review polling timeout (20 min) | If CI is passing, zero unresolved threads, and no new reviews arrived in the last cycle — for 2 consecutive cycles — proceed. Otherwise ask the user whether to keep waiting. |
-| Push after fixing review comments | **Reset the 20-minute monitoring loop to zero.** Every push triggers new bot reviews — prior "all clear" signals are invalid. |
+| Review polling incomplete (< 5 clean cycles) | Do not declare the PR ready. Continue polling or ask the user whether to keep waiting. |
