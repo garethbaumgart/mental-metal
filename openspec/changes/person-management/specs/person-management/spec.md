@@ -83,8 +83,8 @@ The system SHALL allow an authenticated user to update a person's profile fields
 
 #### Scenario: Full replacement update
 
-- **WHEN** an authenticated user sends a PUT with only name and team (other fields null)
-- **THEN** the system replaces all profile fields with the submitted values — null fields are cleared
+- **WHEN** an authenticated user sends a PUT with name and team provided but email, role, and notes set to null
+- **THEN** the system replaces all profile fields with the submitted values — explicit null clears the field (PUT full-replacement semantics, not PATCH)
 
 #### Scenario: Update with duplicate name rejected
 
@@ -118,7 +118,7 @@ The system SHALL allow an authenticated user to change a person's type. When cha
 #### Scenario: Same type is no-op
 
 - **WHEN** an authenticated user sends a PUT to change type to the person's current type
-- **THEN** the system returns the person unchanged with HTTP 200
+- **THEN** the system returns the person unchanged with HTTP 200 and does not raise a domain event
 
 ### Requirement: Update career details for direct reports
 

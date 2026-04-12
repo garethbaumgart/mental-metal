@@ -108,7 +108,7 @@ The system SHALL enforce the initiative status state machine. Valid transitions:
 #### Scenario: Same status is no-op
 
 - **WHEN** an authenticated user sends a PUT to change status to the initiative's current status
-- **THEN** the system returns the initiative unchanged with HTTP 200
+- **THEN** the system returns the initiative unchanged with HTTP 200 and does not raise a domain event
 
 ### Requirement: Manage milestones
 
@@ -171,7 +171,7 @@ The system SHALL allow an authenticated user to link and unlink people to/from a
 #### Scenario: Link non-existent person rejected
 
 - **WHEN** an authenticated user sends a POST to link a personId that does not exist or belongs to another user
-- **THEN** the system returns HTTP 400 indicating the person was not found
+- **THEN** the system returns HTTP 404 indicating the person was not found (consistent anti-enumeration: cross-tenant IDs appear as non-existent)
 
 ### Requirement: Multi-tenant initiative isolation
 
