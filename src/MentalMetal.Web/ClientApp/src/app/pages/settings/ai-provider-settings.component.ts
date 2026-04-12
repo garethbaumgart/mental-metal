@@ -259,7 +259,7 @@ export class AiProviderSettingsComponent implements OnInit {
     const provider = this.selectedProvider();
     const hasModel = !!this.selectedModel;
     const status = this.aiProviderService.status();
-    const sameProvider = status?.isConfigured && status.provider === provider;
+    const sameProvider = !!(status?.isConfigured && status.provider === provider);
     const hasKey = !!this.apiKey || sameProvider;
     return !!provider && hasModel && hasKey;
   }
