@@ -1,10 +1,12 @@
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
+using MentalMetal.Application.Captures;
 using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.Initiatives;
 using MentalMetal.Application.People;
 using MentalMetal.Application.Users;
+using MentalMetal.Domain.Captures;
 using MentalMetal.Domain.Initiatives;
 using MentalMetal.Domain.People;
 using MentalMetal.Infrastructure;
@@ -603,7 +605,7 @@ app.MapPost("/api/initiatives/{id:guid}/milestones/{milestoneId:guid}/complete",
 
 app.MapPost("/api/initiatives/{id:guid}/link-person", async (
     Guid id,
-    LinkPersonRequest request,
+    MentalMetal.Application.Initiatives.LinkPersonRequest request,
     LinkPersonHandler handler,
     CancellationToken cancellationToken) =>
 {
@@ -640,6 +642,128 @@ app.MapDelete("/api/initiatives/{id:guid}/link-person/{personId:guid}", async (
     catch (ArgumentException ex)
     {
         return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+// --- Capture Endpoints ---
+
+app.MapPost("/api/captures", async (
+    CreateCaptureRequest request,
+    CreateCaptureHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(request, cancellationToken);
+        return Results.Created($"/api/captures/{response.Id}", response);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapGet("/api/captures", async (
+    CaptureType? type,
+    ProcessingStatus? status,
+    GetUserCapturesHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    var list = await handler.HandleAsync(type, status, cancellationToken);
+    return Results.Ok(list);
+}).RequireAuthorization();
+
+app.MapGet("/api/captures/{id:guid}", async (
+    Guid id,
+    GetCaptureByIdHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    var response = await handler.HandleAsync(id, cancellationToken);
+    return response is not null ? Results.Ok(response) : Results.NotFound();
+}).RequireAuthorization();
+
+app.MapPut("/api/captures/{id:guid}", async (
+    Guid id,
+    UpdateCaptureMetadataRequest request,
+    UpdateCaptureMetadataHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/captures/{id:guid}/link-person", async (
+    Guid id,
+    MentalMetal.Application.Captures.LinkPersonRequest request,
+    LinkCaptureToPersonHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/captures/{id:guid}/link-initiative", async (
+    Guid id,
+    LinkInitiativeRequest request,
+    LinkCaptureToInitiativeHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/captures/{id:guid}/unlink-person", async (
+    Guid id,
+    MentalMetal.Application.Captures.LinkPersonRequest request,
+    UnlinkCaptureFromPersonHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/captures/{id:guid}/unlink-initiative", async (
+    Guid id,
+    LinkInitiativeRequest request,
+    UnlinkCaptureFromInitiativeHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
     }
 }).RequireAuthorization();
 

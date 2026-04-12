@@ -1,9 +1,11 @@
+using MentalMetal.Application.Captures;
 using MentalMetal.Application.Common;
 using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.Common.Auth;
 using MentalMetal.Application.Initiatives;
 using MentalMetal.Application.People;
 using MentalMetal.Application.Users;
+using MentalMetal.Domain.Captures;
 using MentalMetal.Domain.Initiatives;
 using MentalMetal.Domain.People;
 using MentalMetal.Domain.Users;
@@ -44,6 +46,7 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPersonRepository, PersonRepository>();
         services.AddScoped<IInitiativeRepository, InitiativeRepository>();
+        services.AddScoped<ICaptureRepository, CaptureRepository>();
         services.AddScoped<ITokenService, TokenService>();
 
         // AI provider services
@@ -94,6 +97,16 @@ public static class DependencyInjection
         services.AddScoped<CompleteMilestoneHandler>();
         services.AddScoped<LinkPersonHandler>();
         services.AddScoped<UnlinkPersonHandler>();
+
+        // Capture handlers
+        services.AddScoped<CreateCaptureHandler>();
+        services.AddScoped<GetCaptureByIdHandler>();
+        services.AddScoped<GetUserCapturesHandler>();
+        services.AddScoped<UpdateCaptureMetadataHandler>();
+        services.AddScoped<LinkCaptureToPersonHandler>();
+        services.AddScoped<LinkCaptureToInitiativeHandler>();
+        services.AddScoped<UnlinkCaptureFromPersonHandler>();
+        services.AddScoped<UnlinkCaptureFromInitiativeHandler>();
 
         return services;
     }
