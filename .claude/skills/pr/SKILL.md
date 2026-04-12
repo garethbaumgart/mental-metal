@@ -181,10 +181,13 @@ gh api repos/{owner}/{repo}/issues/$PR_NUMBER/comments --jq '.[] | "[\(.user.log
 ```
 
 **Clean cycle rules:**
+
+- **Actionable** means any comment requiring a code/content change OR a reply — this includes nitpicks and trivial suggestions (per Step 5c)
 - A cycle is **clean** if no new actionable review comments appeared since the previous cycle
 - If a new actionable comment appears, address it (Step 5c), push fixes (Step 5d), and **reset the counter to 0**
 - Only after 5 consecutive clean cycles may you report the PR as ready to merge
 - Track and report the cycle count to the user (e.g., "Clean cycle 3/5, no new comments")
+- **Docs-only PRs** are exempt from the 5-cycle requirement (see Step 6 stop conditions)
 
 ### 5c. Address Review Comments
 

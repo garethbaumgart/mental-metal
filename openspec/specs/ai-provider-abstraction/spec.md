@@ -32,7 +32,7 @@ The User aggregate SHALL expose a `ConfigureAiProvider(provider, encryptedApiKey
 - **THEN** the user's AiProviderConfig is replaced with the new config
 - **AND** an `AiProviderConfigured` event is raised
 
-#### Scenario: Invalid provider rejected
+#### Scenario: Empty API key rejected
 - **WHEN** ConfigureAiProvider is called with an empty API key
 - **THEN** an ArgumentException is thrown
 
@@ -56,7 +56,7 @@ The User aggregate SHALL expose a `RemoveAiProvider()` action that clears `AiPro
 
 ### Requirement: API key encryption at rest
 
-The system SHALL encrypt API keys using AES-256-GCM before storing them in the database. The encryption key SHALL be configurable via application settings (`AiProvider:EncryptionKey`). The stored format SHALL be Base64-encoded `nonce:ciphertext:tag`.
+The system SHALL encrypt API keys using AES-256-GCM before storing them in the database. The encryption key SHALL be configurable via application settings (`AiProvider:EncryptionKey`). The stored format SHALL be three Base64-encoded components joined by `:` delimiters: `base64(nonce):base64(ciphertext):base64(tag)`.
 
 #### Scenario: API key is encrypted before storage
 - **WHEN** a user configures an AI provider with a plaintext API key
