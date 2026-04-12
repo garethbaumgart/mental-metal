@@ -4,11 +4,13 @@ using System.Text.Json.Serialization;
 using MentalMetal.Application.Captures;
 using MentalMetal.Application.Commitments;
 using MentalMetal.Application.Common.Ai;
+using MentalMetal.Application.Delegations;
 using MentalMetal.Application.Initiatives;
 using MentalMetal.Application.People;
 using MentalMetal.Application.Users;
 using MentalMetal.Domain.Captures;
 using MentalMetal.Domain.Commitments;
+using MentalMetal.Domain.Delegations;
 using MentalMetal.Domain.Initiatives;
 using MentalMetal.Domain.People;
 using MentalMetal.Infrastructure;
@@ -935,6 +937,224 @@ app.MapPost("/api/commitments/{id:guid}/link-initiative", async (
     catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
     {
         return Results.NotFound();
+    }
+}).RequireAuthorization();
+
+// --- Delegation Endpoints ---
+
+app.MapPost("/api/delegations", async (
+    CreateDelegationRequest request,
+    CreateDelegationHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(request, cancellationToken);
+        return Results.Created($"/api/delegations/{response.Id}", response);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapGet("/api/delegations", async (
+    DelegationStatus? status,
+    Priority? priority,
+    Guid? delegatePersonId,
+    Guid? initiativeId,
+    GetUserDelegationsHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    var list = await handler.HandleAsync(status, priority, delegatePersonId, initiativeId, cancellationToken);
+    return Results.Ok(list);
+}).RequireAuthorization();
+
+app.MapGet("/api/delegations/{id:guid}", async (
+    Guid id,
+    GetDelegationByIdHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    var response = await handler.HandleAsync(id, cancellationToken);
+    return response is not null ? Results.Ok(response) : Results.NotFound();
+}).RequireAuthorization();
+
+app.MapPut("/api/delegations/{id:guid}", async (
+    Guid id,
+    UpdateDelegationRequest request,
+    UpdateDelegationHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/delegations/{id:guid}/start", async (
+    Guid id,
+    StartDelegationHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("Cannot"))
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/delegations/{id:guid}/complete", async (
+    Guid id,
+    CompleteDelegationRequest request,
+    CompleteDelegationHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("Cannot"))
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/delegations/{id:guid}/block", async (
+    Guid id,
+    BlockDelegationRequest request,
+    BlockDelegationHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("Cannot"))
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/delegations/{id:guid}/unblock", async (
+    Guid id,
+    UnblockDelegationHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("Cannot"))
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/delegations/{id:guid}/follow-up", async (
+    Guid id,
+    FollowUpDelegationRequest request,
+    RecordDelegationFollowUpHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+}).RequireAuthorization();
+
+app.MapPut("/api/delegations/{id:guid}/due-date", async (
+    Guid id,
+    UpdateDelegationDueDateRequest request,
+    UpdateDelegationDueDateHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+}).RequireAuthorization();
+
+app.MapPut("/api/delegations/{id:guid}/priority", async (
+    Guid id,
+    ReprioritizeDelegationRequest request,
+    ReprioritizeDelegationHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/delegations/{id:guid}/reassign", async (
+    Guid id,
+    ReassignDelegationRequest request,
+    ReassignDelegationHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
     }
 }).RequireAuthorization();
 
