@@ -112,7 +112,7 @@ The system SHALL enforce the initiative status state machine. Valid transitions:
 
 ### Requirement: Manage milestones
 
-The system SHALL allow an authenticated user to add, update, remove, and complete milestones on an initiative. Milestones have a title (required), target date (required), and optional description. The system SHALL reject milestone operations on terminal initiatives. The system SHALL raise a `MilestoneSet` domain event on add/update and a `MilestoneCompleted` domain event on completion.
+The system SHALL allow an authenticated user to add, update, remove, and complete milestones on an initiative. Milestones have a title (required), target date (required, ISO-8601 date format `YYYY-MM-DD`), and optional description. The system SHALL reject milestone operations on terminal initiatives. The system SHALL raise a `MilestoneSet` domain event on add/update and a `MilestoneCompleted` domain event on completion.
 
 #### Scenario: Add a milestone
 
@@ -175,7 +175,7 @@ The system SHALL allow an authenticated user to link and unlink people to/from a
 
 ### Requirement: Multi-tenant initiative isolation
 
-All initiative data SHALL be automatically scoped to the authenticated user's UserId via EF Core global query filters. A user SHALL NOT be able to access, modify, or list another user's initiatives.
+All initiative data SHALL be automatically scoped to the authenticated user's UserId. A user SHALL NOT be able to access, modify, or list another user's initiatives.
 
 #### Scenario: Cross-tenant access prevented
 

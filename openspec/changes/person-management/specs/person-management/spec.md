@@ -81,10 +81,10 @@ The system SHALL allow an authenticated user to update a person's profile fields
 - **WHEN** an authenticated user sends a PUT to `/api/people/{id}` with updated name, email, role, team, and notes
 - **THEN** the system updates the person, sets UpdatedAt, and returns the updated person
 
-#### Scenario: Partial update
+#### Scenario: Full replacement update
 
 - **WHEN** an authenticated user sends a PUT with only name and team (other fields null)
-- **THEN** the system updates the provided fields and clears the null fields (full replacement semantics)
+- **THEN** the system replaces all profile fields with the submitted values — null fields are cleared
 
 #### Scenario: Update with duplicate name rejected
 
@@ -154,7 +154,7 @@ The system SHALL allow an authenticated user to advance a candidate's pipeline s
 
 #### Scenario: Advance from New to Screening
 
-- **WHEN** an authenticated user sends a POST to `/api/people/{id}/advance-pipeline` with status "Screening" for a Candidate with status "New"
+- **WHEN** an authenticated user sends a POST to `/api/people/{id}/advance-pipeline` with newStatus "Screening" for a Candidate with pipelineStatus "New"
 - **THEN** the system updates PipelineStatus to Screening and returns the updated person
 
 #### Scenario: Advance through full pipeline
@@ -164,12 +164,12 @@ The system SHALL allow an authenticated user to advance a candidate's pipeline s
 
 #### Scenario: Reject from any active state
 
-- **WHEN** an authenticated user sends a POST to `/api/people/{id}/advance-pipeline` with status "Rejected" for a Candidate in any non-terminal state
+- **WHEN** an authenticated user sends a POST to `/api/people/{id}/advance-pipeline` with newStatus "Rejected" for a Candidate in any non-terminal state
 - **THEN** the system updates PipelineStatus to Rejected
 
 #### Scenario: Withdraw from any active state
 
-- **WHEN** an authenticated user sends a POST to `/api/people/{id}/advance-pipeline` with status "Withdrawn" for a Candidate in any non-terminal state
+- **WHEN** an authenticated user sends a POST to `/api/people/{id}/advance-pipeline` with newStatus "Withdrawn" for a Candidate in any non-terminal state
 - **THEN** the system updates PipelineStatus to Withdrawn
 
 #### Scenario: Invalid transition rejected
@@ -203,7 +203,7 @@ The system SHALL allow an authenticated user to archive a person via soft-delete
 
 ### Requirement: Multi-tenant person isolation
 
-All person data SHALL be automatically scoped to the authenticated user's UserId via EF Core global query filters. A user SHALL NOT be able to access, modify, or list another user's people.
+All person data SHALL be automatically scoped to the authenticated user's UserId. A user SHALL NOT be able to access, modify, or list another user's people.
 
 #### Scenario: Cross-tenant access prevented
 
