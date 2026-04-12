@@ -55,9 +55,12 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+// Trust X-Forwarded-Proto from Cloud Run's load balancer (not in localhost range)
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+    KnownNetworks = { },
+    KnownProxies = { }
 });
 
 app.UseStaticFiles();
