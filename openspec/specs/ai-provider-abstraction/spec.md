@@ -234,7 +234,7 @@ The system SHALL display a subtle counter showing remaining taste operations in 
 
 ### Requirement: API key validation endpoint
 
-The system SHALL expose a `POST /api/users/me/ai-provider/validate` endpoint that sends a minimal completion request to verify the API key and model work. The endpoint SHALL accept provider, API key, and model as input (not requiring the config to be saved first).
+The system SHALL expose a `POST /api/users/me/ai-provider/validate` endpoint that sends a minimal completion request to verify the API key and model work. The endpoint SHALL require authentication, SHALL be rate-limited to prevent abuse, and SHALL ensure API keys are never logged or included in telemetry. The endpoint SHALL accept provider, API key, and model as input (not requiring the config to be saved first).
 
 #### Scenario: Valid API key
 - **WHEN** a user submits a valid provider, API key, and model for validation
@@ -253,7 +253,7 @@ The system SHALL expose a `POST /api/users/me/ai-provider/validate` endpoint tha
 
 ### Requirement: Configure AI provider API endpoint
 
-The system SHALL expose `PUT /api/users/me/ai-provider` to configure the user's AI provider. The request body SHALL include provider (string), apiKey (plaintext string), model (string), and maxTokens (int?, optional). The endpoint SHALL encrypt the API key before passing to the domain.
+The system SHALL expose `PUT /api/users/me/ai-provider` to configure the user's AI provider. The request body SHALL include provider (string), apiKey (plaintext string, optional — omit to keep existing key), model (string), and maxTokens (int?, optional). When apiKey is omitted and the user has an existing config, the system SHALL retain the existing encrypted key and update only the other fields. The endpoint SHALL encrypt the API key before passing to the domain.
 
 #### Scenario: Successful configuration
 - **WHEN** an authenticated user sends a PUT with provider="Anthropic", apiKey="sk-ant-...", model="claude-sonnet-4-20250514"
