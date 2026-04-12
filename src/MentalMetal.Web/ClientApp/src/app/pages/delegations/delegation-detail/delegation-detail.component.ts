@@ -134,12 +134,12 @@ import { DelegationDialogComponent } from '../delegation-dialog/delegation-dialo
       >
         <div class="flex flex-col gap-4 pt-4">
           <label for="blockReason" class="text-sm font-medium text-muted-color">Reason *</label>
-          <textarea pTextarea id="blockReason" [(ngModel)]="blockReason" [rows]="3" class="w-full" placeholder="Why is this blocked?"></textarea>
+          <textarea pTextarea id="blockReason" [ngModel]="blockReason()" (ngModelChange)="blockReason.set($event)" [rows]="3" class="w-full" placeholder="Why is this blocked?"></textarea>
         </div>
         <ng-template #footer>
           <div class="flex justify-end gap-2">
             <p-button label="Cancel" severity="secondary" (onClick)="showBlockDialog.set(false)" />
-            <p-button label="Block" icon="pi pi-ban" severity="warn" (onClick)="onBlock()" [disabled]="!blockReason.trim()" />
+            <p-button label="Block" icon="pi pi-ban" severity="warn" (onClick)="onBlock()" [disabled]="!blockReason().trim()" />
           </div>
         </ng-template>
       </p-dialog>
@@ -154,7 +154,7 @@ import { DelegationDialogComponent } from '../delegation-dialog/delegation-dialo
       >
         <div class="flex flex-col gap-4 pt-4">
           <label for="followUpNotes" class="text-sm font-medium text-muted-color">Notes (optional)</label>
-          <textarea pTextarea id="followUpNotes" [(ngModel)]="followUpNotes" [rows]="3" class="w-full" placeholder="Follow-up notes..."></textarea>
+          <textarea pTextarea id="followUpNotes" [ngModel]="followUpNotes()" (ngModelChange)="followUpNotes.set($event)" [rows]="3" class="w-full" placeholder="Follow-up notes..."></textarea>
         </div>
         <ng-template #footer>
           <div class="flex justify-end gap-2">
@@ -182,8 +182,8 @@ export class DelegationDetailComponent implements OnInit {
   readonly personName = signal('Loading...');
   readonly initiativeName = signal('');
 
-  protected blockReason = '';
-  protected followUpNotes = '';
+  readonly blockReason = signal('');
+  readonly followUpNotes = signal('');
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -234,12 +234,12 @@ export class DelegationDetailComponent implements OnInit {
 
   protected onBlock(): void {
     const d = this.delegation();
-    if (!d || !this.blockReason.trim()) return;
-    this.delegationsService.block(d.id, { reason: this.blockReason.trim() }).subscribe({
+    if (!d || !this.blockReason().trim()) return;
+    this.delegationsService.block(d.id, { reason: this.blockReason().trim() }).subscribe({
       next: (updated) => {
         this.delegation.set(updated);
         this.showBlockDialog.set(false);
-        this.blockReason = '';
+        this.blockReason.set('');
         this.messageService.add({ severity: 'success', summary: 'Delegation blocked' });
       },
       error: () => this.messageService.add({ severity: 'error', summary: 'Failed to block' }),
@@ -262,12 +262,12 @@ export class DelegationDetailComponent implements OnInit {
     const d = this.delegation();
     if (!d) return;
     this.delegationsService.followUp(d.id, {
-      notes: this.followUpNotes.trim() || undefined,
+      notes: this.followUpNotes().trim() || undefined,
     }).subscribe({
       next: (updated) => {
         this.delegation.set(updated);
         this.showFollowUpDialog.set(false);
-        this.followUpNotes = '';
+        this.followUpNotes.set('');
         this.messageService.add({ severity: 'success', summary: 'Follow-up recorded' });
       },
       error: () => this.messageService.add({ severity: 'error', summary: 'Failed to record follow-up' }),

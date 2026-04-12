@@ -32,7 +32,10 @@ public sealed class DelegationRepository(MentalMetalDbContext dbContext) : IDele
             query = query.Where(d => d.InitiativeId == initiativeIdFilter.Value);
 
         return await query
-            .OrderByDescending(d => d.Priority)
+            .OrderByDescending(d =>
+                d.Priority == Priority.Urgent ? 3 :
+                d.Priority == Priority.High ? 2 :
+                d.Priority == Priority.Medium ? 1 : 0)
             .ThenBy(d => d.DueDate == null ? 1 : 0)
             .ThenBy(d => d.DueDate)
             .ThenByDescending(d => d.CreatedAt)

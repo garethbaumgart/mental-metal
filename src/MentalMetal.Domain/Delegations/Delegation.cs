@@ -128,6 +128,9 @@ public sealed class Delegation : AggregateRoot, IUserScoped
 
     public void UpdateDueDate(DateOnly? newDate)
     {
+        if (DueDate == newDate)
+            return; // idempotent
+
         DueDate = newDate;
         UpdatedAt = DateTimeOffset.UtcNow;
 
@@ -136,6 +139,9 @@ public sealed class Delegation : AggregateRoot, IUserScoped
 
     public void Reprioritize(Priority newPriority)
     {
+        if (Priority == newPriority)
+            return; // idempotent
+
         Priority = newPriority;
         UpdatedAt = DateTimeOffset.UtcNow;
 

@@ -31,16 +31,16 @@ import { DelegationDialogComponent } from '../delegation-dialog/delegation-dialo
       <div class="flex items-center gap-4 flex-wrap">
         <p-select
           [options]="statusFilterOptions"
-          [(ngModel)]="selectedStatus"
-          (ngModelChange)="onFilterChange()"
+          [ngModel]="selectedStatus()"
+          (ngModelChange)="selectedStatus.set($event); onFilterChange()"
           placeholder="All Statuses"
           [showClear]="true"
           class="w-48"
         />
         <p-select
           [options]="priorityFilterOptions"
-          [(ngModel)]="selectedPriority"
-          (ngModelChange)="onFilterChange()"
+          [ngModel]="selectedPriority()"
+          (ngModelChange)="selectedPriority.set($event); onFilterChange()"
           placeholder="All Priorities"
           [showClear]="true"
           class="w-48"
@@ -145,8 +145,8 @@ export class DelegationsListComponent implements OnInit {
   readonly showCreateDialog = signal(false);
   private readonly peopleMap = signal<Map<string, string>>(new Map());
 
-  protected selectedStatus: DelegationStatus | null = null;
-  protected selectedPriority: DelegationPriority | null = null;
+  readonly selectedStatus = signal<DelegationStatus | null>(null);
+  readonly selectedPriority = signal<DelegationPriority | null>(null);
 
   protected readonly statusFilterOptions = [
     { label: 'Assigned', value: 'Assigned' as DelegationStatus },
@@ -253,14 +253,17 @@ export class DelegationsListComponent implements OnInit {
   private loadDelegations(): void {
     this.loading.set(true);
     this.delegationsService.list(
-      this.selectedStatus ?? undefined,
-      this.selectedPriority ?? undefined,
+      this.selectedStatus() ?? undefined,
+      this.selectedPriority() ?? undefined,
     ).subscribe({
       next: (delegations) => {
         this.delegations.set(delegations);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false),
+      error: () => {
+        this.loading.set(false);
+        this.messageService.add({ severity: 'error', summary: 'Failed to load delegations' });
+      },
     });
   }
 
@@ -271,6 +274,7 @@ export class DelegationsListComponent implements OnInit {
         people.forEach(p => map.set(p.id, p.name));
         this.peopleMap.set(map);
       },
+      error: () => this.messageService.add({ severity: 'error', summary: 'Failed to load people' }),
     });
   }
 }

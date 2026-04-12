@@ -62,6 +62,13 @@ public class DelegationTests
     }
 
     [Fact]
+    public void Create_EmptyUserId_Throws()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            Delegation.Create(Guid.Empty, "Test", PersonId));
+    }
+
+    [Fact]
     public void Create_EmptyDelegatePersonId_Throws()
     {
         Assert.Throws<ArgumentException>(() =>
@@ -290,6 +297,14 @@ public class DelegationTests
         Assert.Equal(PersonId, delegation.DelegatePersonId);
     }
 
+    [Fact]
+    public void Reassign_EmptyPersonId_Throws()
+    {
+        var delegation = Delegation.Create(UserId, "Test", PersonId);
+
+        Assert.Throws<ArgumentException>(() => delegation.Reassign(Guid.Empty));
+    }
+
     // 2.8 Test Reprioritize and UpdateDueDate
     [Fact]
     public void Reprioritize_ChangesPriorityAndRaisesEvent()
@@ -318,6 +333,29 @@ public class DelegationTests
         var domainEvent = Assert.Single(delegation.DomainEvents);
         var changed = Assert.IsType<DelegationDueDateChanged>(domainEvent);
         Assert.Equal(newDate, changed.NewDueDate);
+    }
+
+    [Fact]
+    public void Reprioritize_SamePriority_IsIdempotent()
+    {
+        var delegation = Delegation.Create(UserId, "Test", PersonId);
+        delegation.ClearDomainEvents();
+
+        delegation.Reprioritize(Priority.Medium);
+
+        Assert.Empty(delegation.DomainEvents);
+    }
+
+    [Fact]
+    public void UpdateDueDate_SameDate_IsIdempotent()
+    {
+        var dueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7));
+        var delegation = Delegation.Create(UserId, "Test", PersonId, dueDate);
+        delegation.ClearDomainEvents();
+
+        delegation.UpdateDueDate(dueDate);
+
+        Assert.Empty(delegation.DomainEvents);
     }
 
     [Fact]
