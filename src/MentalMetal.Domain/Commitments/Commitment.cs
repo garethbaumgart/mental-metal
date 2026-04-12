@@ -35,6 +35,9 @@ public sealed class Commitment : AggregateRoot, IUserScoped
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(description, nameof(description));
 
+        if (userId == Guid.Empty)
+            throw new ArgumentException("UserId is required.", nameof(userId));
+
         if (personId == Guid.Empty)
             throw new ArgumentException("PersonId is required.", nameof(personId));
 

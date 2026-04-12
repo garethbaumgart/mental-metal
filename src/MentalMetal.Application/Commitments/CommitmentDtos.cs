@@ -19,7 +19,7 @@ public sealed record CancelCommitmentRequest(string? Reason = null);
 
 public sealed record UpdateDueDateRequest(DateOnly? DueDate);
 
-public sealed record LinkInitiativeRequest(Guid InitiativeId);
+public sealed record LinkCommitmentToInitiativeRequest(Guid InitiativeId);
 
 public sealed record CommitmentResponse(
     Guid Id,

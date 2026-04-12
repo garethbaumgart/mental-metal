@@ -10,7 +10,7 @@ public sealed class LinkCommitmentToInitiativeHandler(
     IUnitOfWork unitOfWork)
 {
     public async Task<CommitmentResponse> HandleAsync(
-        Guid commitmentId, LinkInitiativeRequest request, CancellationToken cancellationToken)
+        Guid commitmentId, LinkCommitmentToInitiativeRequest request, CancellationToken cancellationToken)
     {
         var commitment = await commitmentRepository.GetByIdAsync(commitmentId, cancellationToken)
             ?? throw new InvalidOperationException("Commitment not found.");

@@ -732,7 +732,7 @@ app.MapPost("/api/captures/{id:guid}/link-person", async (
 
 app.MapPost("/api/captures/{id:guid}/link-initiative", async (
     Guid id,
-    MentalMetal.Application.Captures.LinkInitiativeRequest request,
+    LinkInitiativeRequest request,
     LinkCaptureToInitiativeHandler handler,
     CancellationToken cancellationToken) =>
 {
@@ -766,7 +766,7 @@ app.MapPost("/api/captures/{id:guid}/unlink-person", async (
 
 app.MapPost("/api/captures/{id:guid}/unlink-initiative", async (
     Guid id,
-    MentalMetal.Application.Captures.LinkInitiativeRequest request,
+    LinkInitiativeRequest request,
     UnlinkCaptureFromInitiativeHandler handler,
     CancellationToken cancellationToken) =>
 {
@@ -923,7 +923,7 @@ app.MapPut("/api/commitments/{id:guid}/due-date", async (
 
 app.MapPost("/api/commitments/{id:guid}/link-initiative", async (
     Guid id,
-    MentalMetal.Application.Commitments.LinkInitiativeRequest request,
+    LinkCommitmentToInitiativeRequest request,
     LinkCommitmentToInitiativeHandler handler,
     CancellationToken cancellationToken) =>
 {
