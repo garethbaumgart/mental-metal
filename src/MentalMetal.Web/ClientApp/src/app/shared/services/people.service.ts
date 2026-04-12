@@ -40,7 +40,7 @@ export class PeopleService {
   }
 
   changeType(id: string, newType: PersonType): Observable<Person> {
-    return this.http.patch<Person>(`${this.baseUrl}/${id}/type`, { type: newType });
+    return this.http.put<Person>(`${this.baseUrl}/${id}/type`, { newType });
   }
 
   updateCareerDetails(id: string, request: UpdateCareerDetailsRequest): Observable<Person> {
@@ -52,10 +52,10 @@ export class PeopleService {
   }
 
   advancePipeline(id: string, newStatus: PipelineStatus): Observable<Person> {
-    return this.http.patch<Person>(`${this.baseUrl}/${id}/pipeline-status`, { status: newStatus });
+    return this.http.post<Person>(`${this.baseUrl}/${id}/advance-pipeline`, { newStatus });
   }
 
   archive(id: string): Observable<void> {
-    return this.http.patch<void>(`${this.baseUrl}/${id}/archive`, {});
+    return this.http.post<void>(`${this.baseUrl}/${id}/archive`, {});
   }
 }
