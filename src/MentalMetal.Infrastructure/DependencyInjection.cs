@@ -1,5 +1,6 @@
 using MentalMetal.Application.Captures;
 using MentalMetal.Application.Commitments;
+using MentalMetal.Application.Delegations;
 using MentalMetal.Application.Common;
 using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.Common.Auth;
@@ -8,6 +9,7 @@ using MentalMetal.Application.People;
 using MentalMetal.Application.Users;
 using MentalMetal.Domain.Captures;
 using MentalMetal.Domain.Commitments;
+using MentalMetal.Domain.Delegations;
 using MentalMetal.Domain.Initiatives;
 using MentalMetal.Domain.People;
 using MentalMetal.Domain.Users;
@@ -50,6 +52,7 @@ public static class DependencyInjection
         services.AddScoped<IInitiativeRepository, InitiativeRepository>();
         services.AddScoped<ICaptureRepository, CaptureRepository>();
         services.AddScoped<ICommitmentRepository, CommitmentRepository>();
+        services.AddScoped<IDelegationRepository, DelegationRepository>();
         services.AddScoped<ITokenService, TokenService>();
 
         // AI provider services
@@ -111,6 +114,20 @@ public static class DependencyInjection
         services.AddScoped<ReopenCommitmentHandler>();
         services.AddScoped<UpdateCommitmentDueDateHandler>();
         services.AddScoped<LinkCommitmentToInitiativeHandler>();
+
+        // Delegation handlers
+        services.AddScoped<CreateDelegationHandler>();
+        services.AddScoped<GetDelegationByIdHandler>();
+        services.AddScoped<GetUserDelegationsHandler>();
+        services.AddScoped<UpdateDelegationHandler>();
+        services.AddScoped<StartDelegationHandler>();
+        services.AddScoped<CompleteDelegationHandler>();
+        services.AddScoped<BlockDelegationHandler>();
+        services.AddScoped<UnblockDelegationHandler>();
+        services.AddScoped<RecordDelegationFollowUpHandler>();
+        services.AddScoped<UpdateDelegationDueDateHandler>();
+        services.AddScoped<ReprioritizeDelegationHandler>();
+        services.AddScoped<ReassignDelegationHandler>();
 
         // Capture handlers
         services.AddScoped<CreateCaptureHandler>();

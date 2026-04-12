@@ -13,6 +13,8 @@ export const routes: Routes = [
   { path: 'initiatives/:id', loadComponent: () => import('./pages/initiatives/initiative-detail/initiative-detail.component').then(m => m.InitiativeDetailComponent), canActivate: [authGuard], data: { title: 'Initiative Detail' } },
   { path: 'commitments', loadComponent: () => import('./pages/commitments/commitments-list/commitments-list.component').then(m => m.CommitmentsListComponent), canActivate: [authGuard], data: { title: 'Commitments' } },
   { path: 'commitments/:id', loadComponent: () => import('./pages/commitments/commitment-detail/commitment-detail.component').then(m => m.CommitmentDetailComponent), canActivate: [authGuard], data: { title: 'Commitment Detail' } },
+  { path: 'delegations', loadComponent: () => import('./pages/delegations/delegations-list/delegations-list.component').then(m => m.DelegationsListComponent), canActivate: [authGuard], data: { title: 'Delegations' } },
+  { path: 'delegations/:id', loadComponent: () => import('./pages/delegations/delegation-detail/delegation-detail.component').then(m => m.DelegationDetailComponent), canActivate: [authGuard], data: { title: 'Delegation Detail' } },
   { path: 'queue', loadComponent: () => import('./pages/placeholder.page').then(m => m.PlaceholderPage), canActivate: [authGuard], data: { title: 'My Queue' } },
   { path: 'settings', loadComponent: () => import('./pages/settings/settings.page').then(m => m.SettingsPage), canActivate: [authGuard], data: { title: 'Settings' } },
   { path: '**', redirectTo: 'dashboard' },
