@@ -67,7 +67,7 @@ if (!app.Environment.IsDevelopment())
 {
     var forwardedOptions = new ForwardedHeadersOptions
     {
-        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+        ForwardedHeaders = ForwardedHeaders.XForwardedProto
     };
     forwardedOptions.KnownNetworks.Clear();
     forwardedOptions.KnownProxies.Clear();
