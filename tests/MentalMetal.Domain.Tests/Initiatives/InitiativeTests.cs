@@ -228,7 +228,7 @@ public class InitiativeTests
 
         Assert.Empty(initiative.Milestones);
         var domainEvent = Assert.Single(initiative.DomainEvents);
-        Assert.IsType<MilestoneSet>(domainEvent);
+        Assert.IsType<MilestoneRemoved>(domainEvent);
     }
 
     [Fact]

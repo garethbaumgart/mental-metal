@@ -111,7 +111,7 @@ public sealed class Initiative : AggregateRoot, IUserScoped
 
         UpdatedAt = DateTimeOffset.UtcNow;
 
-        RaiseDomainEvent(new MilestoneSet(Id, milestoneId));
+        RaiseDomainEvent(new MilestoneRemoved(Id, milestoneId));
     }
 
     public void CompleteMilestone(Guid milestoneId)
