@@ -9,6 +9,7 @@ import { MessageService } from 'primeng/api';
 import { AuthService } from '../../shared/services/auth.service';
 import { UserService } from '../../shared/services/user.service';
 import { ThemeService } from '../../shared/services/theme.service';
+import { AiProviderSettingsComponent } from './ai-provider-settings.component';
 
 @Component({
   selector: 'app-settings',
@@ -21,6 +22,7 @@ import { ThemeService } from '../../shared/services/theme.service';
     SelectModule,
     ToggleSwitchModule,
     ToastModule,
+    AiProviderSettingsComponent,
   ],
   providers: [MessageService],
   template: `
@@ -91,6 +93,9 @@ import { ThemeService } from '../../shared/services/theme.service';
           [loading]="savingPreferences()"
         />
       </section>
+
+      <!-- AI Provider Section -->
+      <app-ai-provider-settings />
     </div>
   `,
 })
