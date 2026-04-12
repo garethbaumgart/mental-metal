@@ -7,6 +7,7 @@ import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
+import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { CommitmentsService } from '../../../shared/services/commitments.service';
 import { Commitment, CommitmentDirection, CommitmentStatus } from '../../../shared/models/commitment.model';
@@ -18,9 +19,10 @@ import { CommitmentDialogComponent } from '../commitment-dialog/commitment-dialo
   selector: 'app-commitments-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, DatePipe, ButtonModule, SelectModule, TableModule, TagModule, ToastModule, CommitmentDialogComponent],
+  imports: [FormsModule, DatePipe, ButtonModule, SelectModule, TableModule, TagModule, ToastModule, TooltipModule, CommitmentDialogComponent],
   providers: [MessageService],
   template: `
+    <p-toast />
     <div class="flex flex-col gap-6">
       <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold">Commitments</h1>

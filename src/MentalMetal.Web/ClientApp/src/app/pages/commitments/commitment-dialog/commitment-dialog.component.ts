@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, model, OnInit, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, model, OnInit, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
@@ -138,6 +138,18 @@ export class CommitmentDialogComponent implements OnInit {
     { label: 'They owe me', value: 'TheirsToMe' as CommitmentDirection },
   ];
 
+  constructor() {
+    // Populate form fields when edit commitment changes
+    effect(() => {
+      const edit = this.editCommitment();
+      if (edit && this.visible()) {
+        this.description = edit.description;
+        this.notes = edit.notes ?? '';
+        this.dueDate = edit.dueDate ? new Date(edit.dueDate + 'T00:00:00') : null;
+      }
+    });
+  }
+
   ngOnInit(): void {
     this.loadPeople();
     this.loadInitiatives();
@@ -159,14 +171,34 @@ export class CommitmentDialogComponent implements OnInit {
 
     const edit = this.editCommitment();
     if (edit) {
+      // Update description and notes
       this.commitmentsService.update(edit.id, {
         description: this.description.trim(),
         notes: this.notes.trim() || null,
       }).subscribe({
         next: (commitment) => {
-          this.submitting.set(false);
-          this.updated.emit(commitment);
-          this.visible.set(false);
+          // Also update due date if it changed
+          const newDueDateStr = this.dueDate
+            ? `${this.dueDate.getFullYear()}-${String(this.dueDate.getMonth() + 1).padStart(2, '0')}-${String(this.dueDate.getDate()).padStart(2, '0')}`
+            : null;
+          if (newDueDateStr !== edit.dueDate) {
+            this.commitmentsService.updateDueDate(edit.id, { dueDate: newDueDateStr }).subscribe({
+              next: (updated) => {
+                this.submitting.set(false);
+                this.updated.emit(updated);
+                this.visible.set(false);
+              },
+              error: () => {
+                this.submitting.set(false);
+                this.updated.emit(commitment);
+                this.visible.set(false);
+              },
+            });
+          } else {
+            this.submitting.set(false);
+            this.updated.emit(commitment);
+            this.visible.set(false);
+          }
         },
         error: () => {
           this.submitting.set(false);
