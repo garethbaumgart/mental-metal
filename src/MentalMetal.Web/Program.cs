@@ -445,8 +445,15 @@ app.MapPost("/api/initiatives", async (
     CreateInitiativeHandler handler,
     CancellationToken cancellationToken) =>
 {
-    var response = await handler.HandleAsync(request, cancellationToken);
-    return Results.Created($"/api/initiatives/{response.Id}", response);
+    try
+    {
+        var response = await handler.HandleAsync(request, cancellationToken);
+        return Results.Created($"/api/initiatives/{response.Id}", response);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
 }).RequireAuthorization();
 
 app.MapGet("/api/initiatives", async (

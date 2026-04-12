@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -22,7 +21,6 @@ import { Person } from '../../../shared/models/person.model';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DatePipe,
     FormsModule,
     ButtonModule,
     InputTextModule,
@@ -113,7 +111,7 @@ import { Person } from '../../../shared/models/person.model';
                   <div class="flex-1">
                     <div class="font-medium">{{ milestone.title }}</div>
                     <div class="text-sm text-muted-color">
-                      {{ milestone.targetDate | date:'mediumDate' }}
+                      {{ milestone.targetDate }}
                       @if (milestone.description) {
                         — {{ milestone.description }}
                       }
@@ -361,7 +359,9 @@ export class InitiativeDetailComponent implements OnInit {
     this.initiativesService.linkPerson(i.id, personToLink.id).subscribe({
       next: (updated) => {
         this.initiative.set(updated);
-        this.linkedPeople.update((list) => [...list, personToLink]);
+        this.linkedPeople.update((list) =>
+          list.some((p) => p.id === personToLink.id) ? list : [...list, personToLink]
+        );
         this.selectedPerson = null;
         this.linkingPerson.set(false);
         this.messageService.add({ severity: 'success', summary: 'Person linked' });

@@ -4,11 +4,14 @@ namespace MentalMetal.Domain.Initiatives;
 
 public sealed class Initiative : AggregateRoot, IUserScoped
 {
+    private readonly List<Milestone> _milestones = [];
+    private readonly List<Guid> _linkedPersonIds = [];
+
     public Guid UserId { get; private set; }
     public string Title { get; private set; } = null!;
     public InitiativeStatus Status { get; private set; }
-    public List<Milestone> Milestones { get; private set; } = [];
-    public List<Guid> LinkedPersonIds { get; private set; } = [];
+    public IReadOnlyList<Milestone> Milestones => _milestones;
+    public IReadOnlyList<Guid> LinkedPersonIds => _linkedPersonIds;
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
@@ -78,7 +81,7 @@ public sealed class Initiative : AggregateRoot, IUserScoped
         EnsureNotTerminal();
 
         var milestone = Milestone.Create(title, targetDate, description);
-        Milestones.Add(milestone);
+        _milestones.Add(milestone);
         UpdatedAt = DateTimeOffset.UtcNow;
 
         RaiseDomainEvent(new MilestoneSet(Id, milestone.Id));
@@ -88,11 +91,11 @@ public sealed class Initiative : AggregateRoot, IUserScoped
     {
         EnsureNotTerminal();
 
-        var index = Milestones.FindIndex(m => m.Id == milestoneId);
-        if (index == -1)
-            throw new ArgumentException($"Milestone '{milestoneId}' not found.");
+        var existing = _milestones.FirstOrDefault(m => m.Id == milestoneId)
+            ?? throw new ArgumentException($"Milestone '{milestoneId}' not found.");
 
-        Milestones[index] = Milestones[index].WithUpdates(title, targetDate, description);
+        _milestones.Remove(existing);
+        _milestones.Add(existing.WithUpdates(title, targetDate, description));
         UpdatedAt = DateTimeOffset.UtcNow;
 
         RaiseDomainEvent(new MilestoneSet(Id, milestoneId));
@@ -102,7 +105,7 @@ public sealed class Initiative : AggregateRoot, IUserScoped
     {
         EnsureNotTerminal();
 
-        var removed = Milestones.RemoveAll(m => m.Id == milestoneId);
+        var removed = _milestones.RemoveAll(m => m.Id == milestoneId);
         if (removed == 0)
             throw new ArgumentException($"Milestone '{milestoneId}' not found.");
 
@@ -115,11 +118,11 @@ public sealed class Initiative : AggregateRoot, IUserScoped
     {
         EnsureNotTerminal();
 
-        var index = Milestones.FindIndex(m => m.Id == milestoneId);
-        if (index == -1)
-            throw new ArgumentException($"Milestone '{milestoneId}' not found.");
+        var existing = _milestones.FirstOrDefault(m => m.Id == milestoneId)
+            ?? throw new ArgumentException($"Milestone '{milestoneId}' not found.");
 
-        Milestones[index] = Milestones[index].Complete();
+        _milestones.Remove(existing);
+        _milestones.Add(existing.Complete());
         UpdatedAt = DateTimeOffset.UtcNow;
 
         RaiseDomainEvent(new MilestoneCompleted(Id, milestoneId));
@@ -129,10 +132,10 @@ public sealed class Initiative : AggregateRoot, IUserScoped
     {
         EnsureNotTerminal();
 
-        if (LinkedPersonIds.Contains(personId))
+        if (_linkedPersonIds.Contains(personId))
             return;
 
-        LinkedPersonIds.Add(personId);
+        _linkedPersonIds.Add(personId);
         UpdatedAt = DateTimeOffset.UtcNow;
 
         RaiseDomainEvent(new PersonLinkedToInitiative(Id, personId));
@@ -142,7 +145,7 @@ public sealed class Initiative : AggregateRoot, IUserScoped
     {
         EnsureNotTerminal();
 
-        if (!LinkedPersonIds.Remove(personId))
+        if (!_linkedPersonIds.Remove(personId))
             throw new ArgumentException($"Person '{personId}' is not linked to this initiative.");
 
         UpdatedAt = DateTimeOffset.UtcNow;

@@ -21,6 +21,10 @@ public sealed class InitiativeConfiguration : IEntityTypeConfiguration<Initiativ
             .IsRequired()
             .HasMaxLength(20);
 
+        builder.Navigation(i => i.Milestones)
+            .HasField("_milestones")
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
+
         builder.OwnsMany(i => i.Milestones, milestone =>
         {
             milestone.ToTable("InitiativeMilestones");
@@ -43,7 +47,9 @@ public sealed class InitiativeConfiguration : IEntityTypeConfiguration<Initiativ
         });
 
         builder.PrimitiveCollection(i => i.LinkedPersonIds)
-            .HasColumnName("LinkedPersonIds");
+            .HasColumnName("LinkedPersonIds")
+            .HasField("_linkedPersonIds")
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
 
         builder.Property(i => i.CreatedAt);
         builder.Property(i => i.UpdatedAt);
