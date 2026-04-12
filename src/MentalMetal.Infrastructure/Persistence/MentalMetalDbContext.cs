@@ -1,5 +1,6 @@
 using MentalMetal.Application.Common;
 using MentalMetal.Domain.Captures;
+using MentalMetal.Domain.Commitments;
 using MentalMetal.Domain.Common;
 using MentalMetal.Domain.Initiatives;
 using MentalMetal.Domain.People;
@@ -20,6 +21,7 @@ public sealed class MentalMetalDbContext(
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Initiative> Initiatives => Set<Initiative>();
     public DbSet<Capture> Captures => Set<Capture>();
+    public DbSet<Commitment> Commitments => Set<Commitment>();
     public DbSet<AiTasteBudget> AiTasteBudgets => Set<AiTasteBudget>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -31,5 +33,6 @@ public sealed class MentalMetalDbContext(
         modelBuilder.Entity<Person>().HasQueryFilter(p => p.UserId == currentUserService.UserId);
         modelBuilder.Entity<Initiative>().HasQueryFilter(i => i.UserId == currentUserService.UserId);
         modelBuilder.Entity<Capture>().HasQueryFilter(c => c.UserId == currentUserService.UserId);
+        modelBuilder.Entity<Commitment>().HasQueryFilter(c => c.UserId == currentUserService.UserId);
     }
 }

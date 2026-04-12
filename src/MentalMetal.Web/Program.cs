@@ -2,11 +2,13 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 using MentalMetal.Application.Captures;
+using MentalMetal.Application.Commitments;
 using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.Initiatives;
 using MentalMetal.Application.People;
 using MentalMetal.Application.Users;
 using MentalMetal.Domain.Captures;
+using MentalMetal.Domain.Commitments;
 using MentalMetal.Domain.Initiatives;
 using MentalMetal.Domain.People;
 using MentalMetal.Infrastructure;
@@ -766,6 +768,163 @@ app.MapPost("/api/captures/{id:guid}/unlink-initiative", async (
     Guid id,
     LinkInitiativeRequest request,
     UnlinkCaptureFromInitiativeHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+}).RequireAuthorization();
+
+// --- Commitment Endpoints ---
+
+app.MapPost("/api/commitments", async (
+    CreateCommitmentRequest request,
+    CreateCommitmentHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(request, cancellationToken);
+        return Results.Created($"/api/commitments/{response.Id}", response);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapGet("/api/commitments", async (
+    CommitmentDirection? direction,
+    CommitmentStatus? status,
+    Guid? personId,
+    Guid? initiativeId,
+    bool? overdue,
+    GetUserCommitmentsHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    var list = await handler.HandleAsync(direction, status, personId, initiativeId, overdue, cancellationToken);
+    return Results.Ok(list);
+}).RequireAuthorization();
+
+app.MapGet("/api/commitments/{id:guid}", async (
+    Guid id,
+    GetCommitmentByIdHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    var response = await handler.HandleAsync(id, cancellationToken);
+    return response is not null ? Results.Ok(response) : Results.NotFound();
+}).RequireAuthorization();
+
+app.MapPut("/api/commitments/{id:guid}", async (
+    Guid id,
+    UpdateCommitmentRequest request,
+    UpdateCommitmentHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/commitments/{id:guid}/complete", async (
+    Guid id,
+    CompleteCommitmentRequest request,
+    CompleteCommitmentHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("Cannot"))
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/commitments/{id:guid}/cancel", async (
+    Guid id,
+    CancelCommitmentRequest request,
+    CancelCommitmentHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("Cannot"))
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/commitments/{id:guid}/reopen", async (
+    Guid id,
+    ReopenCommitmentHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("Cannot"))
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPut("/api/commitments/{id:guid}/due-date", async (
+    Guid id,
+    UpdateDueDateRequest request,
+    UpdateCommitmentDueDateHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/commitments/{id:guid}/link-initiative", async (
+    Guid id,
+    LinkCommitmentToInitiativeRequest request,
+    LinkCommitmentToInitiativeHandler handler,
     CancellationToken cancellationToken) =>
 {
     try
