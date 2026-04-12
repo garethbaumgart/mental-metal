@@ -115,6 +115,7 @@ import { Initiative } from '../../../shared/models/initiative.model';
                 [suggestions]="peopleSuggestions()"
                 (completeMethod)="searchPeople($event)"
                 field="name"
+                [forceSelection]="true"
                 placeholder="Search people..."
                 class="w-full"
               />
@@ -153,6 +154,7 @@ import { Initiative } from '../../../shared/models/initiative.model';
                 [suggestions]="initiativeSuggestions()"
                 (completeMethod)="searchInitiatives($event)"
                 field="title"
+                [forceSelection]="true"
                 placeholder="Search initiatives..."
                 class="w-full"
               />
