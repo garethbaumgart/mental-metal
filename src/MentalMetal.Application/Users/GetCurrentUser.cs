@@ -22,6 +22,7 @@ public sealed class GetCurrentUserHandler(
                 user.Preferences.Theme.ToString(),
                 user.Preferences.NotificationsEnabled,
                 user.Preferences.BriefingTime),
+            user.AiProviderConfig is not null,
             user.CreatedAt,
             user.LastLoginAt);
     }

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text;
+using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.Users;
 using MentalMetal.Infrastructure;
 using MentalMetal.Infrastructure.Auth;
@@ -57,6 +58,26 @@ app.UseStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (TasteLimitExceededException ex) when (!context.Response.HasStarted)
+    {
+        context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        await context.Response.WriteAsJsonAsync(new { error = ex.Message });
+    }
+    catch (AiProviderException ex) when (!context.Response.HasStarted)
+    {
+        var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("AiErrorMiddleware");
+        logger.LogWarning(ex, "AI provider error from {Provider}", ex.Provider);
+        context.Response.StatusCode = StatusCodes.Status502BadGateway;
+        await context.Response.WriteAsJsonAsync(new { error = "AI provider request failed. Please try again or check your provider configuration." });
+    }
+});
 
 // --- Auth Endpoints ---
 
@@ -172,6 +193,57 @@ app.MapPut("/api/users/me/preferences", async (
 {
     await handler.HandleAsync(request, cancellationToken);
     return Results.NoContent();
+}).RequireAuthorization();
+
+// --- AI Provider Endpoints ---
+
+app.MapGet("/api/users/me/ai-provider", async (
+    GetAiProviderStatusHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    var status = await handler.HandleAsync(cancellationToken);
+    return Results.Ok(status);
+}).RequireAuthorization();
+
+app.MapPut("/api/users/me/ai-provider", async (
+    ConfigureAiProviderRequest request,
+    ConfigureAiProviderHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    await handler.HandleAsync(request, cancellationToken);
+    return Results.NoContent();
+}).RequireAuthorization();
+
+app.MapPost("/api/users/me/ai-provider/validate", async (
+    ValidateAiProviderRequest request,
+    ValidateAiProviderHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    var result = await handler.HandleAsync(request, cancellationToken);
+    return Results.Ok(result);
+}).RequireAuthorization();
+
+app.MapDelete("/api/users/me/ai-provider", async (
+    RemoveAiProviderHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    await handler.HandleAsync(cancellationToken);
+    return Results.NoContent();
+}).RequireAuthorization();
+
+app.MapGet("/api/ai/models", (
+    string provider,
+    GetAvailableModelsHandler handler) =>
+{
+    try
+    {
+        var result = handler.Handle(provider);
+        return Results.Ok(result);
+    }
+    catch (ArgumentException)
+    {
+        return Results.BadRequest(new { error = $"Unsupported provider: {provider}" });
+    }
 }).RequireAuthorization();
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));

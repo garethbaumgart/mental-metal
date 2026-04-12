@@ -1,7 +1,9 @@
 using MentalMetal.Application.Common;
+using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.Common.Auth;
 using MentalMetal.Application.Users;
 using MentalMetal.Domain.Users;
+using MentalMetal.Infrastructure.Ai;
 using MentalMetal.Infrastructure.Auth;
 using MentalMetal.Infrastructure.Persistence;
 using MentalMetal.Infrastructure.Repositories;
@@ -25,6 +27,11 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString));
 
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
+        services.AddOptions<AiProviderSettings>()
+            .Bind(configuration.GetSection(AiProviderSettings.SectionName))
+            .Validate(s => !string.IsNullOrWhiteSpace(s.EncryptionKey),
+                "AiProvider:EncryptionKey is required. Generate with: openssl rand -base64 32")
+            .ValidateOnStart();
 
         // Infrastructure services
         services.AddHttpContextAccessor();
@@ -33,6 +40,18 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ITokenService, TokenService>();
 
+        // AI provider services
+        services.AddHttpClient("GoogleAi");
+        services.AddSingleton<IApiKeyEncryptionService, AesApiKeyEncryptionService>();
+        services.AddSingleton<AiModelCatalog>();
+        services.AddSingleton<IAiModelCatalog>(sp => sp.GetRequiredService<AiModelCatalog>());
+        services.AddSingleton<AnthropicAdapter>();
+        services.AddSingleton<OpenAiAdapter>();
+        services.AddSingleton<GoogleAdapter>();
+        services.AddScoped<IAiCompletionService, AiCompletionService>();
+        services.AddScoped<IAiProviderValidator, AiProviderValidator>();
+        services.AddScoped<ITasteBudgetService, TasteBudgetService>();
+
         // Application handlers
         services.AddScoped<RegisterOrLoginUserHandler>();
         services.AddScoped<GetCurrentUserHandler>();
@@ -40,6 +59,11 @@ public static class DependencyInjection
         services.AddScoped<UpdateUserPreferencesHandler>();
         services.AddScoped<RefreshAccessTokenHandler>();
         services.AddScoped<LogoutUserHandler>();
+        services.AddScoped<ConfigureAiProviderHandler>();
+        services.AddScoped<GetAiProviderStatusHandler>();
+        services.AddScoped<ValidateAiProviderHandler>();
+        services.AddScoped<RemoveAiProviderHandler>();
+        services.AddSingleton<GetAvailableModelsHandler>();
 
         return services;
     }
