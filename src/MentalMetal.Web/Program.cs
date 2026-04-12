@@ -1060,6 +1060,10 @@ app.MapPost("/api/delegations/{id:guid}/block", async (
     {
         return Results.Conflict(new { error = ex.Message });
     }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
 }).RequireAuthorization();
 
 app.MapPost("/api/delegations/{id:guid}/unblock", async (
@@ -1147,6 +1151,10 @@ app.MapPost("/api/delegations/{id:guid}/reassign", async (
     catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
     {
         return Results.NotFound();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
     }
 }).RequireAuthorization();
 

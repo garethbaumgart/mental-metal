@@ -74,19 +74,21 @@ import { Initiative } from '../../../shared/models/initiative.model';
           />
         </div>
 
-        <div class="flex flex-col gap-2">
-          <label for="delegationInitiative" class="text-sm font-medium text-muted-color">Initiative (optional)</label>
-          <p-select
-            id="delegationInitiative"
-            [options]="initiativeOptions()"
-            [(ngModel)]="selectedInitiativeId"
-            placeholder="Select initiative"
-            [filter]="true"
-            filterBy="label"
-            [showClear]="true"
-            class="w-full"
-          />
-        </div>
+        @if (!editDelegation()) {
+          <div class="flex flex-col gap-2">
+            <label for="delegationInitiative" class="text-sm font-medium text-muted-color">Initiative (optional)</label>
+            <p-select
+              id="delegationInitiative"
+              [options]="initiativeOptions()"
+              [(ngModel)]="selectedInitiativeId"
+              placeholder="Select initiative"
+              [filter]="true"
+              filterBy="label"
+              [showClear]="true"
+              class="w-full"
+            />
+          </div>
+        }
 
         <div class="flex flex-col gap-2">
           <label for="delegationNotes" class="text-sm font-medium text-muted-color">Notes (optional)</label>
