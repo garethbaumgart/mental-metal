@@ -182,12 +182,13 @@ gh api repos/{owner}/{repo}/issues/$PR_NUMBER/comments --jq '.[] | "[\(.user.log
 
 ### 5c. Address Review Comments
 
-For each review comment:
+For each review comment — **including nitpicks and trivial suggestions**:
 
 1. Read the full comment to understand the feedback
 2. Evaluate whether the feedback is valid and actionable
-3. If valid: make the code change
+3. If valid (including nitpicks): make the code change — nitpicks are low-effort fixes that improve code quality; always address them
 4. If by-design or out-of-scope: reply with a clear explanation of why
+5. React with 👀 on each comment as you address it
 
 **Batch fixes:** Collect all comments from a review round, fix them all, then commit and push once. Each push triggers new review cycles from bots.
 
