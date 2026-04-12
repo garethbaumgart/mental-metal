@@ -60,10 +60,12 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
 
             ai.Property(a => a.EncryptedApiKey)
                 .HasColumnName("AiProviderEncryptedApiKey")
+                .IsRequired()
                 .HasMaxLength(1024);
 
             ai.Property(a => a.Model)
                 .HasColumnName("AiProviderModel")
+                .IsRequired()
                 .HasMaxLength(100);
 
             ai.Property(a => a.MaxTokens)

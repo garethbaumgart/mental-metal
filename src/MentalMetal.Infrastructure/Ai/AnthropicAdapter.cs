@@ -45,7 +45,7 @@ public sealed class AnthropicAdapter : IAiProviderAdapter
                 Content: text,
                 InputTokens: response.Usage.InputTokens,
                 OutputTokens: response.Usage.OutputTokens,
-                Model: response.Model.ToString(),
+                Model: response.Model?.ToString() ?? model,
                 Provider: AiProvider.Anthropic);
         }
         catch (ApiException ex)

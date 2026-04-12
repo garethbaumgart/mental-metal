@@ -22,7 +22,7 @@ public sealed class GoogleAdapter(IHttpClientFactory httpClientFactory) : IAiPro
     {
         var httpClient = httpClientFactory.CreateClient("GoogleAi");
         httpClient.DefaultRequestHeaders.Add("x-goog-api-key", apiKey);
-        var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent";
+        var url = $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(model)}:generateContent";
 
         var body = new GeminiRequest
         {
