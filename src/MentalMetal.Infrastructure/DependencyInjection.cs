@@ -1,8 +1,10 @@
 using MentalMetal.Application.Common;
 using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.Common.Auth;
+using MentalMetal.Application.Initiatives;
 using MentalMetal.Application.People;
 using MentalMetal.Application.Users;
+using MentalMetal.Domain.Initiatives;
 using MentalMetal.Domain.People;
 using MentalMetal.Domain.Users;
 using MentalMetal.Infrastructure.Ai;
@@ -41,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPersonRepository, PersonRepository>();
+        services.AddScoped<IInitiativeRepository, InitiativeRepository>();
         services.AddScoped<ITokenService, TokenService>();
 
         // AI provider services
@@ -78,6 +81,19 @@ public static class DependencyInjection
         services.AddScoped<UpdateCandidateDetailsHandler>();
         services.AddScoped<AdvanceCandidatePipelineHandler>();
         services.AddScoped<ArchivePersonHandler>();
+
+        // Initiative handlers
+        services.AddScoped<CreateInitiativeHandler>();
+        services.AddScoped<GetInitiativeHandler>();
+        services.AddScoped<GetInitiativesHandler>();
+        services.AddScoped<UpdateInitiativeTitleHandler>();
+        services.AddScoped<ChangeInitiativeStatusHandler>();
+        services.AddScoped<AddMilestoneHandler>();
+        services.AddScoped<UpdateMilestoneHandler>();
+        services.AddScoped<RemoveMilestoneHandler>();
+        services.AddScoped<CompleteMilestoneHandler>();
+        services.AddScoped<LinkPersonHandler>();
+        services.AddScoped<UnlinkPersonHandler>();
 
         return services;
     }
