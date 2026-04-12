@@ -47,8 +47,8 @@ export class InitiativesService {
     return this.http.put<Initiative>(`${this.baseUrl}/${id}/milestones/${milestoneId}`, request);
   }
 
-  removeMilestone(id: string, milestoneId: string): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/${id}/milestones/${milestoneId}`);
+  removeMilestone(id: string, milestoneId: string): Observable<Initiative> {
+    return this.http.delete<Initiative>(`${this.baseUrl}/${id}/milestones/${milestoneId}`);
   }
 
   completeMilestone(id: string, milestoneId: string): Observable<Initiative> {
@@ -59,7 +59,7 @@ export class InitiativesService {
     return this.http.post<Initiative>(`${this.baseUrl}/${id}/link-person`, { personId } as LinkPersonRequest);
   }
 
-  unlinkPerson(id: string, personId: string): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/${id}/link-person/${personId}`);
+  unlinkPerson(id: string, personId: string): Observable<Initiative> {
+    return this.http.delete<Initiative>(`${this.baseUrl}/${id}/link-person/${personId}`);
   }
 }

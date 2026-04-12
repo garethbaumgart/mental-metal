@@ -567,8 +567,8 @@ app.MapDelete("/api/initiatives/{id:guid}/milestones/{milestoneId:guid}", async 
 {
     try
     {
-        await handler.HandleAsync(id, milestoneId, cancellationToken);
-        return Results.NoContent();
+        var response = await handler.HandleAsync(id, milestoneId, cancellationToken);
+        return Results.Ok(response);
     }
     catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
     {
@@ -612,10 +612,6 @@ app.MapPost("/api/initiatives/{id:guid}/link-person", async (
         var response = await handler.HandleAsync(id, request, cancellationToken);
         return Results.Ok(response);
     }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("Person not found"))
-    {
-        return Results.NotFound();
-    }
     catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
     {
         return Results.NotFound();
@@ -634,8 +630,8 @@ app.MapDelete("/api/initiatives/{id:guid}/link-person/{personId:guid}", async (
 {
     try
     {
-        await handler.HandleAsync(id, personId, cancellationToken);
-        return Results.NoContent();
+        var response = await handler.HandleAsync(id, personId, cancellationToken);
+        return Results.Ok(response);
     }
     catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
     {

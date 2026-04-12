@@ -103,8 +103,8 @@ export class InitiativesListComponent implements OnInit {
     this.router.navigate(['/initiatives', initiative.id]);
   }
 
-  protected onInitiativeCreated(initiative: Initiative): void {
-    this.initiatives.update((list) => [...list, initiative]);
+  protected onInitiativeCreated(_initiative: Initiative): void {
+    this.loadInitiatives();
   }
 
   protected formatStatus(status: InitiativeStatus): string {
