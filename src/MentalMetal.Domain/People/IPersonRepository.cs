@@ -1,0 +1,9 @@
+namespace MentalMetal.Domain.People;
+
+public interface IPersonRepository
+{
+    Task<Person?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
+    Task<IReadOnlyList<Person>> GetAllAsync(Guid userId, PersonType? typeFilter, bool includeArchived, CancellationToken cancellationToken);
+    Task<bool> ExistsByNameAsync(Guid userId, string name, Guid? excludeId, CancellationToken cancellationToken);
+    Task AddAsync(Person person, CancellationToken cancellationToken);
+}

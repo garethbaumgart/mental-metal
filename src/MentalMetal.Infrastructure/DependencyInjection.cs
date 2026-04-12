@@ -1,7 +1,9 @@
 using MentalMetal.Application.Common;
 using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.Common.Auth;
+using MentalMetal.Application.People;
 using MentalMetal.Application.Users;
+using MentalMetal.Domain.People;
 using MentalMetal.Domain.Users;
 using MentalMetal.Infrastructure.Ai;
 using MentalMetal.Infrastructure.Auth;
@@ -38,6 +40,7 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<MentalMetalDbContext>());
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IPersonRepository, PersonRepository>();
         services.AddScoped<ITokenService, TokenService>();
 
         // AI provider services
@@ -64,6 +67,17 @@ public static class DependencyInjection
         services.AddScoped<ValidateAiProviderHandler>();
         services.AddScoped<RemoveAiProviderHandler>();
         services.AddSingleton<GetAvailableModelsHandler>();
+
+        // Person handlers
+        services.AddScoped<CreatePersonHandler>();
+        services.AddScoped<GetPersonHandler>();
+        services.AddScoped<GetPeopleHandler>();
+        services.AddScoped<UpdatePersonProfileHandler>();
+        services.AddScoped<ChangePersonTypeHandler>();
+        services.AddScoped<UpdateCareerDetailsHandler>();
+        services.AddScoped<UpdateCandidateDetailsHandler>();
+        services.AddScoped<AdvanceCandidatePipelineHandler>();
+        services.AddScoped<ArchivePersonHandler>();
 
         return services;
     }
