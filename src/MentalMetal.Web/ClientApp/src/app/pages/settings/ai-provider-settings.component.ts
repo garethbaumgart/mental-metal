@@ -258,7 +258,9 @@ export class AiProviderSettingsComponent implements OnInit {
   canSave(): boolean {
     const provider = this.selectedProvider();
     const hasModel = !!this.selectedModel;
-    const hasKey = !!this.apiKey || this.isConfigured();
+    const status = this.aiProviderService.status();
+    const sameProvider = status?.isConfigured && status.provider === provider;
+    const hasKey = !!this.apiKey || sameProvider;
     return !!provider && hasModel && hasKey;
   }
 
