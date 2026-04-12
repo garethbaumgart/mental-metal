@@ -79,6 +79,29 @@ app.Use(async (context, next) =>
     }
 });
 
+// --- Test-only Auth Endpoint (Development/E2E only) ---
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapPost("/api/auth/test-login", async (
+        HttpContext httpContext,
+        RegisterOrLoginUserHandler handler,
+        TestLoginRequest body) =>
+    {
+        var authResult = await handler.HandleAsync(
+            new RegisterOrLoginCommand(
+                $"test-{body.Email}",
+                body.Email,
+                body.Name,
+                null),
+            httpContext.RequestAborted);
+
+        httpContext.Response.Cookies.Append("refresh_token", authResult.RefreshToken, RefreshTokenCookieOptions());
+
+        return Results.Ok(new { authResult.AccessToken });
+    });
+}
+
 // --- Auth Endpoints ---
 
 CookieOptions RefreshTokenCookieOptions() => new()
@@ -254,3 +277,5 @@ app.MapFallback("/api/{**catch-all}", () => Results.NotFound());
 app.MapFallbackToFile("index.html");
 
 app.Run();
+
+internal sealed record TestLoginRequest(string Email, string Name);
