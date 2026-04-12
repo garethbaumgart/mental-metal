@@ -74,21 +74,19 @@ import { Initiative } from '../../../shared/models/initiative.model';
           />
         </div>
 
-        @if (!editCommitment()) {
-          <div class="flex flex-col gap-2">
-            <label for="commitmentInitiative" class="text-sm font-medium text-muted-color">Initiative (optional)</label>
-            <p-select
-              id="commitmentInitiative"
-              [options]="initiativeOptions()"
-              [(ngModel)]="selectedInitiativeId"
-              placeholder="Select initiative"
-              [filter]="true"
-              filterBy="label"
-              [showClear]="true"
-              class="w-full"
-            />
-          </div>
-        }
+        <div class="flex flex-col gap-2">
+          <label for="commitmentInitiative" class="text-sm font-medium text-muted-color">Initiative (optional)</label>
+          <p-select
+            id="commitmentInitiative"
+            [options]="initiativeOptions()"
+            [(ngModel)]="selectedInitiativeId"
+            placeholder="Select initiative"
+            [filter]="true"
+            filterBy="label"
+            [showClear]="true"
+            class="w-full"
+          />
+        </div>
 
         <div class="flex flex-col gap-2">
           <label for="commitmentNotes" class="text-sm font-medium text-muted-color">Notes (optional)</label>
@@ -146,6 +144,7 @@ export class CommitmentDialogComponent implements OnInit {
         this.description = edit.description;
         this.notes = edit.notes ?? '';
         this.dueDate = edit.dueDate ? new Date(edit.dueDate + 'T00:00:00') : null;
+        this.selectedInitiativeId = edit.initiativeId;
       }
     });
   }
@@ -176,28 +175,36 @@ export class CommitmentDialogComponent implements OnInit {
         description: this.description.trim(),
         notes: this.notes.trim() || null,
       }).subscribe({
-        next: (commitment) => {
-          // Also update due date if it changed
-          const newDueDateStr = this.dueDate
-            ? `${this.dueDate.getFullYear()}-${String(this.dueDate.getMonth() + 1).padStart(2, '0')}-${String(this.dueDate.getDate()).padStart(2, '0')}`
-            : null;
-          if (newDueDateStr !== edit.dueDate) {
+        next: (latest) => {
+          // Chain due date update if changed
+          const newDueDateStr = this.formatDateStr(this.dueDate);
+          const dueDateChanged = newDueDateStr !== edit.dueDate;
+          const initiativeChanged = this.selectedInitiativeId !== edit.initiativeId && this.selectedInitiativeId;
+
+          const afterDueDate = (current: Commitment) => {
+            if (initiativeChanged) {
+              this.commitmentsService.linkInitiative(edit.id, this.selectedInitiativeId!).subscribe({
+                next: (updated) => this.finishEdit(updated),
+                error: () => {
+                  this.messageService.add({ severity: 'error', summary: 'Failed to link initiative' });
+                  this.finishEdit(current);
+                },
+              });
+            } else {
+              this.finishEdit(current);
+            }
+          };
+
+          if (dueDateChanged) {
             this.commitmentsService.updateDueDate(edit.id, { dueDate: newDueDateStr }).subscribe({
-              next: (updated) => {
-                this.submitting.set(false);
-                this.updated.emit(updated);
-                this.visible.set(false);
-              },
+              next: (updated) => afterDueDate(updated),
               error: () => {
-                this.submitting.set(false);
-                this.updated.emit(commitment);
-                this.visible.set(false);
+                this.messageService.add({ severity: 'error', summary: 'Failed to update due date' });
+                afterDueDate(latest);
               },
             });
           } else {
-            this.submitting.set(false);
-            this.updated.emit(commitment);
-            this.visible.set(false);
+            afterDueDate(latest);
           }
         },
         error: () => {
@@ -206,9 +213,7 @@ export class CommitmentDialogComponent implements OnInit {
         },
       });
     } else {
-      const dueDateStr = this.dueDate
-        ? `${this.dueDate.getFullYear()}-${String(this.dueDate.getMonth() + 1).padStart(2, '0')}-${String(this.dueDate.getDate()).padStart(2, '0')}`
-        : undefined;
+      const dueDateStr = this.formatDateStr(this.dueDate) ?? undefined;
 
       this.commitmentsService.create({
         description: this.description.trim(),
@@ -230,6 +235,17 @@ export class CommitmentDialogComponent implements OnInit {
         },
       });
     }
+  }
+
+  private finishEdit(commitment: Commitment): void {
+    this.submitting.set(false);
+    this.updated.emit(commitment);
+    this.visible.set(false);
+  }
+
+  private formatDateStr(date: Date | null): string | null {
+    if (!date) return null;
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   }
 
   private resetForm(): void {

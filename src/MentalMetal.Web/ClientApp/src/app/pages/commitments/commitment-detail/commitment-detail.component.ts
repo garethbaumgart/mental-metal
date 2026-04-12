@@ -125,6 +125,9 @@ export class CommitmentDetailComponent implements OnInit {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.loadCommitment(id);
+    } else {
+      this.loading.set(false);
+      this.router.navigate(['/commitments']);
     }
   }
 

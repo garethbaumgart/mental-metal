@@ -37,6 +37,11 @@ public sealed class CommitmentRepository(MentalMetalDbContext dbContext) : IComm
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
             query = query.Where(c => c.Status == CommitmentStatus.Open && c.DueDate != null && c.DueDate < today);
         }
+        else if (overdueFilter == false)
+        {
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            query = query.Where(c => c.Status != CommitmentStatus.Open || c.DueDate == null || c.DueDate >= today);
+        }
 
         return await query
             .OrderBy(c => c.DueDate == null ? 1 : 0)

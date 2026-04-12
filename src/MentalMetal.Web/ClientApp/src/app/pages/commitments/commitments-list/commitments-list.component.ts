@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { DatePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
@@ -19,7 +18,7 @@ import { CommitmentDialogComponent } from '../commitment-dialog/commitment-dialo
   selector: 'app-commitments-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, DatePipe, ButtonModule, SelectModule, TableModule, TagModule, ToastModule, TooltipModule, CommitmentDialogComponent],
+  imports: [FormsModule, ButtonModule, SelectModule, TableModule, TagModule, ToastModule, TooltipModule, CommitmentDialogComponent],
   providers: [MessageService],
   template: `
     <p-toast />
