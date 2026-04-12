@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json.Serialization;
 using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.People;
 using MentalMetal.Application.Users;
@@ -13,6 +14,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -286,9 +290,9 @@ app.MapPost("/api/people", async (
         var response = await handler.HandleAsync(request, cancellationToken);
         return Results.Created($"/api/people/{response.Id}", response);
     }
-    catch (InvalidOperationException)
+    catch (InvalidOperationException ex)
     {
-        return Results.Conflict();
+        return Results.Conflict(new { error = ex.Message });
     }
 }).RequireAuthorization();
 

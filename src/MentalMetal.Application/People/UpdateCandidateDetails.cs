@@ -18,6 +18,9 @@ public sealed class UpdateCandidateDetailsHandler(
         if (person.UserId != currentUserService.UserId)
             throw new InvalidOperationException("Person not found.");
 
+        if (person.IsArchived)
+            throw new InvalidOperationException("Cannot modify an archived person.");
+
         person.UpdateCandidateDetails(request.CvNotes, request.SourceChannel);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);

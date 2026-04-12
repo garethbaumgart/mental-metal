@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MentalMetal.Infrastructure.Migrations
 {
     [DbContext(typeof(MentalMetalDbContext))]
-    [Migration("20260412095441_AddPerson")]
+    [Migration("20260412101050_AddPerson")]
     partial class AddPerson
     {
         /// <inheritdoc />
@@ -77,10 +77,6 @@ namespace MentalMetal.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("UserId");
-
-                    b.HasIndex("UserId", "Name")
-                        .IsUnique()
-                        .HasFilter("\"IsArchived\" = false");
 
                     b.ToTable("People", (string)null);
                 });

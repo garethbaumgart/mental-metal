@@ -75,10 +75,6 @@ namespace MentalMetal.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.HasIndex("UserId", "Name")
-                        .IsUnique()
-                        .HasFilter("\"IsArchived\" = false");
-
                     b.ToTable("People", (string)null);
                 });
 

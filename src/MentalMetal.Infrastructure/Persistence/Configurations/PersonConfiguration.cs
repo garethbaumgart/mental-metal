@@ -78,8 +78,7 @@ public sealed class PersonConfiguration : IEntityTypeConfiguration<Person>
 
         builder.HasIndex(p => p.UserId);
 
-        builder.HasIndex(p => new { p.UserId, p.Name })
-            .IsUnique()
-            .HasFilter("\"IsArchived\" = false");
+        // Case-insensitive unique index defined in migration using lower("Name")
+        // See AddPerson migration for the raw SQL index
     }
 }

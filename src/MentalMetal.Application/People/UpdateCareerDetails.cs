@@ -18,6 +18,9 @@ public sealed class UpdateCareerDetailsHandler(
         if (person.UserId != currentUserService.UserId)
             throw new InvalidOperationException("Person not found.");
 
+        if (person.IsArchived)
+            throw new InvalidOperationException("Cannot modify an archived person.");
+
         person.UpdateCareerDetails(request.Level, request.Aspirations, request.GrowthAreas);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);

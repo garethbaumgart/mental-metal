@@ -44,17 +44,19 @@ namespace MentalMetal.Infrastructure.Migrations
                 table: "People",
                 column: "UserId");
 
-            migrationBuilder.CreateIndex(
-                name: "IX_People_UserId_Name",
-                table: "People",
-                columns: new[] { "UserId", "Name" },
-                unique: true,
-                filter: "\"IsArchived\" = false");
+            migrationBuilder.Sql(
+                """
+                CREATE UNIQUE INDEX "IX_People_UserId_LowerName"
+                ON "People" ("UserId", lower("Name"))
+                WHERE "IsArchived" = false;
+                """);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.Sql("""DROP INDEX IF EXISTS "IX_People_UserId_LowerName";""");
+
             migrationBuilder.DropTable(
                 name: "People");
         }

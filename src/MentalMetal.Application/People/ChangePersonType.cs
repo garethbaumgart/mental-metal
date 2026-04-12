@@ -18,6 +18,9 @@ public sealed class ChangePersonTypeHandler(
         if (person.UserId != currentUserService.UserId)
             throw new InvalidOperationException("Person not found.");
 
+        if (person.IsArchived)
+            throw new InvalidOperationException("Cannot modify an archived person.");
+
         person.ChangeType(request.NewType);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);

@@ -18,6 +18,9 @@ public sealed class AdvanceCandidatePipelineHandler(
         if (person.UserId != currentUserService.UserId)
             throw new InvalidOperationException("Person not found.");
 
+        if (person.IsArchived)
+            throw new InvalidOperationException("Cannot modify an archived person.");
+
         person.AdvanceCandidatePipeline(request.NewStatus);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
