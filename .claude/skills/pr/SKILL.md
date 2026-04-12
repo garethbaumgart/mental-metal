@@ -172,13 +172,19 @@ If CI fails:
 
 ### 5b. Monitor for Reviews
 
-Poll for reviewer comments every 2 minutes, for up to 5 cycles (10 minutes total). If all comments have been addressed after a cycle, stop polling and proceed:
+Poll for reviewer comments every 2 minutes. You must complete **5 consecutive clean cycles** (no new actionable comments) before declaring the PR ready. Each cycle runs all three commands below and compares the results against the previous cycle:
 
 ```bash
 gh api repos/{owner}/{repo}/pulls/$PR_NUMBER/comments --jq '.[] | "[\(.user.login)] \(.path) L\(.line // "?"): \(.body[0:300])"'
 gh api repos/{owner}/{repo}/pulls/$PR_NUMBER/reviews --jq '.[] | "[\(.user.login)] \(.state): \(.body[0:300])"'
 gh api repos/{owner}/{repo}/issues/$PR_NUMBER/comments --jq '.[] | "[\(.user.login)] \(.body[0:300])"'
 ```
+
+**Clean cycle rules:**
+- A cycle is **clean** if no new actionable review comments appeared since the previous cycle
+- If a new actionable comment appears, address it (Step 5c), push fixes (Step 5d), and **reset the counter to 0**
+- Only after 5 consecutive clean cycles may you report the PR as ready to merge
+- Track and report the cycle count to the user (e.g., "Clean cycle 3/5, no new comments")
 
 ### 5c. Address Review Comments
 
@@ -227,4 +233,4 @@ The review loop stops when one of these conditions is met:
 | PR already exists for branch | Update the existing PR body instead of creating a duplicate. |
 | No OpenSpec spec found | Omit the Spec line from the PR body. Proceed normally. |
 | CI fails after PR creation | Read logs, fix issues, push fixes, re-monitor. |
-| Review polling timeout (10 min) | If no unaddressed comments remain, proceed. Otherwise ask the user whether to keep waiting. |
+| Review polling incomplete (< 5 clean cycles) | Do not declare the PR ready. Continue polling or ask the user whether to keep waiting. |
