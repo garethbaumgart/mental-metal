@@ -297,4 +297,53 @@ public class CaptureTests
         Assert.Null(capture.Title);
         Assert.Null(capture.Source);
     }
+
+    // RecordSpawned* tests
+    [Fact]
+    public void RecordSpawnedCommitment_AddsIdAndUpdatesTimestamp()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+        var commitmentId = Guid.NewGuid();
+
+        capture.RecordSpawnedCommitment(commitmentId);
+
+        Assert.Single(capture.SpawnedCommitmentIds);
+        Assert.Contains(commitmentId, capture.SpawnedCommitmentIds);
+    }
+
+    [Fact]
+    public void RecordSpawnedCommitment_Duplicate_IsIdempotent()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+        var commitmentId = Guid.NewGuid();
+        capture.RecordSpawnedCommitment(commitmentId);
+
+        capture.RecordSpawnedCommitment(commitmentId);
+
+        Assert.Single(capture.SpawnedCommitmentIds);
+    }
+
+    [Fact]
+    public void RecordSpawnedDelegation_AddsId()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+        var delegationId = Guid.NewGuid();
+
+        capture.RecordSpawnedDelegation(delegationId);
+
+        Assert.Single(capture.SpawnedDelegationIds);
+        Assert.Contains(delegationId, capture.SpawnedDelegationIds);
+    }
+
+    [Fact]
+    public void RecordSpawnedObservation_AddsId()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+        var observationId = Guid.NewGuid();
+
+        capture.RecordSpawnedObservation(observationId);
+
+        Assert.Single(capture.SpawnedObservationIds);
+        Assert.Contains(observationId, capture.SpawnedObservationIds);
+    }
 }

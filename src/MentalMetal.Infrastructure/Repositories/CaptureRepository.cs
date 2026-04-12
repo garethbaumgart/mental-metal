@@ -12,7 +12,7 @@ public sealed class CaptureRepository(MentalMetalDbContext dbContext) : ICapture
     public async Task<IReadOnlyList<Capture>> GetAllAsync(
         Guid userId, CaptureType? typeFilter, ProcessingStatus? statusFilter, CancellationToken cancellationToken)
     {
-        var query = dbContext.Captures.Where(c => c.UserId == userId);
+        var query = dbContext.Captures.AsNoTracking().Where(c => c.UserId == userId);
 
         if (typeFilter is not null)
             query = query.Where(c => c.CaptureType == typeFilter.Value);

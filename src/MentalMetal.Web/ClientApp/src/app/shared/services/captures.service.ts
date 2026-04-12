@@ -5,8 +5,6 @@ import {
   Capture,
   CaptureType,
   CreateCaptureRequest,
-  LinkInitiativeRequest,
-  LinkPersonRequest,
   ProcessingStatus,
   UpdateCaptureMetadataRequest,
 } from '../models/capture.model';
@@ -40,18 +38,18 @@ export class CapturesService {
   }
 
   linkPerson(id: string, personId: string): Observable<Capture> {
-    return this.http.post<Capture>(`${this.baseUrl}/${id}/link-person`, { personId } as LinkPersonRequest);
+    return this.http.post<Capture>(`${this.baseUrl}/${id}/link-person`, { personId });
   }
 
   unlinkPerson(id: string, personId: string): Observable<Capture> {
-    return this.http.post<Capture>(`${this.baseUrl}/${id}/unlink-person`, { personId } as LinkPersonRequest);
+    return this.http.post<Capture>(`${this.baseUrl}/${id}/unlink-person`, { personId });
   }
 
   linkInitiative(id: string, initiativeId: string): Observable<Capture> {
-    return this.http.post<Capture>(`${this.baseUrl}/${id}/link-initiative`, { initiativeId } as LinkInitiativeRequest);
+    return this.http.post<Capture>(`${this.baseUrl}/${id}/link-initiative`, { initiativeId });
   }
 
   unlinkInitiative(id: string, initiativeId: string): Observable<Capture> {
-    return this.http.post<Capture>(`${this.baseUrl}/${id}/unlink-initiative`, { initiativeId } as LinkInitiativeRequest);
+    return this.http.post<Capture>(`${this.baseUrl}/${id}/unlink-initiative`, { initiativeId });
   }
 }

@@ -5,6 +5,8 @@ import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
 import { CapturesService } from '../../../shared/services/captures.service';
 import { Capture, CaptureType } from '../../../shared/models/capture.model';
 
@@ -12,8 +14,10 @@ import { Capture, CaptureType } from '../../../shared/models/capture.model';
   selector: 'app-quick-capture-dialog',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, ButtonModule, DialogModule, InputTextModule, TextareaModule, SelectModule],
+  imports: [FormsModule, ButtonModule, DialogModule, InputTextModule, TextareaModule, SelectModule, ToastModule],
+  providers: [MessageService],
   template: `
+    <p-toast />
     <p-dialog
       header="Quick Capture"
       [visible]="visible()"
@@ -66,6 +70,7 @@ import { Capture, CaptureType } from '../../../shared/models/capture.model';
 })
 export class QuickCaptureDialogComponent {
   private readonly capturesService = inject(CapturesService);
+  private readonly messageService = inject(MessageService);
 
   readonly visible = model(false);
   readonly created = output<Capture>();
@@ -105,7 +110,10 @@ export class QuickCaptureDialogComponent {
         this.source = '';
         this.visible.set(false);
       },
-      error: () => this.submitting.set(false),
+      error: () => {
+        this.submitting.set(false);
+        this.messageService.add({ severity: 'error', summary: 'Failed to create capture' });
+      },
     });
   }
 }
