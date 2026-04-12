@@ -8,14 +8,14 @@ User authentication via Google OAuth, JWT session management, refresh token rota
 
 ### Requirement: User registration via OAuth
 
-The system SHALL create a new User aggregate when a user authenticates via Google OAuth for the first time. The User SHALL be populated with ExternalAuthId, Email, Name, and AvatarUrl from the Google identity token. The system SHALL raise a `UserRegistered` domain event upon successful registration.
+The system SHALL create a new User aggregate when a user authenticates via Google OAuth for the first time. The User SHALL be populated with ExternalAuthId, Email, Name, and AvatarUrl from the Google identity token. The system SHALL raise a `UserRegistered` domain event upon successful registration. ExternalAuthId and Email SHALL have unique database indexes to enforce identity uniqueness at the persistence layer.
 
 #### Scenario: First-time Google OAuth login
 
 - **WHEN** a user completes Google OAuth authentication and no User exists with that ExternalAuthId
 - **THEN** the system creates a new User aggregate with the Google profile data, sets CreatedAt and LastLoginAt to the current time, applies default UserPreferences, and returns a JWT access token and refresh token
 
-#### Scenario: Duplicate ExternalAuthId rejected
+#### Scenario: Existing ExternalAuthId treated as returning login
 
 - **WHEN** a registration attempt is made with an ExternalAuthId that already exists
 - **THEN** the system treats it as a returning user login (RecordLogin) rather than creating a duplicate
@@ -60,7 +60,7 @@ The system SHALL authenticate API requests using JWT access tokens sent in the `
 
 ### Requirement: Refresh token rotation
 
-The system SHALL support refresh tokens stored in HTTP-only secure cookies with a 7-day expiry. Each refresh token use SHALL invalidate the old token and issue a new refresh token alongside a new access token.
+The system SHALL support refresh tokens stored in HTTP-only, Secure, SameSite=Strict cookies scoped to the application path, with a 7-day expiry. The Secure flag MAY be relaxed in Development environments. Each refresh token use SHALL invalidate the old token and issue a new refresh token alongside a new access token.
 
 #### Scenario: Successful token refresh
 
@@ -145,7 +145,7 @@ The system SHALL provide an endpoint to retrieve the authenticated user's profil
 #### Scenario: Get current user
 
 - **WHEN** an authenticated user requests their profile via `/api/users/me`
-- **THEN** the system returns the user's Id, Email, Name, AvatarUrl, Timezone, Preferences, CreatedAt, and LastLoginAt
+- **THEN** the system returns the user's Id, Email, Name, AvatarUrl, Timezone, Preferences, HasAiProvider, CreatedAt, and LastLoginAt
 
 ### Requirement: Frontend authentication flow
 
@@ -164,7 +164,7 @@ The Angular application SHALL manage authentication state using signals, redirec
 #### Scenario: Automatic token refresh
 
 - **WHEN** an API request receives a 401 response and a valid refresh token exists
-- **THEN** the auth interceptor automatically attempts a token refresh and retries the original request
+- **THEN** the auth interceptor attempts a single token refresh and retries the original request (no retry loop — if the refresh itself fails, redirect to login)
 
 #### Scenario: Refresh failure redirects to login
 
