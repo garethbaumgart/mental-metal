@@ -155,19 +155,28 @@ public sealed class Capture : AggregateRoot, IUserScoped
 
     public void RecordSpawnedCommitment(Guid commitmentId)
     {
-        if (!_spawnedCommitmentIds.Contains(commitmentId))
-            _spawnedCommitmentIds.Add(commitmentId);
+        if (_spawnedCommitmentIds.Contains(commitmentId))
+            return;
+
+        _spawnedCommitmentIds.Add(commitmentId);
+        UpdatedAt = DateTimeOffset.UtcNow;
     }
 
     public void RecordSpawnedDelegation(Guid delegationId)
     {
-        if (!_spawnedDelegationIds.Contains(delegationId))
-            _spawnedDelegationIds.Add(delegationId);
+        if (_spawnedDelegationIds.Contains(delegationId))
+            return;
+
+        _spawnedDelegationIds.Add(delegationId);
+        UpdatedAt = DateTimeOffset.UtcNow;
     }
 
     public void RecordSpawnedObservation(Guid observationId)
     {
-        if (!_spawnedObservationIds.Contains(observationId))
-            _spawnedObservationIds.Add(observationId);
+        if (_spawnedObservationIds.Contains(observationId))
+            return;
+
+        _spawnedObservationIds.Add(observationId);
+        UpdatedAt = DateTimeOffset.UtcNow;
     }
 }

@@ -96,7 +96,7 @@ import { Initiative } from '../../../shared/models/initiative.model';
         <section class="flex flex-col gap-4">
           <h2 class="text-xl font-semibold">Linked People</h2>
 
-          @if (linkedPeople().length === 0) {
+          @if (linkedPeople().length === 0 && capture()!.linkedPersonIds.length === 0) {
             <p class="text-muted-color text-sm">No linked people.</p>
           } @else {
             <div class="flex flex-wrap gap-2">
@@ -134,7 +134,7 @@ import { Initiative } from '../../../shared/models/initiative.model';
         <section class="flex flex-col gap-4">
           <h2 class="text-xl font-semibold">Linked Initiatives</h2>
 
-          @if (linkedInitiatives().length === 0) {
+          @if (linkedInitiatives().length === 0 && capture()!.linkedInitiativeIds.length === 0) {
             <p class="text-muted-color text-sm">No linked initiatives.</p>
           } @else {
             <div class="flex flex-wrap gap-2">
