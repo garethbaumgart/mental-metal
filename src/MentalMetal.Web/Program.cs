@@ -81,7 +81,10 @@ app.Use(async (context, next) =>
 
 // --- Test-only Auth Endpoint (Development/E2E only) ---
 
-if (app.Environment.IsDevelopment())
+var enableTestLogin = app.Environment.IsDevelopment()
+    && string.Equals(builder.Configuration["Testing:EnableTestLogin"], "true", StringComparison.OrdinalIgnoreCase);
+
+if (enableTestLogin)
 {
     app.MapPost("/api/auth/test-login", async (
         HttpContext httpContext,
