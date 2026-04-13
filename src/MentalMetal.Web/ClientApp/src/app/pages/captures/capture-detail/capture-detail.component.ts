@@ -46,6 +46,26 @@ import { Initiative } from '../../../shared/models/initiative.model';
     .extraction-item {
       border-color: var(--p-surface-100);
     }
+    .error-banner {
+      border-color: var(--p-red-200);
+      background-color: var(--p-red-50);
+    }
+    .error-icon { color: var(--p-red-500); }
+    .error-title { color: var(--p-red-700); }
+    .error-detail { color: var(--p-red-600); }
+    .success-banner {
+      background-color: var(--p-green-50);
+      border-color: var(--p-green-200);
+    }
+    .success-icon { color: var(--p-green-600); }
+    .success-text { color: var(--p-green-700); }
+    .warn-banner {
+      background-color: var(--p-yellow-50);
+      border-color: var(--p-yellow-200);
+    }
+    .warn-icon { color: var(--p-yellow-600); }
+    .warn-text { color: var(--p-yellow-700); }
+    .risk-icon { color: var(--p-yellow-500); }
   `],
   providers: [MessageService],
   template: `
@@ -94,12 +114,12 @@ import { Initiative } from '../../../shared/models/initiative.model';
           </div>
         }
         @if (capture()!.processingStatus === 'Failed') {
-          <div class="flex items-center gap-4 p-4 rounded-md border border-red-200 bg-red-50">
-            <i class="pi pi-exclamation-triangle text-red-500"></i>
+          <div class="flex items-center gap-4 p-4 rounded-md border error-banner">
+            <i class="pi pi-exclamation-triangle error-icon"></i>
             <div class="flex-1">
-              <p class="font-medium text-red-700">Processing Failed</p>
+              <p class="font-medium error-title">Processing Failed</p>
               @if (capture()!.failureReason) {
-                <p class="text-sm text-red-600">{{ capture()!.failureReason }}</p>
+                <p class="text-sm error-detail">{{ capture()!.failureReason }}</p>
               }
             </div>
             <p-button
@@ -130,14 +150,14 @@ import { Initiative } from '../../../shared/models/initiative.model';
             </div>
 
             @if (extractionConfirmed()) {
-              <div class="flex items-center gap-2 p-3 rounded-md bg-green-50 border border-green-200">
-                <i class="pi pi-check-circle text-green-600"></i>
-                <span class="text-green-700 font-medium">Entities created</span>
+              <div class="flex items-center gap-2 p-3 rounded-md border success-banner">
+                <i class="pi pi-check-circle success-icon"></i>
+                <span class="success-text font-medium">Entities created</span>
               </div>
             } @else if (extractionDiscarded()) {
-              <div class="flex items-center gap-2 p-3 rounded-md bg-yellow-50 border border-yellow-200">
-                <i class="pi pi-info-circle text-yellow-600"></i>
-                <span class="text-yellow-700 font-medium">Extraction discarded</span>
+              <div class="flex items-center gap-2 p-3 rounded-md border warn-banner">
+                <i class="pi pi-info-circle warn-icon"></i>
+                <span class="warn-text font-medium">Extraction discarded</span>
               </div>
             } @else {
               <div class="flex gap-2">
@@ -246,7 +266,7 @@ import { Initiative } from '../../../shared/models/initiative.model';
                 <h3 class="font-semibold mb-2">Risks ({{ capture()!.aiExtraction!.risksIdentified.length }})</h3>
                 @for (r of capture()!.aiExtraction!.risksIdentified; track $index) {
                   <div class="p-2 mb-1 text-sm flex items-start gap-2">
-                    <i class="pi pi-exclamation-triangle text-yellow-500 mt-0.5"></i>
+                    <i class="pi pi-exclamation-triangle risk-icon mt-0.5"></i>
                     <span>{{ r }}</span>
                   </div>
                 }
