@@ -40,6 +40,7 @@ public sealed class PostInitiativeChatMessageHandler(
 
         return new PostChatMessageResponse(
             ChatMessageDto.From(userMessage),
-            ChatMessageDto.From(replyMessage));
+            ChatMessageDto.From(replyMessage),
+            ChatThreadSummaryDto.From(thread));
     }
 }

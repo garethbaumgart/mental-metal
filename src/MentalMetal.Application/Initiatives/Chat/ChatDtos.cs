@@ -78,4 +78,5 @@ public sealed record PostChatMessageRequest(string Content);
 
 public sealed record PostChatMessageResponse(
     ChatMessageDto UserMessage,
-    ChatMessageDto AssistantMessage);
+    ChatMessageDto AssistantMessage,
+    ChatThreadSummaryDto Thread);

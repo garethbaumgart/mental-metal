@@ -149,11 +149,11 @@ import { SourceReferenceChipComponent } from './source-reference-chip.component'
           <div #messageList class="flex-1 overflow-y-auto flex flex-col gap-2 p-2">
             @for (m of activeThread()!.messages; track m.messageOrdinal) {
               <div
+                class="rounded p-2 message-bubble"
                 [class.self-end]="m.role === 'User'"
                 [class.self-start]="m.role === 'Assistant'"
                 [class.self-center]="m.role === 'System'"
-                [class.max-w-[80%]]="m.role !== 'System'"
-                class="rounded p-2 message-bubble"
+                [class.bubble-capped]="m.role !== 'System'"
                 [class.user-bubble]="m.role === 'User'"
                 [class.assistant-bubble]="m.role === 'Assistant'"
               >
@@ -164,7 +164,7 @@ import { SourceReferenceChipComponent } from './source-reference-chip.component'
 
                   @if (m.sourceReferences.length > 0) {
                     <div class="flex flex-wrap gap-1 mt-2">
-                      @for (r of m.sourceReferences; track r.entityId) {
+                      @for (r of m.sourceReferences; track r.entityId + '-' + $index) {
                         <app-source-reference-chip [reference]="r" [initiativeId]="initiativeId()" />
                       }
                     </div>
@@ -221,6 +221,9 @@ import { SourceReferenceChipComponent } from './source-reference-chip.component'
     }
     .message-bubble {
       border: 1px solid var(--p-surface-200);
+    }
+    .bubble-capped {
+      max-width: 80%;
     }
     .user-bubble {
       background: var(--p-primary-50);
@@ -317,18 +320,20 @@ export class InitiativeChatTabComponent {
     this.chatService.postMessage(this.initiativeId(), thread.id, { content }).subscribe({
       next: (resp) => {
         this.awaitingReply.set(false);
-        // Replace the optimistic message with the canonical ones from the server.
+        // Replace the optimistic message with the canonical ones from the server. The backend
+        // auto-titles the thread on the first user message, so adopt the server's title here.
         this.activeThread.update((t) => {
           if (!t) return t;
           const base = t.messages.filter((m) => m !== optimistic);
           return {
             ...t,
+            title: resp.thread.title,
             messages: [...base, resp.userMessage, resp.assistantMessage],
-            messageCount: base.length + 2,
-            lastMessageAt: resp.assistantMessage.createdAt,
+            messageCount: resp.thread.messageCount,
+            lastMessageAt: resp.thread.lastMessageAt ?? resp.assistantMessage.createdAt,
           };
         });
-        this.bumpThreadSummary(thread.id, resp.assistantMessage.createdAt);
+        this.syncThreadSummary(resp.thread);
       },
       error: (err) => {
         this.awaitingReply.set(false);
@@ -422,9 +427,9 @@ export class InitiativeChatTabComponent {
     this.threadSummaries.update((list) => [summary, ...list]);
   }
 
-  private bumpThreadSummary(threadId: string, lastMessageAt: string): void {
+  private syncThreadSummary(summary: ChatThreadSummary): void {
     this.threadSummaries.update((list) =>
-      list.map((t) => t.id === threadId ? { ...t, lastMessageAt, messageCount: t.messageCount + 2 } : t)
+      list.map((t) => t.id === summary.id ? { ...t, ...summary } : t)
     );
   }
 

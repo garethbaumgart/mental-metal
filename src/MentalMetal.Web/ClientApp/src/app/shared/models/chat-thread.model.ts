@@ -65,4 +65,5 @@ export interface PostChatMessageRequest {
 export interface PostChatMessageResponse {
   userMessage: ChatMessage;
   assistantMessage: ChatMessage;
+  thread: ChatThreadSummary;
 }

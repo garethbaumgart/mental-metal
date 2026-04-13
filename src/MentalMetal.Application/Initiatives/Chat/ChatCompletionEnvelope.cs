@@ -5,7 +5,7 @@ namespace MentalMetal.Application.Initiatives.Chat;
 /// </summary>
 internal sealed record ChatCompletionEnvelope(
     string AssistantText,
-    List<EnvelopeSourceReference> SourceReferences);
+    List<EnvelopeSourceReference>? SourceReferences);
 
 internal sealed record EnvelopeSourceReference(
     string EntityType,

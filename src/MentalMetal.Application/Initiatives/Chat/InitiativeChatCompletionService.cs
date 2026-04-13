@@ -66,7 +66,7 @@ public sealed class InitiativeChatCompletionService(
                 return;
             }
 
-            var refs = envelope.SourceReferences
+            var refs = (envelope.SourceReferences ?? [])
                 .Select(r => TryBuildReference(r, known))
                 .Where(r => r is not null)
                 .Select(r => r!)
@@ -227,8 +227,27 @@ public sealed class InitiativeChatCompletionService(
 
     internal static IReadOnlyList<ChatMessage> TrimHistory(IReadOnlyList<ChatMessage> messages)
     {
-        if (messages.Count <= MaxHistoryMessages) return messages;
-        // Keep the most recent N; oldest trimmed first.
-        return messages.Skip(messages.Count - MaxHistoryMessages).ToList();
+        // Step 1: enforce the hard message-count cap. Keep the most recent N; oldest trimmed first.
+        IReadOnlyList<ChatMessage> capped = messages.Count <= MaxHistoryMessages
+            ? messages
+            : messages.Skip(messages.Count - MaxHistoryMessages).ToList();
+
+        // Step 2: enforce the token budget. Estimate tokens as chars/4 (good enough for the
+        // default providers). Walk from newest to oldest, keeping as many messages as fit; always
+        // keep at least the most recent message so we have a question to answer.
+        var total = 0;
+        var keepFromIndex = capped.Count;
+        for (var i = capped.Count - 1; i >= 0; i--)
+        {
+            var estimate = EstimateTokens(capped[i].Content);
+            if (i < capped.Count - 1 && total + estimate > HistoryTokenBudget) break;
+            total += estimate;
+            keepFromIndex = i;
+        }
+
+        return keepFromIndex == 0 ? capped : capped.Skip(keepFromIndex).ToList();
     }
+
+    private static int EstimateTokens(string content) =>
+        string.IsNullOrEmpty(content) ? 0 : (content.Length + 3) / 4;
 }
