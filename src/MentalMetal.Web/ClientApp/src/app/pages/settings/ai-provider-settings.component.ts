@@ -124,6 +124,7 @@ import {
               optionLabel="name"
               optionValue="id"
               [(ngModel)]="selectedModel"
+              (ngModelChange)="onModelChange()"
               placeholder="Select model"
               class="w-full"
               [loading]="loadingModels()"
@@ -225,7 +226,7 @@ export class AiProviderSettingsComponent implements OnInit {
         this.validating.set(false);
         if (result.success) {
           this.validationResult.set('success');
-          this.validationMessage.set(`Connected to ${result.modelName}`);
+          this.validationMessage.set(result.modelName ? `Connected to ${result.modelName}` : 'Validation successful');
         } else {
           this.validationResult.set('error');
           this.validationMessage.set(result.error ?? 'Validation failed');
@@ -249,6 +250,16 @@ export class AiProviderSettingsComponent implements OnInit {
   }
 
   onApiKeyInput(): void {
+    // Clear stale validation so canSave() disables Save until the new key is validated
+    this.validationResult.set(null);
+    this.validationMessage.set(null);
+    this.validateSubject.next();
+  }
+
+  onModelChange(): void {
+    // Clear stale validation when model changes — the previous result was for a different model
+    this.validationResult.set(null);
+    this.validationMessage.set(null);
     this.validateSubject.next();
   }
 
