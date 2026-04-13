@@ -1,4 +1,5 @@
 using MentalMetal.Application.Common;
+using MentalMetal.Domain.Common;
 using MentalMetal.Domain.Initiatives;
 using MentalMetal.Domain.Users;
 
@@ -13,10 +14,10 @@ public sealed class AddMilestoneHandler(
         Guid initiativeId, MilestoneRequest request, CancellationToken cancellationToken)
     {
         var initiative = await initiativeRepository.GetByIdAsync(initiativeId, cancellationToken)
-            ?? throw new InvalidOperationException("Initiative not found.");
+            ?? throw new NotFoundException("Initiative", initiativeId);
 
         if (initiative.UserId != currentUserService.UserId)
-            throw new InvalidOperationException("Initiative not found.");
+            throw new NotFoundException("Initiative", initiativeId);
 
         initiative.AddMilestone(request.Title, request.TargetDate, request.Description);
 

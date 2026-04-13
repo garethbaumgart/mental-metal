@@ -398,6 +398,13 @@ public class InitiativeTests
             initiative.UnlinkPerson(personId));
     }
 
+    [Fact]
+    public void Create_EmptyUserId_Throws()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            Initiative.Create(Guid.Empty, "Test"));
+    }
+
     private static Initiative CreateWithStatus(InitiativeStatus status)
     {
         var initiative = Initiative.Create(UserId, "Test");

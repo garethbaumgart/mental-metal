@@ -34,6 +34,9 @@ public sealed class Capture : AggregateRoot, IUserScoped
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rawContent, nameof(rawContent));
 
+        if (userId == Guid.Empty)
+            throw new ArgumentException("UserId is required.", nameof(userId));
+
         var now = DateTimeOffset.UtcNow;
 
         var capture = new Capture
@@ -148,6 +151,9 @@ public sealed class Capture : AggregateRoot, IUserScoped
 
     public void LinkToPerson(Guid personId)
     {
+        if (personId == Guid.Empty)
+            throw new ArgumentException("PersonId is required.", nameof(personId));
+
         if (_linkedPersonIds.Contains(personId))
             return;
 
@@ -159,6 +165,9 @@ public sealed class Capture : AggregateRoot, IUserScoped
 
     public void UnlinkFromPerson(Guid personId)
     {
+        if (personId == Guid.Empty)
+            throw new ArgumentException("PersonId is required.", nameof(personId));
+
         if (!_linkedPersonIds.Remove(personId))
             return; // idempotent
 
@@ -169,6 +178,9 @@ public sealed class Capture : AggregateRoot, IUserScoped
 
     public void LinkToInitiative(Guid initiativeId)
     {
+        if (initiativeId == Guid.Empty)
+            throw new ArgumentException("InitiativeId is required.", nameof(initiativeId));
+
         if (_linkedInitiativeIds.Contains(initiativeId))
             return;
 
@@ -180,6 +192,9 @@ public sealed class Capture : AggregateRoot, IUserScoped
 
     public void UnlinkFromInitiative(Guid initiativeId)
     {
+        if (initiativeId == Guid.Empty)
+            throw new ArgumentException("InitiativeId is required.", nameof(initiativeId));
+
         if (!_linkedInitiativeIds.Remove(initiativeId))
             return; // idempotent
 
@@ -199,6 +214,9 @@ public sealed class Capture : AggregateRoot, IUserScoped
 
     public void RecordSpawnedCommitment(Guid commitmentId)
     {
+        if (commitmentId == Guid.Empty)
+            throw new ArgumentException("CommitmentId is required.", nameof(commitmentId));
+
         if (_spawnedCommitmentIds.Contains(commitmentId))
             return;
 
@@ -208,6 +226,9 @@ public sealed class Capture : AggregateRoot, IUserScoped
 
     public void RecordSpawnedDelegation(Guid delegationId)
     {
+        if (delegationId == Guid.Empty)
+            throw new ArgumentException("DelegationId is required.", nameof(delegationId));
+
         if (_spawnedDelegationIds.Contains(delegationId))
             return;
 
@@ -217,6 +238,9 @@ public sealed class Capture : AggregateRoot, IUserScoped
 
     public void RecordSpawnedObservation(Guid observationId)
     {
+        if (observationId == Guid.Empty)
+            throw new ArgumentException("ObservationId is required.", nameof(observationId));
+
         if (_spawnedObservationIds.Contains(observationId))
             return;
 

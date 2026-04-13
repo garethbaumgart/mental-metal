@@ -25,16 +25,16 @@ import { QuickCaptureDialogComponent } from '../quick-capture-dialog/quick-captu
       <div class="flex items-center gap-4">
         <p-select
           [options]="typeFilterOptions"
-          [(ngModel)]="selectedType"
-          (ngModelChange)="onFilterChange()"
+          [ngModel]="selectedType()"
+          (ngModelChange)="selectedType.set($event); onFilterChange()"
           placeholder="All Types"
           [showClear]="true"
           class="w-48"
         />
         <p-select
           [options]="statusFilterOptions"
-          [(ngModel)]="selectedStatus"
-          (ngModelChange)="onFilterChange()"
+          [ngModel]="selectedStatus()"
+          (ngModelChange)="selectedStatus.set($event); onFilterChange()"
           placeholder="All Statuses"
           [showClear]="true"
           class="w-48"
@@ -101,8 +101,8 @@ export class CapturesListComponent implements OnInit {
   readonly captures = signal<Capture[]>([]);
   readonly loading = signal(true);
   readonly showCreateDialog = signal(false);
-  protected selectedType: CaptureType | null = null;
-  protected selectedStatus: ProcessingStatus | null = null;
+  readonly selectedType = signal<CaptureType | null>(null);
+  readonly selectedStatus = signal<ProcessingStatus | null>(null);
 
   protected readonly typeFilterOptions = [
     { label: 'Quick Note', value: 'QuickNote' as CaptureType },
@@ -173,7 +173,7 @@ export class CapturesListComponent implements OnInit {
 
   private loadCaptures(): void {
     this.loading.set(true);
-    this.capturesService.list(this.selectedType ?? undefined, this.selectedStatus ?? undefined).subscribe({
+    this.capturesService.list(this.selectedType() ?? undefined, this.selectedStatus() ?? undefined).subscribe({
       next: (captures) => {
         this.captures.set(captures);
         this.loading.set(false);

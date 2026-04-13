@@ -26,30 +26,18 @@ public sealed class Milestone : ValueObject
         };
     }
 
-    public Milestone Complete()
+    public void Complete()
     {
-        return new Milestone
-        {
-            Id = Id,
-            Title = Title,
-            TargetDate = TargetDate,
-            Description = Description,
-            IsCompleted = true
-        };
+        IsCompleted = true;
     }
 
-    internal Milestone WithUpdates(string title, DateOnly targetDate, string? description)
+    internal void ApplyUpdates(string title, DateOnly targetDate, string? description)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(title, nameof(title));
 
-        return new Milestone
-        {
-            Id = Id,
-            Title = title.Trim(),
-            TargetDate = targetDate,
-            Description = description?.Trim(),
-            IsCompleted = IsCompleted
-        };
+        Title = title.Trim();
+        TargetDate = targetDate;
+        Description = description?.Trim();
     }
 
     protected override IEnumerable<object?> GetEqualityComponents()
