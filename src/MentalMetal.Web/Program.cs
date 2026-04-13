@@ -731,6 +731,10 @@ app.MapPost("/api/captures/{id:guid}/link-person", async (
     {
         return Results.NotFound();
     }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
 }).RequireAuthorization();
 
 app.MapPost("/api/captures/{id:guid}/link-initiative", async (
@@ -747,6 +751,10 @@ app.MapPost("/api/captures/{id:guid}/link-initiative", async (
     catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
     {
         return Results.NotFound();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
     }
 }).RequireAuthorization();
 
@@ -765,6 +773,10 @@ app.MapPost("/api/captures/{id:guid}/unlink-person", async (
     {
         return Results.NotFound();
     }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
 }).RequireAuthorization();
 
 app.MapPost("/api/captures/{id:guid}/unlink-initiative", async (
@@ -781,6 +793,10 @@ app.MapPost("/api/captures/{id:guid}/unlink-initiative", async (
     catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
     {
         return Results.NotFound();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
     }
 }).RequireAuthorization();
 

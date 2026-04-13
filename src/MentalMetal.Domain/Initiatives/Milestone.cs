@@ -26,7 +26,7 @@ public sealed class Milestone : ValueObject
         };
     }
 
-    public void Complete()
+    internal void Complete()
     {
         IsCompleted = true;
     }

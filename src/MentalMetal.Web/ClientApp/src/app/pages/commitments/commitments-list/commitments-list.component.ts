@@ -238,6 +238,7 @@ export class CommitmentsListComponent implements OnInit {
         this.loading.set(false);
       },
       error: () => {
+        this.commitments.set([]);
         this.loading.set(false);
         this.messageService.add({ severity: 'error', summary: 'Failed to load commitments' });
       },
