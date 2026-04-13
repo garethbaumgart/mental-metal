@@ -221,7 +221,8 @@ The review loop stops when one of these conditions is met:
   gh pr merge $PR_NUMBER --squash --delete-branch
   ```
 - **User cancels** — leave the PR open, report current status and any unaddressed comments
-- **5 consecutive clean review cycles achieved** (Step 5b) with CI green — proceed to squash merge. This applies to every PR, including markdown-only and OpenSpec proposals.
+- **5 consecutive clean review cycles achieved** (Step 5b) and CI is satisfied — proceed to squash merge. This applies to every PR, including markdown-only and OpenSpec proposals.
+  - CI is considered satisfied when all triggered checks are green **or** when no CI checks were triggered due to repository workflow path filters (e.g., `paths-ignore` excluding `**/*.md`, `.claude/**`, `docs/**`). Never treat pending or failed checks as satisfied.
 
 ---
 

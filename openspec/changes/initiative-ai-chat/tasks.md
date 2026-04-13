@@ -36,7 +36,7 @@
 ## 4. Application Layer — Context Builder
 
 - [ ] 4.1 Create `IInitiativeChatContextBuilder` interface and `InitiativeChatContextBuilder` implementation
-- [ ] 4.2 Implement `Build(userId, initiativeId, recentMessages)` enforcing caps (20 decisions, all open risks, latest req/design snapshots, 50 commitments, 50 delegations, 30 capture summaries) and filtering by UserId
+- [ ] 4.2 Implement `Build(userId, initiativeId, userQuestion, recentMessages)` — `userId` is required and non-optional; every downstream query filters by it. Enforce caps (20 decisions, all open risks, latest req/design snapshots, 50 commitments, 50 delegations, 30 capture summaries).
 - [ ] 4.3 Define DTO `InitiativeChatContextPayload` returned by the builder
 - [ ] 4.4 Unit test the builder: caps enforced, cross-user data excluded, empty initiative produces minimal payload
 
