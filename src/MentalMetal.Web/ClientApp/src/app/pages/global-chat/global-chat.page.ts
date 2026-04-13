@@ -207,6 +207,9 @@ export class GlobalChatPageComponent {
 
   protected readonly activeGroups = computed<ThreadGroup[]>(() => this.groupByDate(this.state.activeThreads()));
 
+  // Monotonic token to discard stale selectThread() responses when clicks race.
+  private selectThreadRequestToken = 0;
+
   constructor() {
     this.refresh();
 
@@ -238,9 +241,18 @@ export class GlobalChatPageComponent {
   }
 
   protected selectThread(threadId: string): void {
+    // Guard against stale responses when the user clicks between threads rapidly: tag each
+    // request with a monotonic token and only apply the response if it still matches.
+    const requestToken = ++this.selectThreadRequestToken;
     this.chatService.get(threadId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (t) => this.state.activeThread.set(t),
-      error: () => this.messageService.add({ severity: 'error', summary: 'Failed to load thread' }),
+      next: (t) => {
+        if (requestToken !== this.selectThreadRequestToken) return;
+        this.state.activeThread.set(t);
+      },
+      error: () => {
+        if (requestToken !== this.selectThreadRequestToken) return;
+        this.messageService.add({ severity: 'error', summary: 'Failed to load thread' });
+      },
     });
   }
 
@@ -320,8 +332,21 @@ export class GlobalChatPageComponent {
         const status = err?.status as number | undefined;
         this.messageService.add({ severity: 'error', summary: status === 409 ? 'This thread is archived' : 'Failed to send message' });
         this.state.activeThread.update((t) => t ? { ...t, messages: t.messages.filter((m) => m !== optimistic) } : t);
+        if (status === 409) this.reconcileArchivedThread(thread.id);
       },
     });
+  }
+
+  private reconcileArchivedThread(threadId: string): void {
+    // Server rejected send with 409 → thread was archived concurrently. Mirror that locally
+    // so the rail moves it into archived, activeThread.status becomes Archived, and the
+    // composer disables itself via the [disabled] bindings.
+    this.state.activeThread.update((curr) => curr && curr.id === threadId ? { ...curr, status: 'Archived' } : curr);
+    const moved = this.state.activeThreads().find((t) => t.id === threadId);
+    this.state.activeThreads.update((list) => list.filter((t) => t.id !== threadId));
+    if (moved && !this.state.archivedThreads().some((t) => t.id === threadId)) {
+      this.state.archivedThreads.update((list) => [{ ...moved, status: 'Archived' }, ...list]);
+    }
   }
 
   private refresh(): void {

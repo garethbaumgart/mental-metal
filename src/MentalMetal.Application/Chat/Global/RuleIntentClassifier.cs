@@ -30,10 +30,25 @@ public sealed class RuleIntentClassifier(
         var intents = new HashSet<ChatIntent>();
         var personIds = new List<Guid>();
         var initiativeIds = new List<Guid>();
+        DateRangeHint? dateRange = null;
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        // Saturday-safe end-of-week: days until Saturday (0..6). Matches context builder.
+        var daysUntilSaturday = ((int)DayOfWeek.Saturday - (int)today.DayOfWeek + 7) % 7;
+        var endOfWeek = today.AddDays(daysUntilSaturday);
 
         if (OverdueRx.IsMatch(userMessage)) intents.Add(ChatIntent.OverdueWork);
-        if (TodayRx.IsMatch(userMessage)) intents.Add(ChatIntent.MyDay);
-        if (ThisWeekRx.IsMatch(userMessage)) intents.Add(ChatIntent.MyWeek);
+        if (TodayRx.IsMatch(userMessage))
+        {
+            intents.Add(ChatIntent.MyDay);
+            dateRange = new DateRangeHint(today, today);
+        }
+        if (ThisWeekRx.IsMatch(userMessage))
+        {
+            intents.Add(ChatIntent.MyWeek);
+            // "this week" overrides "today" if both fire — widen range.
+            dateRange = new DateRangeHint(today, endOfWeek);
+        }
         if (CaptureSearchRx.IsMatch(userMessage)) intents.Add(ChatIntent.CaptureSearch);
 
         // Resolve person and initiative names via direct repository scans. Worth doing in
@@ -69,7 +84,7 @@ public sealed class RuleIntentClassifier(
 
         return new IntentSet(
             intents.ToList(),
-            new EntityHints(personIds, initiativeIds, DateRange: null));
+            new EntityHints(personIds, initiativeIds, dateRange));
     }
 
     /// <summary>

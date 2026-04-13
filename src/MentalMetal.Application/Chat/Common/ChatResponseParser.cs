@@ -39,9 +39,9 @@ public static class ChatResponseParser
         try
         {
             var raw = JsonSerializer.Deserialize<RawEnvelope>(json, JsonOpts);
-            if (raw is null) return null;
+            if (raw is null || string.IsNullOrWhiteSpace(raw.AssistantText)) return null;
             return new ParsedEnvelope(
-                raw.AssistantText ?? string.Empty,
+                raw.AssistantText,
                 (raw.SourceReferences ?? [])
                     .Select(r => new ParsedSourceReference(r.EntityType, r.EntityId, r.SnippetText, r.RelevanceScore))
                     .ToList());

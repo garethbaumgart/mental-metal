@@ -222,64 +222,15 @@ public sealed class GlobalChatContextBuilder(
                 captureItems.Add(new CaptureContextItem(capture.Id, capture.CapturedAt, capture.AiExtraction?.Summary ?? string.Empty));
         }
 
-        // ---- Person-name resolution for already-collected commitments/delegations ----
-        var allPersonIdsForLookup = userCommitments.Where(c => addedCommitmentIds.Contains(c.Id)).Select(c => c.PersonId)
-            .Concat(userDelegations.Where(d => addedDelegationIds.Contains(d.Id)).Select(d => d.DelegatePersonId))
-            .Distinct()
-            .ToList();
-        var personLookup = allPersonIdsForLookup.Count == 0
-            ? new Dictionary<Guid, string>()
-            : (await people.GetByIdsAsync(userId, allPersonIdsForLookup, cancellationToken))
-                .ToDictionary(p => p.Id, p => p.Name);
-
-        // Re-project commitments / delegations with resolved names (the in-place items above
-        // were placeholders; rebuild).
-        var commitmentItemsResolved = userCommitments
-            .Where(c => addedCommitmentIds.Contains(c.Id))
-            .Select(c => new CommitmentContextItem(
-                c.Id, c.Description, c.Direction.ToString(),
-                personLookup.TryGetValue(c.PersonId, out var pn) ? pn : null,
-                c.Status.ToString(), c.DueDate, c.IsOverdue))
-            .ToList();
-
-        var delegationItemsResolved = userDelegations
-            .Where(d => addedDelegationIds.Contains(d.Id))
-            .Select(d => new DelegationContextItem(
-                d.Id, d.Description,
-                personLookup.TryGetValue(d.DelegatePersonId, out var dn) ? dn : null,
-                d.Status.ToString(), d.DueDate,
-                d.DueDate is not null && d.DueDate < today
-                    && d.Status is DelegationStatus.Assigned or DelegationStatus.InProgress or DelegationStatus.Blocked,
-                d.Status == DelegationStatus.Blocked ? d.Notes : null))
-            .ToList();
-
-        commitmentItems = commitmentItemsResolved;
-        delegationItems = delegationItemsResolved;
-
-        // ---- Generic counters and top-N --------------------------------------------
-        var counters = new GlobalCounters(
-            OpenCommitments: userCommitments.Count(c => c.Status == CommitmentStatus.Open),
-            OpenDelegations: userDelegations.Count(d => d.Status is DelegationStatus.Assigned or DelegationStatus.InProgress or DelegationStatus.Blocked),
-            ActiveInitiatives: 0); // Initiative count filled below.
-
+        // ---- Generic additions (must happen before name resolution so ordering and
+        // names survive for these items too) --------------------------------------
         if (intents.IsGenericOnly || intents.Intents.Contains(ChatIntent.Generic))
         {
-            // Top-5 most overdue
-            var topOverdue = userCommitments
+            // Top-5 most overdue — AddCommitments preserves OrderBy(DueDate) ranking.
+            AddCommitments(userCommitments
                 .Where(c => c.IsOverdue)
                 .OrderBy(c => c.DueDate)
-                .Take(GenericTopOverdueCap)
-                .ToList();
-            foreach (var c in topOverdue)
-            {
-                if (addedCommitmentIds.Add(c.Id))
-                {
-                    commitmentItems.Add(new CommitmentContextItem(
-                        c.Id, c.Description, c.Direction.ToString(),
-                        personLookup.TryGetValue(c.PersonId, out var pn) ? pn : null,
-                        c.Status.ToString(), c.DueDate, c.IsOverdue));
-                }
-            }
+                .Take(GenericTopOverdueCap), commitmentItems, addedCommitmentIds);
 
             // Top-5 most-recent confirmed captures
             var recentCaptures = (await captures.GetAllAsync(userId, typeFilter: null, statusFilter: ProcessingStatus.Processed, cancellationToken))
@@ -291,10 +242,47 @@ public sealed class GlobalChatContextBuilder(
                 if (captureItems.All(c => c.Id != capture.Id))
                     captureItems.Add(new CaptureContextItem(capture.Id, capture.CapturedAt, capture.AiExtraction?.Summary ?? string.Empty));
             }
-
-            var allInitiatives = await initiatives.GetAllAsync(userId, statusFilter: null, cancellationToken);
-            counters = counters with { ActiveInitiatives = allInitiatives.Count(i => i.UserId == userId && i.Status == InitiativeStatus.Active) };
         }
+
+        // ---- Person-name resolution for already-collected commitments/delegations ----
+        // Build a lookup dictionary, then rehydrate the existing placeholder items in-place
+        // (preserves ordering from the earlier OrderBy(...).Take(...) selection passes).
+        var commitmentPersonIds = userCommitments.Where(c => addedCommitmentIds.Contains(c.Id)).Select(c => c.PersonId);
+        var delegationPersonIds = userDelegations.Where(d => addedDelegationIds.Contains(d.Id)).Select(d => d.DelegatePersonId);
+        var personIdsToLookup = commitmentPersonIds.Concat(delegationPersonIds).Distinct().ToList();
+        var personLookup = personIdsToLookup.Count == 0
+            ? new Dictionary<Guid, string>()
+            : (await people.GetByIdsAsync(userId, personIdsToLookup, cancellationToken))
+                .ToDictionary(p => p.Id, p => p.Name);
+
+        var commitmentById = userCommitments.Where(c => addedCommitmentIds.Contains(c.Id)).ToDictionary(c => c.Id);
+        var delegationById = userDelegations.Where(d => addedDelegationIds.Contains(d.Id)).ToDictionary(d => d.Id);
+
+        commitmentItems = commitmentItems.Select(item =>
+            commitmentById.TryGetValue(item.Id, out var c)
+                ? new CommitmentContextItem(
+                    c.Id, c.Description, c.Direction.ToString(),
+                    personLookup.TryGetValue(c.PersonId, out var pn) ? pn : null,
+                    c.Status.ToString(), c.DueDate, c.IsOverdue)
+                : item).ToList();
+
+        delegationItems = delegationItems.Select(item =>
+            delegationById.TryGetValue(item.Id, out var d)
+                ? new DelegationContextItem(
+                    d.Id, d.Description,
+                    personLookup.TryGetValue(d.DelegatePersonId, out var dn) ? dn : null,
+                    d.Status.ToString(), d.DueDate,
+                    d.DueDate is not null && d.DueDate < today
+                        && d.Status is DelegationStatus.Assigned or DelegationStatus.InProgress or DelegationStatus.Blocked,
+                    d.Status == DelegationStatus.Blocked ? d.Notes : null)
+                : item).ToList();
+
+        // ---- Counters (populated for every request, not just Generic) ----------
+        var allInitiatives = await initiatives.GetAllAsync(userId, statusFilter: null, cancellationToken);
+        var counters = new GlobalCounters(
+            OpenCommitments: userCommitments.Count(c => c.Status == CommitmentStatus.Open),
+            OpenDelegations: userDelegations.Count(d => d.Status is DelegationStatus.Assigned or DelegationStatus.InProgress or DelegationStatus.Blocked),
+            ActiveInitiatives: allInitiatives.Count(i => i.UserId == userId && i.Status == InitiativeStatus.Active));
 
         // ---- Token budget enforcement ----------------------------------------------
         // Estimate via char count; trim least-important sections first per spec priority order.

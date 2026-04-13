@@ -67,7 +67,7 @@ public sealed class InitiativeChatCompletionService(
                 .ToList();
 
             thread.AppendAssistantMessage(
-                string.IsNullOrWhiteSpace(envelope.AssistantText) ? result.Content : envelope.AssistantText,
+                envelope.AssistantText,
                 refs,
                 new TokenUsage(result.InputTokens, result.OutputTokens));
         }

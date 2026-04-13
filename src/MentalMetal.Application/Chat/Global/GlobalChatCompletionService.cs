@@ -19,6 +19,9 @@ public sealed class GlobalChatCompletionService(
         if (thread.Scope.Type != ContextScopeType.Global)
             throw new InvalidOperationException("GenerateReplyAsync only supports global-scoped threads.");
 
+        if (thread.Messages.Count == 0)
+            throw new InvalidOperationException("Thread must contain a user message before generating a reply.");
+
         var lastMessage = thread.Messages[^1];
         if (lastMessage.Role != ChatRole.User)
             throw new InvalidOperationException("Last thread message must be a User message before generating a reply.");
@@ -56,7 +59,7 @@ public sealed class GlobalChatCompletionService(
                 .ToList();
 
             thread.AppendAssistantMessage(
-                string.IsNullOrWhiteSpace(envelope.AssistantText) ? result.Content : envelope.AssistantText,
+                envelope.AssistantText,
                 refs,
                 new TokenUsage(result.InputTokens, result.OutputTokens));
         }

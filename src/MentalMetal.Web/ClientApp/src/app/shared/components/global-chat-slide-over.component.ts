@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, signal, viewChild, ElementRef } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, signal, viewChild, ElementRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
@@ -104,14 +104,14 @@ import { SourceReferenceChipComponent } from '../../pages/initiatives/chat/sourc
             (input)="composer.set($any($event.target).value)"
             rows="2"
             class="flex-1"
-            [disabled]="awaitingReply()"
+            [disabled]="awaitingReply() || composerDisabled()"
             (keydown.enter)="onEnter($event)"
             placeholder="Ask anything..."
           ></textarea>
           <p-button
             label="Send"
             icon="pi pi-send"
-            [disabled]="!composer().trim()"
+            [disabled]="!composer().trim() || composerDisabled()"
             [loading]="awaitingReply()"
             (onClick)="send()"
           />
@@ -135,18 +135,35 @@ export class GlobalChatSlideOverComponent {
 
   protected readonly composer = signal('');
   protected readonly awaitingReply = signal(false);
+  protected readonly composerDisabled = computed(() => {
+    const status = this.state.activeThread()?.status;
+    // Disable when a thread exists but isn't Active. When no thread exists yet the
+    // drawer lazily starts one on first send, so keep the composer enabled.
+    return status !== undefined && status !== 'Active';
+  });
+
+  // Monotonic token so late preload responses can't clobber a newer selection.
+  private preloadRequestToken = 0;
 
   constructor() {
     effect(() => {
       // First open with no active thread → load the most-recent or create a fresh one.
       if (this.state.slideOverOpen() && !this.state.activeThread()) {
+        const requestToken = ++this.preloadRequestToken;
         this.chatService.list('Active').pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
           next: (list) => {
+            if (requestToken !== this.preloadRequestToken) return;
             this.state.activeThreads.set(list);
+            // Only preselect if the user hasn't already selected or started something.
+            if (this.state.activeThread()) return;
             const mostRecent = list[0];
             if (mostRecent) {
               this.chatService.get(mostRecent.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-                next: (t) => this.state.activeThread.set(t),
+                next: (t) => {
+                  if (requestToken !== this.preloadRequestToken) return;
+                  if (this.state.activeThread()) return;
+                  this.state.activeThread.set(t);
+                },
               });
             }
             // Otherwise leave activeThread null — start happens lazily on first send.
@@ -222,6 +239,16 @@ export class GlobalChatSlideOverComponent {
             summary: status === 409 ? 'This thread is archived' : 'Failed to send message',
           });
           this.state.activeThread.update((t) => t ? { ...t, messages: t.messages.filter((m) => m !== optimistic) } : t);
+          if (status === 409) {
+            // Server archived this thread concurrently: mirror that locally so the composer
+            // disables itself via [disabled]="composerDisabled()" and the rail is consistent.
+            this.state.activeThread.update((t) => t && t.id === thread.id ? { ...t, status: 'Archived' } : t);
+            const moved = this.state.activeThreads().find((t) => t.id === thread.id);
+            this.state.activeThreads.update((list) => list.filter((t) => t.id !== thread.id));
+            if (moved && !this.state.archivedThreads().some((t) => t.id === thread.id)) {
+              this.state.archivedThreads.update((list) => [{ ...moved, status: 'Archived' }, ...list]);
+            }
+          }
         },
       });
     };

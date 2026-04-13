@@ -18,7 +18,19 @@ public enum ChatIntent
 /// <summary>
 /// Hint range for capture / time-window intents. Inclusive on both ends.
 /// </summary>
-public sealed record DateRangeHint(DateOnly Start, DateOnly End);
+public sealed record DateRangeHint
+{
+    public DateOnly Start { get; }
+    public DateOnly End { get; }
+
+    public DateRangeHint(DateOnly start, DateOnly end)
+    {
+        if (end < start)
+            throw new ArgumentException("End date must be on or after start date.", nameof(end));
+        Start = start;
+        End = end;
+    }
+}
 
 /// <summary>
 /// Resolved entity hints. The classifier resolves names against the user's actual
