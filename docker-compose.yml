@@ -31,6 +31,7 @@ services:
       ASPNETCORE_URLS: http://+:5002
       DOTNET_USE_POLLING_FILE_WATCHER: "true"
       ConnectionStrings__DefaultConnection: "Host=postgres-dev;Port=5432;Database=mentalmetal;Username=mentalmetal;Password=devTestPassword"
+      Testing__EnableTestLogin: "true"
     ports:
       - "5002:5002"
     volumes:
