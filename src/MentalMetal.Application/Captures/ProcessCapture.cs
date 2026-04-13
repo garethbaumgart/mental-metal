@@ -33,6 +33,10 @@ public sealed class ProcessCaptureHandler(
         {
             capture.FailProcessing(ex.Message);
         }
+        catch (System.Text.Json.JsonException ex)
+        {
+            capture.FailProcessing($"Failed to parse AI response: {ex.Message}");
+        }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return CaptureResponse.From(capture);
@@ -85,7 +89,7 @@ public sealed class ProcessCaptureHandler(
 
     internal static AiExtraction ParseExtraction(string jsonContent)
     {
-        var json = System.Text.Json.JsonDocument.Parse(jsonContent);
+        using var json = System.Text.Json.JsonDocument.Parse(jsonContent);
         var root = json.RootElement;
 
         return new AiExtraction
@@ -115,7 +119,7 @@ public sealed class ProcessCaptureHandler(
             SuggestedPersonLinks = ParseStringArray(root, "suggestedPersonLinks"),
             SuggestedInitiativeLinks = ParseStringArray(root, "suggestedInitiativeLinks"),
             ConfidenceScore = root.TryGetProperty("confidenceScore", out var cs)
-                ? cs.GetDecimal()
+                ? Math.Clamp(cs.GetDecimal(), 0m, 1m)
                 : 0m,
         };
     }

@@ -837,7 +837,9 @@ app.MapPost("/api/captures/{id:guid}/confirm-extraction", async (
     {
         return Results.NotFound();
     }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("Cannot confirm"))
+    catch (InvalidOperationException ex) when (
+        ex.Message.Contains("Cannot confirm") ||
+        ex.Message.Contains("No extraction to confirm"))
     {
         return Results.Conflict(new { error = ex.Message });
     }

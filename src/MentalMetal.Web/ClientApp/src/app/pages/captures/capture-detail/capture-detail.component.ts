@@ -498,6 +498,7 @@ export class CaptureDetailComponent implements OnInit {
         this.capture.set(updated);
         this.confirming.set(false);
         this.extractionConfirmed.set(true);
+        this.extractionDiscarded.set(false);
         this.loadLinkedPeople(updated.linkedPersonIds);
         this.loadLinkedInitiatives(updated.linkedInitiativeIds);
         this.messageService.add({ severity: 'success', summary: 'Entities created from extraction' });
@@ -519,6 +520,7 @@ export class CaptureDetailComponent implements OnInit {
         this.capture.set(updated);
         this.discarding.set(false);
         this.extractionDiscarded.set(true);
+        this.extractionConfirmed.set(false);
         this.messageService.add({ severity: 'info', summary: 'Extraction discarded' });
       },
       error: () => {
@@ -693,6 +695,8 @@ export class CaptureDetailComponent implements OnInit {
 
   private loadCapture(id: string): void {
     this.loading.set(true);
+    this.extractionConfirmed.set(false);
+    this.extractionDiscarded.set(false);
     this.capturesService.get(id).subscribe({
       next: (capture) => {
         this.capture.set(capture);

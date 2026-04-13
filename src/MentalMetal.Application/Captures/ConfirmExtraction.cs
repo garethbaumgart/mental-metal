@@ -1,3 +1,4 @@
+using System.Globalization;
 using MentalMetal.Application.Common;
 using MentalMetal.Domain.Captures;
 using MentalMetal.Domain.Commitments;
@@ -22,6 +23,10 @@ public sealed class ConfirmExtractionHandler(
         var capture = await captureRepository.GetByIdAsync(captureId, cancellationToken)
             ?? throw new InvalidOperationException($"Capture not found: {captureId}");
 
+        // Idempotency: if entities already spawned, return current state
+        if (capture.SpawnedCommitmentIds.Count > 0 || capture.SpawnedDelegationIds.Count > 0)
+            return CaptureResponse.From(capture);
+
         capture.ConfirmExtraction();
 
         var extraction = capture.AiExtraction!;
@@ -41,7 +46,7 @@ public sealed class ConfirmExtractionHandler(
                 ? CommitmentDirection.MineToThem
                 : CommitmentDirection.TheirsToMe;
 
-            DateOnly? dueDate = DateOnly.TryParse(ec.DueDate, out var d) ? d : null;
+            DateOnly? dueDate = ParseIsoDate(ec.DueDate);
 
             var commitment = Commitment.Create(userId, ec.Description, direction, personId, dueDate,
                 sourceCaptureId: capture.Id);
@@ -55,7 +60,7 @@ public sealed class ConfirmExtractionHandler(
             var personId = MatchPerson(ed.PersonHint, people);
             if (personId == Guid.Empty) continue; // Skip if no person match — DelegatePersonId is required
 
-            DateOnly? dueDate = DateOnly.TryParse(ed.DueDate, out var d) ? d : null;
+            DateOnly? dueDate = ParseIsoDate(ed.DueDate);
 
             var delegation = Delegation.Create(userId, ed.Description, personId, dueDate,
                 sourceCaptureId: capture.Id);
@@ -82,6 +87,10 @@ public sealed class ConfirmExtractionHandler(
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return CaptureResponse.From(capture);
     }
+
+    private static DateOnly? ParseIsoDate(string? value) =>
+        DateOnly.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)
+            ? d : null;
 
     private static Guid MatchPerson(string? hint, IReadOnlyList<Person> people)
     {
