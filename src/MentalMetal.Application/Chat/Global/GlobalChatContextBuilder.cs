@@ -47,7 +47,8 @@ public sealed class GlobalChatContextBuilder(
         var truncationNotes = new List<string>();
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var endOfWeek = today.AddDays((int)DayOfWeek.Saturday - (int)DateTime.UtcNow.DayOfWeek);
+        var daysUntilSaturday = ((int)DayOfWeek.Saturday - (int)today.DayOfWeek + 7) % 7;
+        var endOfWeek = today.AddDays(daysUntilSaturday);
 
         // ---- Persons (PersonLens) ------------------------------------------------
         if (intents.Intents.Contains(ChatIntent.PersonLens) && intents.Hints.PersonIds.Count > 0)
@@ -94,18 +95,44 @@ public sealed class GlobalChatContextBuilder(
         }
 
         // ---- Commitments / Delegations slices -----------------------------------
-        // Pull once, slice for each active intent. Filtering happens in-memory off the user's
-        // own (already user-filtered) lists — defence in depth re-filters by UserId.
-        var allCommitments = await commitments.GetAllAsync(
-            userId, directionFilter: null, statusFilter: null,
-            personIdFilter: null, initiativeIdFilter: null,
-            overdueFilter: null, cancellationToken);
-        var allDelegations = await delegations.GetAllAsync(
-            userId, statusFilter: null, priorityFilter: null,
-            delegatePersonIdFilter: null, initiativeIdFilter: null,
-            cancellationToken);
-        var userCommitments = allCommitments.Where(c => c.UserId == userId).ToList();
-        var userDelegations = allDelegations.Where(d => d.UserId == userId).ToList();
+        // Only load when an active intent actually needs them. Filtering happens in-memory off
+        // the user's own (already user-filtered) lists — defence in depth re-filters by UserId.
+        var isGeneric = intents.IsGenericOnly || intents.Intents.Contains(ChatIntent.Generic);
+        var needsCommitments =
+            intents.Intents.Contains(ChatIntent.MyDay)
+            || intents.Intents.Contains(ChatIntent.MyWeek)
+            || intents.Intents.Contains(ChatIntent.OverdueWork)
+            || (intents.Intents.Contains(ChatIntent.PersonLens) && intents.Hints.PersonIds.Count > 0)
+            || (intents.Intents.Contains(ChatIntent.InitiativeStatus) && intents.Hints.InitiativeIds.Count > 0)
+            || isGeneric;
+        var needsDelegations =
+            intents.Intents.Contains(ChatIntent.MyDay)
+            || intents.Intents.Contains(ChatIntent.MyWeek)
+            || intents.Intents.Contains(ChatIntent.OverdueWork)
+            || (intents.Intents.Contains(ChatIntent.PersonLens) && intents.Hints.PersonIds.Count > 0)
+            || (intents.Intents.Contains(ChatIntent.InitiativeStatus) && intents.Hints.InitiativeIds.Count > 0)
+            || isGeneric;
+
+        var userCommitments = new List<Commitment>();
+        var userDelegations = new List<Delegation>();
+
+        if (needsCommitments)
+        {
+            var allCommitments = await commitments.GetAllAsync(
+                userId, directionFilter: null, statusFilter: null,
+                personIdFilter: null, initiativeIdFilter: null,
+                overdueFilter: null, cancellationToken);
+            userCommitments = allCommitments.Where(c => c.UserId == userId).ToList();
+        }
+
+        if (needsDelegations)
+        {
+            var allDelegations = await delegations.GetAllAsync(
+                userId, statusFilter: null, priorityFilter: null,
+                delegatePersonIdFilter: null, initiativeIdFilter: null,
+                cancellationToken);
+            userDelegations = allDelegations.Where(d => d.UserId == userId).ToList();
+        }
 
         var addedCommitmentIds = new HashSet<Guid>();
         var addedDelegationIds = new HashSet<Guid>();
@@ -196,7 +223,6 @@ public sealed class GlobalChatContextBuilder(
         }
 
         // ---- Person-name resolution for already-collected commitments/delegations ----
-        var personLookupIds = commitmentItems.Select(c => c.Id).ToList(); // placeholder
         var allPersonIdsForLookup = userCommitments.Where(c => addedCommitmentIds.Contains(c.Id)).Select(c => c.PersonId)
             .Concat(userDelegations.Where(d => addedDelegationIds.Contains(d.Id)).Select(d => d.DelegatePersonId))
             .Distinct()

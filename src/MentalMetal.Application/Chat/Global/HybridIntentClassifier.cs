@@ -16,11 +16,16 @@ public sealed class HybridIntentClassifier(
         if (!rules.IsGenericOnly)
             return rules;
 
-        // Re-run rule layer to grab entity hints even if no intent matched (the rule classifier
-        // returns Generic without hints when no intent fired). The AI classifier is unaware of
-        // the user's specific people/initiatives, so we keep its hints empty and rely on the
-        // rule re-pass for hints.
+        // Re-run the rule-layer name resolver to grab entity hints even if no intent keyword
+        // matched. The AI classifier is unaware of the user's specific people/initiatives, so
+        // we take AI-classified intents and merge in rule-resolved Person/Initiative hints.
         var ai = await aiClassifier.ClassifyAsync(userId, userMessage, cancellationToken);
-        return ai;
+        var ruleHints = await ruleClassifier.ResolveEntityHintsAsync(userId, userMessage, cancellationToken);
+
+        var mergedPersonIds = ai.Hints.PersonIds.Concat(ruleHints.PersonIds).Distinct().ToList();
+        var mergedInitiativeIds = ai.Hints.InitiativeIds.Concat(ruleHints.InitiativeIds).Distinct().ToList();
+        var mergedDateRange = ai.Hints.DateRange ?? ruleHints.DateRange;
+
+        return ai with { Hints = new EntityHints(mergedPersonIds, mergedInitiativeIds, mergedDateRange) };
     }
 }

@@ -2,12 +2,14 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
   inject,
   signal,
   viewChild,
   ElementRef,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -193,6 +195,7 @@ export class GlobalChatPageComponent {
   protected readonly state = inject(GlobalChatStateService);
   private readonly chatService = inject(GlobalChatService);
   private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly messageList = viewChild<ElementRef<HTMLDivElement>>('messageList');
 
   protected readonly composer = signal('');
@@ -221,7 +224,7 @@ export class GlobalChatPageComponent {
 
   protected startThread(): void {
     this.startingThread.set(true);
-    this.chatService.start().subscribe({
+    this.chatService.start().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (t) => {
         this.startingThread.set(false);
         this.state.activeThreads.update((list) => [{ id: t.id, title: t.title, status: t.status, createdAt: t.createdAt, lastMessageAt: t.lastMessageAt ?? null, messageCount: t.messageCount }, ...list]);
@@ -235,7 +238,7 @@ export class GlobalChatPageComponent {
   }
 
   protected selectThread(threadId: string): void {
-    this.chatService.get(threadId).subscribe({
+    this.chatService.get(threadId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (t) => this.state.activeThread.set(t),
       error: () => this.messageService.add({ severity: 'error', summary: 'Failed to load thread' }),
     });
@@ -249,7 +252,7 @@ export class GlobalChatPageComponent {
   protected commitRename(threadId: string): void {
     const draft = this.renameDraft().trim();
     if (!draft) return;
-    this.chatService.rename(threadId, { title: draft }).subscribe({
+    this.chatService.rename(threadId, { title: draft }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (t) => {
         this.renamingId.set(null);
         this.state.activeThreads.update((list) => list.map((x) => x.id === threadId ? { ...x, title: t.title } : x));
@@ -260,7 +263,7 @@ export class GlobalChatPageComponent {
   }
 
   protected archive(threadId: string): void {
-    this.chatService.archive(threadId).subscribe({
+    this.chatService.archive(threadId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         const moved = this.state.activeThreads().find((t) => t.id === threadId);
         this.state.activeThreads.update((list) => list.filter((t) => t.id !== threadId));
@@ -272,7 +275,7 @@ export class GlobalChatPageComponent {
   }
 
   protected unarchive(threadId: string): void {
-    this.chatService.unarchive(threadId).subscribe({
+    this.chatService.unarchive(threadId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => this.refresh(),
       error: () => this.messageService.add({ severity: 'error', summary: 'Failed to unarchive' }),
     });
@@ -302,7 +305,7 @@ export class GlobalChatPageComponent {
     this.composer.set('');
     this.awaitingReply.set(true);
 
-    this.chatService.postMessage(thread.id, { content: draft }).subscribe({
+    this.chatService.postMessage(thread.id, { content: draft }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (resp) => {
         this.awaitingReply.set(false);
         this.state.activeThread.update((t) => {
@@ -322,8 +325,8 @@ export class GlobalChatPageComponent {
   }
 
   private refresh(): void {
-    this.chatService.list('Active').subscribe({ next: (l) => this.state.activeThreads.set(l) });
-    this.chatService.list('Archived').subscribe({ next: (l) => this.state.archivedThreads.set(l) });
+    this.chatService.list('Active').pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ next: (l) => this.state.activeThreads.set(l) });
+    this.chatService.list('Archived').pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ next: (l) => this.state.archivedThreads.set(l) });
   }
 
   private groupByDate(threads: ChatThreadSummary[]): ThreadGroup[] {

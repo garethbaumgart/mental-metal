@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, effect, inject, signal, viewChild, ElementRef } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, signal, viewChild, ElementRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { DrawerModule } from 'primeng/drawer';
@@ -129,6 +130,7 @@ export class GlobalChatSlideOverComponent {
   protected readonly state = inject(GlobalChatStateService);
   private readonly router = inject(Router);
   private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly messageList = viewChild<ElementRef<HTMLDivElement>>('messageList');
 
   protected readonly composer = signal('');
@@ -138,12 +140,12 @@ export class GlobalChatSlideOverComponent {
     effect(() => {
       // First open with no active thread → load the most-recent or create a fresh one.
       if (this.state.slideOverOpen() && !this.state.activeThread()) {
-        this.chatService.list('Active').subscribe({
+        this.chatService.list('Active').pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
           next: (list) => {
             this.state.activeThreads.set(list);
             const mostRecent = list[0];
             if (mostRecent) {
-              this.chatService.get(mostRecent.id).subscribe({
+              this.chatService.get(mostRecent.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
                 next: (t) => this.state.activeThread.set(t),
               });
             }
@@ -197,7 +199,7 @@ export class GlobalChatSlideOverComponent {
       this.composer.set('');
       this.awaitingReply.set(true);
 
-      this.chatService.postMessage(thread.id, { content: draft }).subscribe({
+      this.chatService.postMessage(thread.id, { content: draft }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (resp) => {
           this.awaitingReply.set(false);
           this.state.activeThread.update((t) => {
@@ -229,7 +231,7 @@ export class GlobalChatSlideOverComponent {
       proceed(current);
     } else {
       // Lazy thread creation on first send.
-      this.chatService.start().subscribe({
+      this.chatService.start().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (thread) => {
           this.state.activeThread.set(thread);
           proceed(thread);

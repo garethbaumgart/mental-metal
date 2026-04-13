@@ -72,6 +72,36 @@ public sealed class RuleIntentClassifier(
             new EntityHints(personIds, initiativeIds, DateRange: null));
     }
 
+    /// <summary>
+    /// Runs only the entity-name resolution, returning hints regardless of whether any intent
+    /// keyword fired. Used by <see cref="HybridIntentClassifier"/> to enrich AI-classified
+    /// intents with rule-resolved person/initiative hints.
+    /// </summary>
+    public async Task<EntityHints> ResolveEntityHintsAsync(Guid userId, string userMessage, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(userMessage))
+            return EntityHints.Empty;
+
+        var personIds = new List<Guid>();
+        var initiativeIds = new List<Guid>();
+
+        var allPeople = await people.GetAllAsync(userId, typeFilter: null, includeArchived: false, cancellationToken);
+        foreach (var person in allPeople.Where(p => p.UserId == userId))
+        {
+            if (NameMatches(userMessage, person.Name))
+                personIds.Add(person.Id);
+        }
+
+        var allInitiatives = await initiatives.GetAllAsync(userId, statusFilter: null, cancellationToken);
+        foreach (var initiative in allInitiatives.Where(i => i.UserId == userId))
+        {
+            if (NameMatches(userMessage, initiative.Title))
+                initiativeIds.Add(initiative.Id);
+        }
+
+        return new EntityHints(personIds, initiativeIds, DateRange: null);
+    }
+
     private static bool NameMatches(string message, string name)
     {
         if (string.IsNullOrWhiteSpace(name)) return false;
