@@ -20,10 +20,8 @@ public sealed class ConfirmExtractionHandler(
 {
     public async Task<ConfirmExtractionResponse> HandleAsync(Guid captureId, CancellationToken cancellationToken)
     {
-        var capture = await captureRepository.GetByIdAsync(captureId, cancellationToken);
-
-        if (capture is null || capture.UserId != currentUserService.UserId)
-            throw new InvalidOperationException($"Capture not found: {captureId}");
+        var capture = (await captureRepository.GetByIdAsync(captureId, cancellationToken))
+            .EnsureOwned(currentUserService.UserId, captureId);
 
         capture.ConfirmExtraction();
 

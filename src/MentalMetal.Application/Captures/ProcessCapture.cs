@@ -12,10 +12,8 @@ public sealed class ProcessCaptureHandler(
 {
     public async Task<CaptureResponse> HandleAsync(Guid captureId, CancellationToken cancellationToken)
     {
-        var capture = await captureRepository.GetByIdAsync(captureId, cancellationToken);
-
-        if (capture is null || capture.UserId != currentUserService.UserId)
-            throw new InvalidOperationException($"Capture not found: {captureId}");
+        var capture = (await captureRepository.GetByIdAsync(captureId, cancellationToken))
+            .EnsureOwned(currentUserService.UserId, captureId);
 
         capture.BeginProcessing();
         await unitOfWork.SaveChangesAsync(cancellationToken);
