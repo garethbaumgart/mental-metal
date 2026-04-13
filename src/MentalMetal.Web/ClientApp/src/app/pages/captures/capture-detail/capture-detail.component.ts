@@ -149,12 +149,12 @@ import { Initiative } from '../../../shared/models/initiative.model';
               />
             </div>
 
-            @if (extractionConfirmed()) {
+            @if (capture()!.extractionStatus === 'Confirmed') {
               <div class="flex items-center gap-2 p-3 rounded-md border success-banner">
                 <i class="pi pi-check-circle success-icon"></i>
                 <span class="success-text font-medium">Entities created</span>
               </div>
-            } @else if (extractionDiscarded()) {
+            } @else if (capture()!.extractionStatus === 'Discarded') {
               <div class="flex items-center gap-2 p-3 rounded-md border warn-banner">
                 <i class="pi pi-info-circle warn-icon"></i>
                 <span class="warn-text font-medium">Extraction discarded</span>
@@ -417,8 +417,6 @@ export class CaptureDetailComponent implements OnInit {
   readonly retrying = signal(false);
   readonly confirming = signal(false);
   readonly discarding = signal(false);
-  readonly extractionConfirmed = signal(false);
-  readonly extractionDiscarded = signal(false);
   readonly linkedPeople = signal<Person[]>([]);
   readonly linkedInitiatives = signal<Initiative[]>([]);
   readonly peopleSuggestions = signal<Person[]>([]);
@@ -497,8 +495,6 @@ export class CaptureDetailComponent implements OnInit {
       next: (updated) => {
         this.capture.set(updated);
         this.confirming.set(false);
-        this.extractionConfirmed.set(true);
-        this.extractionDiscarded.set(false);
         this.loadLinkedPeople(updated.linkedPersonIds);
         this.loadLinkedInitiatives(updated.linkedInitiativeIds);
         this.messageService.add({ severity: 'success', summary: 'Entities created from extraction' });
@@ -519,8 +515,6 @@ export class CaptureDetailComponent implements OnInit {
       next: (updated) => {
         this.capture.set(updated);
         this.discarding.set(false);
-        this.extractionDiscarded.set(true);
-        this.extractionConfirmed.set(false);
         this.messageService.add({ severity: 'info', summary: 'Extraction discarded' });
       },
       error: () => {
@@ -695,8 +689,6 @@ export class CaptureDetailComponent implements OnInit {
 
   private loadCapture(id: string): void {
     this.loading.set(true);
-    this.extractionConfirmed.set(false);
-    this.extractionDiscarded.set(false);
     this.capturesService.get(id).subscribe({
       next: (capture) => {
         this.capture.set(capture);
@@ -704,10 +696,6 @@ export class CaptureDetailComponent implements OnInit {
         this.editSource = capture.source ?? '';
         this.loadLinkedPeople(capture.linkedPersonIds);
         this.loadLinkedInitiatives(capture.linkedInitiativeIds);
-        // If already has spawned entities, show confirmed state
-        if (capture.spawnedCommitmentIds.length > 0 || capture.spawnedDelegationIds.length > 0) {
-          this.extractionConfirmed.set(true);
-        }
         this.loading.set(false);
       },
       error: () => {

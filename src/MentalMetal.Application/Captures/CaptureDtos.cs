@@ -24,7 +24,7 @@ public sealed record AiExtractionResponse(
     public static AiExtractionResponse? From(AiExtraction? extraction) =>
         extraction is null ? null : new(
             extraction.Summary,
-            extraction.Commitments.Select(c => new ExtractedCommitmentResponse(c.Description, c.Direction, c.PersonHint, c.DueDate)).ToList(),
+            extraction.Commitments.Select(c => new ExtractedCommitmentResponse(c.Description, c.Direction.ToString(), c.PersonHint, c.DueDate)).ToList(),
             extraction.Delegations.Select(d => new ExtractedDelegationResponse(d.Description, d.PersonHint, d.DueDate)).ToList(),
             extraction.Observations.Select(o => new ExtractedObservationResponse(o.Description, o.PersonHint, o.Tag)).ToList(),
             extraction.Decisions.ToList(),
@@ -44,6 +44,7 @@ public sealed record CaptureResponse(
     string RawContent,
     CaptureType CaptureType,
     ProcessingStatus ProcessingStatus,
+    ExtractionStatus ExtractionStatus,
     AiExtractionResponse? AiExtraction,
     string? FailureReason,
     List<Guid> LinkedPersonIds,
@@ -63,6 +64,7 @@ public sealed record CaptureResponse(
         capture.RawContent,
         capture.CaptureType,
         capture.ProcessingStatus,
+        capture.ExtractionStatus,
         AiExtractionResponse.From(capture.AiExtraction),
         capture.FailureReason,
         capture.LinkedPersonIds.ToList(),

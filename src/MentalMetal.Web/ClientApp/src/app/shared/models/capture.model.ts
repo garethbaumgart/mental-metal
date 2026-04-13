@@ -2,6 +2,8 @@ export type CaptureType = 'QuickNote' | 'Transcript' | 'MeetingNotes';
 
 export type ProcessingStatus = 'Raw' | 'Processing' | 'Processed' | 'Failed';
 
+export type ExtractionStatus = 'None' | 'Pending' | 'Confirmed' | 'Discarded';
+
 export interface ExtractedCommitment {
   description: string;
   direction: 'MineToThem' | 'TheirsToMe';
@@ -39,6 +41,7 @@ export interface Capture {
   rawContent: string;
   captureType: CaptureType;
   processingStatus: ProcessingStatus;
+  extractionStatus: ExtractionStatus;
   aiExtraction: AiExtraction | null;
   failureReason: string | null;
   linkedPersonIds: string[];

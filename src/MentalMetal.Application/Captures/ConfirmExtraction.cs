@@ -23,10 +23,6 @@ public sealed class ConfirmExtractionHandler(
         var capture = await captureRepository.GetByIdAsync(captureId, cancellationToken)
             ?? throw new InvalidOperationException($"Capture not found: {captureId}");
 
-        // Idempotency: if entities already spawned, return current state
-        if (capture.SpawnedCommitmentIds.Count > 0 || capture.SpawnedDelegationIds.Count > 0)
-            return CaptureResponse.From(capture);
-
         capture.ConfirmExtraction();
 
         var extraction = capture.AiExtraction!;
@@ -42,7 +38,7 @@ public sealed class ConfirmExtractionHandler(
             var personId = MatchPerson(ec.PersonHint, people);
             if (personId == Guid.Empty) continue; // Skip if no person match — PersonId is required
 
-            var direction = ec.Direction == "MineToThem"
+            var direction = ec.Direction == ExtractionDirection.MineToThem
                 ? CommitmentDirection.MineToThem
                 : CommitmentDirection.TheirsToMe;
 

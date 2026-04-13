@@ -859,7 +859,9 @@ app.MapPost("/api/captures/{id:guid}/discard-extraction", async (
     {
         return Results.NotFound();
     }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("Cannot discard"))
+    catch (InvalidOperationException ex) when (
+        ex.Message.Contains("Cannot discard") ||
+        ex.Message.Contains("Extraction already confirmed"))
     {
         return Results.Conflict(new { error = ex.Message });
     }

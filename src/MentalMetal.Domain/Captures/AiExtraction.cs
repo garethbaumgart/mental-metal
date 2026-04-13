@@ -16,7 +16,7 @@ public sealed record AiExtraction
 public sealed record ExtractedCommitment
 {
     public required string Description { get; init; }
-    public required string Direction { get; init; } // "MineToThem" or "TheirsToMe"
+    public required ExtractionDirection Direction { get; init; }
     public string? PersonHint { get; init; }
     public string? DueDate { get; init; }
 }
@@ -33,4 +33,10 @@ public sealed record ExtractedObservation
     public required string Description { get; init; }
     public string? PersonHint { get; init; }
     public string? Tag { get; init; }
+}
+
+public enum ExtractionDirection
+{
+    MineToThem,
+    TheirsToMe
 }

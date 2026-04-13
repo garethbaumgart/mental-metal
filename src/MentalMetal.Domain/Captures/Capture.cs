@@ -15,6 +15,7 @@ public sealed class Capture : AggregateRoot, IUserScoped
     public CaptureType CaptureType { get; private set; }
     public ProcessingStatus ProcessingStatus { get; private set; }
     public AiExtraction? AiExtraction { get; private set; }
+    public ExtractionStatus ExtractionStatus { get; private set; }
     public string? FailureReason { get; private set; }
     public IReadOnlyList<Guid> LinkedPersonIds => _linkedPersonIds;
     public IReadOnlyList<Guid> LinkedInitiativeIds => _linkedInitiativeIds;
@@ -75,6 +76,7 @@ public sealed class Capture : AggregateRoot, IUserScoped
 
         ProcessingStatus = ProcessingStatus.Processed;
         AiExtraction = extraction;
+        ExtractionStatus = ExtractionStatus.Pending;
         FailureReason = null;
         ProcessedAt = DateTimeOffset.UtcNow;
         UpdatedAt = DateTimeOffset.UtcNow;
@@ -104,6 +106,7 @@ public sealed class Capture : AggregateRoot, IUserScoped
         ProcessingStatus = ProcessingStatus.Raw;
         FailureReason = null;
         AiExtraction = null;
+        ExtractionStatus = ExtractionStatus.None;
         UpdatedAt = DateTimeOffset.UtcNow;
 
         RaiseDomainEvent(new CaptureRetryRequested(Id));
@@ -118,6 +121,12 @@ public sealed class Capture : AggregateRoot, IUserScoped
         if (AiExtraction is null)
             throw new InvalidOperationException("No extraction to confirm.");
 
+        if (ExtractionStatus == ExtractionStatus.Confirmed)
+            throw new InvalidOperationException("Extraction already confirmed.");
+
+        ExtractionStatus = ExtractionStatus.Confirmed;
+        UpdatedAt = DateTimeOffset.UtcNow;
+
         RaiseDomainEvent(new CaptureExtractionConfirmed(Id));
     }
 
@@ -127,6 +136,11 @@ public sealed class Capture : AggregateRoot, IUserScoped
             throw new InvalidOperationException(
                 $"Cannot discard extraction from '{ProcessingStatus}' status. Must be 'Processed'.");
 
+        if (ExtractionStatus != ExtractionStatus.Pending)
+            throw new InvalidOperationException(
+                $"Cannot discard extraction with status '{ExtractionStatus}'. Must be 'Pending'.");
+
+        ExtractionStatus = ExtractionStatus.Discarded;
         UpdatedAt = DateTimeOffset.UtcNow;
 
         RaiseDomainEvent(new CaptureExtractionDiscarded(Id));

@@ -102,7 +102,7 @@ public sealed class ProcessCaptureHandler(
             Commitments = ParseArray(root, "commitments", e => new ExtractedCommitment
             {
                 Description = e.GetProperty("description").GetString() ?? "",
-                Direction = e.GetProperty("direction").GetString() ?? "TheirsToMe",
+                Direction = ParseDirection(GetOptionalString(e, "direction")),
                 PersonHint = GetOptionalString(e, "personHint"),
                 DueDate = GetOptionalString(e, "dueDate"),
             }),
@@ -147,6 +147,11 @@ public sealed class ProcessCaptureHandler(
             .Where(s => !string.IsNullOrWhiteSpace(s))
             .ToList();
     }
+
+    private static ExtractionDirection ParseDirection(string? value) =>
+        string.Equals(value, "MineToThem", StringComparison.OrdinalIgnoreCase)
+            ? ExtractionDirection.MineToThem
+            : ExtractionDirection.TheirsToMe;
 
     private static string? GetOptionalString(System.Text.Json.JsonElement element, string propertyName)
     {

@@ -33,6 +33,12 @@ public sealed class CaptureConfiguration : IEntityTypeConfiguration<Capture>
             extraction.OwnsMany(e => e.Observations);
         });
 
+        builder.Property(c => c.ExtractionStatus)
+            .HasConversion<string>()
+            .IsRequired()
+            .HasMaxLength(20)
+            .HasDefaultValue(ExtractionStatus.None);
+
         builder.Property(c => c.FailureReason)
             .HasMaxLength(2000);
 
