@@ -7,9 +7,11 @@ using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.Delegations;
 using MentalMetal.Application.Initiatives;
 using MentalMetal.Application.Initiatives.Brief;
+using MentalMetal.Application.Initiatives.Chat;
 using MentalMetal.Application.People;
 using MentalMetal.Application.Users;
 using MentalMetal.Domain.Captures;
+using MentalMetal.Domain.ChatThreads;
 using MentalMetal.Domain.Commitments;
 using MentalMetal.Domain.Common;
 using MentalMetal.Domain.Delegations;
@@ -1375,6 +1377,79 @@ app.MapPut("/api/initiatives/{id:guid}/brief/pending-updates/{updateId:guid}", a
 {
     try { return Results.Ok(await handler.HandleAsync(id, updateId, request, ct)); }
     catch (NotFoundException) { return Results.NotFound(); }
+    catch (InvalidOperationException ex) { return Results.Conflict(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+// ---- Initiative Chat endpoints ----------------------------------------------
+
+app.MapPost("/api/initiatives/{id:guid}/chat/threads", async (
+    Guid id, StartInitiativeChatThreadHandler handler, CancellationToken ct) =>
+{
+    var thread = await handler.HandleAsync(id, ct);
+    return thread is null
+        ? Results.NotFound()
+        : Results.Created($"/api/initiatives/{id}/chat/threads/{thread.Id}", thread);
+}).RequireAuthorization();
+
+app.MapGet("/api/initiatives/{id:guid}/chat/threads", async (
+    Guid id, ChatThreadStatus? status, ListInitiativeChatThreadsHandler handler, CancellationToken ct) =>
+{
+    var list = await handler.HandleAsync(id, status, ct);
+    return list is null ? Results.NotFound() : Results.Ok(list);
+}).RequireAuthorization();
+
+app.MapGet("/api/initiatives/{id:guid}/chat/threads/{threadId:guid}", async (
+    Guid id, Guid threadId, GetInitiativeChatThreadHandler handler, CancellationToken ct) =>
+{
+    var thread = await handler.HandleAsync(id, threadId, ct);
+    return thread is null ? Results.NotFound() : Results.Ok(thread);
+}).RequireAuthorization();
+
+app.MapPut("/api/initiatives/{id:guid}/chat/threads/{threadId:guid}", async (
+    Guid id, Guid threadId, RenameChatThreadRequest request, RenameInitiativeChatThreadHandler handler, CancellationToken ct) =>
+{
+    try
+    {
+        var thread = await handler.HandleAsync(id, threadId, request, ct);
+        return thread is null ? Results.NotFound() : Results.Ok(thread);
+    }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/initiatives/{id:guid}/chat/threads/{threadId:guid}/messages", async (
+    Guid id, Guid threadId, PostChatMessageRequest request, PostInitiativeChatMessageHandler handler, CancellationToken ct) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, threadId, request, ct);
+        return response is null ? Results.NotFound() : Results.Ok(response);
+    }
+    catch (PostInitiativeChatMessageHandler.ArchivedThreadException ex)
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/initiatives/{id:guid}/chat/threads/{threadId:guid}/archive", async (
+    Guid id, Guid threadId, ArchiveInitiativeChatThreadHandler handler, CancellationToken ct) =>
+{
+    try
+    {
+        var thread = await handler.HandleAsync(id, threadId, ct);
+        return thread is null ? Results.NotFound() : Results.Ok(thread);
+    }
+    catch (InvalidOperationException ex) { return Results.Conflict(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/initiatives/{id:guid}/chat/threads/{threadId:guid}/unarchive", async (
+    Guid id, Guid threadId, UnarchiveInitiativeChatThreadHandler handler, CancellationToken ct) =>
+{
+    try
+    {
+        var thread = await handler.HandleAsync(id, threadId, ct);
+        return thread is null ? Results.NotFound() : Results.Ok(thread);
+    }
     catch (InvalidOperationException ex) { return Results.Conflict(new { error = ex.Message }); }
 }).RequireAuthorization();
 

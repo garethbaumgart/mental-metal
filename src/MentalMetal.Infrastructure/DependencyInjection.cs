@@ -1,4 +1,5 @@
 using MentalMetal.Application.Captures;
+using MentalMetal.Application.Initiatives.Chat;
 using MentalMetal.Application.Commitments;
 using MentalMetal.Application.Delegations;
 using MentalMetal.Application.Common;
@@ -9,6 +10,7 @@ using MentalMetal.Application.Initiatives.Brief;
 using MentalMetal.Application.People;
 using MentalMetal.Application.Users;
 using MentalMetal.Domain.Captures;
+using MentalMetal.Domain.ChatThreads;
 using MentalMetal.Domain.Commitments;
 using MentalMetal.Domain.Delegations;
 using MentalMetal.Domain.Initiatives;
@@ -58,6 +60,7 @@ public static class DependencyInjection
         services.AddScoped<ICaptureRepository, CaptureRepository>();
         services.AddScoped<ICommitmentRepository, CommitmentRepository>();
         services.AddScoped<IDelegationRepository, DelegationRepository>();
+        services.AddScoped<IChatThreadRepository, ChatThreadRepository>();
         services.AddScoped<ITokenService, TokenService>();
 
         // AI provider services
@@ -165,6 +168,17 @@ public static class DependencyInjection
         services.AddScoped<RetryProcessingHandler>();
         services.AddScoped<ConfirmExtractionHandler>();
         services.AddScoped<DiscardExtractionHandler>();
+
+        // Initiative chat services and handlers
+        services.AddScoped<IInitiativeChatContextBuilder, InitiativeChatContextBuilder>();
+        services.AddScoped<IInitiativeChatCompletionService, InitiativeChatCompletionService>();
+        services.AddScoped<StartInitiativeChatThreadHandler>();
+        services.AddScoped<ListInitiativeChatThreadsHandler>();
+        services.AddScoped<GetInitiativeChatThreadHandler>();
+        services.AddScoped<RenameInitiativeChatThreadHandler>();
+        services.AddScoped<PostInitiativeChatMessageHandler>();
+        services.AddScoped<ArchiveInitiativeChatThreadHandler>();
+        services.AddScoped<UnarchiveInitiativeChatThreadHandler>();
 
         return services;
     }
