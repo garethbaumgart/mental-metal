@@ -1,5 +1,6 @@
 using MentalMetal.Application.Common;
 using MentalMetal.Domain.Captures;
+using MentalMetal.Domain.ChatThreads;
 using MentalMetal.Domain.Commitments;
 using MentalMetal.Domain.Common;
 using MentalMetal.Domain.Delegations;
@@ -27,6 +28,7 @@ public sealed class MentalMetalDbContext(
     public DbSet<Delegation> Delegations => Set<Delegation>();
     public DbSet<AiTasteBudget> AiTasteBudgets => Set<AiTasteBudget>();
     public DbSet<PendingBriefUpdate> PendingBriefUpdates => Set<PendingBriefUpdate>();
+    public DbSet<ChatThread> ChatThreads => Set<ChatThread>();
 
     public void DiscardPendingChanges() => ChangeTracker.Clear();
 
@@ -42,5 +44,6 @@ public sealed class MentalMetalDbContext(
         modelBuilder.Entity<Commitment>().HasQueryFilter(c => c.UserId == currentUserService.UserId);
         modelBuilder.Entity<Delegation>().HasQueryFilter(d => d.UserId == currentUserService.UserId);
         modelBuilder.Entity<PendingBriefUpdate>().HasQueryFilter(p => p.UserId == currentUserService.UserId);
+        modelBuilder.Entity<ChatThread>().HasQueryFilter(t => t.UserId == currentUserService.UserId);
     }
 }

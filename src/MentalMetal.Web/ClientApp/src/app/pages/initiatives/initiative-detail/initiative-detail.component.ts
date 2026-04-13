@@ -17,6 +17,7 @@ import { PeopleService } from '../../../shared/services/people.service';
 import { Initiative, InitiativeStatus, Milestone } from '../../../shared/models/initiative.model';
 import { Person } from '../../../shared/models/person.model';
 import { LivingBriefTabComponent } from '../living-brief/living-brief-tab.component';
+import { InitiativeChatTabComponent } from '../chat/initiative-chat-tab.component';
 
 @Component({
   selector: 'app-initiative-detail',
@@ -35,6 +36,7 @@ import { LivingBriefTabComponent } from '../living-brief/living-brief-tab.compon
     DatePickerModule,
     TabsModule,
     LivingBriefTabComponent,
+    InitiativeChatTabComponent,
   ],
   styles: [`
     .milestone-card, .milestone-form {
@@ -66,6 +68,7 @@ import { LivingBriefTabComponent } from '../living-brief/living-brief-tab.compon
           <p-tablist>
             <p-tab value="overview">Overview</p-tab>
             <p-tab value="brief">Living Brief</p-tab>
+            <p-tab value="chat">Chat</p-tab>
           </p-tablist>
           <p-tabpanels>
             <p-tabpanel value="overview">
@@ -222,6 +225,9 @@ import { LivingBriefTabComponent } from '../living-brief/living-brief-tab.compon
             </p-tabpanel>
             <p-tabpanel value="brief">
               <app-living-brief-tab [initiativeId]="initiative()!.id" />
+            </p-tabpanel>
+            <p-tabpanel value="chat">
+              <app-initiative-chat-tab [initiativeId]="initiative()!.id" />
             </p-tabpanel>
           </p-tabpanels>
         </p-tabs>
