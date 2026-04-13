@@ -24,8 +24,8 @@ import { CreateInitiativeDialogComponent } from '../create-initiative-dialog/cre
       <div class="flex items-center gap-4">
         <p-select
           [options]="statusFilterOptions"
-          [(ngModel)]="selectedStatus"
-          (ngModelChange)="onStatusFilterChange()"
+          [ngModel]="selectedStatus()"
+          (ngModelChange)="selectedStatus.set($event); onStatusFilterChange()"
           placeholder="All Statuses"
           [showClear]="true"
           class="w-48"
@@ -82,7 +82,7 @@ export class InitiativesListComponent implements OnInit {
   readonly initiatives = signal<Initiative[]>([]);
   readonly loading = signal(true);
   readonly showCreateDialog = signal(false);
-  protected selectedStatus: InitiativeStatus | null = null;
+  readonly selectedStatus = signal<InitiativeStatus | null>(null);
 
   protected readonly statusFilterOptions = [
     { label: 'Active', value: 'Active' as InitiativeStatus },
@@ -127,7 +127,7 @@ export class InitiativesListComponent implements OnInit {
 
   private loadInitiatives(): void {
     this.loading.set(true);
-    this.initiativesService.list(this.selectedStatus ?? undefined).subscribe({
+    this.initiativesService.list(this.selectedStatus() ?? undefined).subscribe({
       next: (initiatives) => {
         this.initiatives.set(initiatives);
         this.loading.set(false);

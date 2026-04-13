@@ -34,9 +34,12 @@ public sealed class AnthropicAdapter : IAiProviderAdapter
                 cancellationToken: cancellationToken);
 
             var text = "";
-            var firstBlock = response.Content.FirstOrDefault();
-            if (firstBlock is not null && firstBlock.IsText)
-                text = firstBlock.Text.Text;
+            if (response.Content.Count > 0)
+            {
+                var firstBlock = response.Content[0];
+                if (firstBlock.IsText)
+                    text = firstBlock.Text.Text;
+            }
 
             return new AiCompletionResult(
                 Content: text,

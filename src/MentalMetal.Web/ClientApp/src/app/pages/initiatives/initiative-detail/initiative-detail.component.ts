@@ -189,6 +189,8 @@ import { Person } from '../../../shared/models/person.model';
                 [suggestions]="peopleSuggestions()"
                 (completeMethod)="searchPeople($event)"
                 field="name"
+                [forceSelection]="true"
+                [minLength]="2"
                 placeholder="Search people..."
                 class="w-full"
               />

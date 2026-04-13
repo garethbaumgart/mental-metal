@@ -304,11 +304,11 @@ import { Initiative } from '../../../shared/models/initiative.model';
           <div class="flex items-end gap-4">
             <div class="flex flex-col gap-2 flex-1">
               <label for="title" class="text-sm font-medium text-muted-color">Title</label>
-              <input pInputText id="title" [(ngModel)]="editTitle" class="w-full" />
+              <input pInputText id="title" [ngModel]="editTitle()" (ngModelChange)="editTitle.set($event)" class="w-full" />
             </div>
             <div class="flex flex-col gap-2 flex-1">
               <label for="source" class="text-sm font-medium text-muted-color">Source</label>
-              <input pInputText id="source" [(ngModel)]="editSource" class="w-full" />
+              <input pInputText id="source" [ngModel]="editSource()" (ngModelChange)="editSource.set($event)" class="w-full" />
             </div>
             <p-button
               label="Save"
@@ -338,7 +338,8 @@ import { Initiative } from '../../../shared/models/initiative.model';
               <label for="linkPerson" class="text-sm font-medium text-muted-color">Add Person</label>
               <p-autoComplete
                 id="linkPerson"
-                [(ngModel)]="selectedPerson"
+                [ngModel]="selectedPerson()"
+                (ngModelChange)="selectedPerson.set($event)"
                 [suggestions]="peopleSuggestions()"
                 (completeMethod)="searchPeople($event)"
                 field="name"
@@ -353,7 +354,7 @@ import { Initiative } from '../../../shared/models/initiative.model';
               [outlined]="true"
               (onClick)="linkPerson()"
               [loading]="linkingPerson()"
-              [disabled]="!selectedPerson"
+              [disabled]="!selectedPerson()"
             />
           </div>
         </section>
@@ -377,7 +378,8 @@ import { Initiative } from '../../../shared/models/initiative.model';
               <label for="linkInitiative" class="text-sm font-medium text-muted-color">Add Initiative</label>
               <p-autoComplete
                 id="linkInitiative"
-                [(ngModel)]="selectedInitiative"
+                [ngModel]="selectedInitiative()"
+                (ngModelChange)="selectedInitiative.set($event)"
                 [suggestions]="initiativeSuggestions()"
                 (completeMethod)="searchInitiatives($event)"
                 field="title"
@@ -392,7 +394,7 @@ import { Initiative } from '../../../shared/models/initiative.model';
               [outlined]="true"
               (onClick)="linkInitiative()"
               [loading]="linkingInitiative()"
-              [disabled]="!selectedInitiative"
+              [disabled]="!selectedInitiative()"
             />
           </div>
         </section>
@@ -422,10 +424,10 @@ export class CaptureDetailComponent implements OnInit {
   readonly peopleSuggestions = signal<Person[]>([]);
   readonly initiativeSuggestions = signal<Initiative[]>([]);
 
-  protected editTitle = '';
-  protected editSource = '';
-  protected selectedPerson: Person | null = null;
-  protected selectedInitiative: Initiative | null = null;
+  readonly editTitle = signal('');
+  readonly editSource = signal('');
+  readonly selectedPerson = signal<Person | null>(null);
+  readonly selectedInitiative = signal<Initiative | null>(null);
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -441,7 +443,7 @@ export class CaptureDetailComponent implements OnInit {
   protected metadataChanged(): boolean {
     const c = this.capture();
     if (!c) return false;
-    return this.editTitle !== (c.title ?? '') || this.editSource !== (c.source ?? '');
+    return this.editTitle() !== (c.title ?? '') || this.editSource() !== (c.source ?? '');
   }
 
   protected processCapture(): void {
@@ -535,13 +537,13 @@ export class CaptureDetailComponent implements OnInit {
 
     this.savingMetadata.set(true);
     this.capturesService.updateMetadata(c.id, {
-      title: this.editTitle.trim() || null,
-      source: this.editSource.trim() || null,
+      title: this.editTitle().trim() || null,
+      source: this.editSource().trim() || null,
     }).subscribe({
       next: (updated) => {
         this.capture.set(updated);
-        this.editTitle = updated.title ?? '';
-        this.editSource = updated.source ?? '';
+        this.editTitle.set(updated.title ?? '');
+        this.editSource.set(updated.source ?? '');
         this.savingMetadata.set(false);
         this.messageService.add({ severity: 'success', summary: 'Metadata updated' });
       },
@@ -568,17 +570,17 @@ export class CaptureDetailComponent implements OnInit {
 
   protected linkPerson(): void {
     const c = this.capture();
-    if (!c || !this.selectedPerson) return;
+    if (!c || !this.selectedPerson()) return;
 
     this.linkingPerson.set(true);
-    const personToLink = this.selectedPerson;
+    const personToLink = this.selectedPerson()!;
     this.capturesService.linkPerson(c.id, personToLink.id).subscribe({
       next: (updated) => {
         this.capture.set(updated);
         this.linkedPeople.update((list) =>
           list.some((p) => p.id === personToLink.id) ? list : [...list, personToLink]
         );
-        this.selectedPerson = null;
+        this.selectedPerson.set(null);
         this.linkingPerson.set(false);
         this.messageService.add({ severity: 'success', summary: 'Person linked' });
       },
@@ -621,17 +623,17 @@ export class CaptureDetailComponent implements OnInit {
 
   protected linkInitiative(): void {
     const c = this.capture();
-    if (!c || !this.selectedInitiative) return;
+    if (!c || !this.selectedInitiative()) return;
 
     this.linkingInitiative.set(true);
-    const initiativeToLink = this.selectedInitiative;
+    const initiativeToLink = this.selectedInitiative()!;
     this.capturesService.linkInitiative(c.id, initiativeToLink.id).subscribe({
       next: (updated) => {
         this.capture.set(updated);
         this.linkedInitiatives.update((list) =>
           list.some((i) => i.id === initiativeToLink.id) ? list : [...list, initiativeToLink]
         );
-        this.selectedInitiative = null;
+        this.selectedInitiative.set(null);
         this.linkingInitiative.set(false);
         this.messageService.add({ severity: 'success', summary: 'Initiative linked' });
       },
@@ -697,8 +699,8 @@ export class CaptureDetailComponent implements OnInit {
     this.capturesService.get(id).subscribe({
       next: (capture) => {
         this.capture.set(capture);
-        this.editTitle = capture.title ?? '';
-        this.editSource = capture.source ?? '';
+        this.editTitle.set(capture.title ?? '');
+        this.editSource.set(capture.source ?? '');
         this.loadLinkedPeople(capture.linkedPersonIds);
         this.loadLinkedInitiatives(capture.linkedInitiativeIds);
         this.loading.set(false);

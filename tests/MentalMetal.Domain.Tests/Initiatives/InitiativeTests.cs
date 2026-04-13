@@ -398,6 +398,41 @@ public class InitiativeTests
             initiative.UnlinkPerson(personId));
     }
 
+    [Fact]
+    public void UpdateMilestone_MutatesExistingInstance()
+    {
+        var initiative = Initiative.Create(UserId, "Test");
+        initiative.AddMilestone("Phase 1", new DateOnly(2026, 6, 1));
+        var original = initiative.Milestones[0];
+        var milestoneId = original.Id;
+
+        initiative.UpdateMilestone(milestoneId, "Phase 1 Updated", new DateOnly(2026, 7, 1));
+
+        Assert.Same(original, initiative.Milestones.First(m => m.Id == milestoneId));
+        Assert.Equal("Phase 1 Updated", original.Title);
+    }
+
+    [Fact]
+    public void CompleteMilestone_MutatesExistingInstance()
+    {
+        var initiative = Initiative.Create(UserId, "Test");
+        initiative.AddMilestone("Phase 1", new DateOnly(2026, 6, 1));
+        var original = initiative.Milestones[0];
+        var milestoneId = original.Id;
+
+        initiative.CompleteMilestone(milestoneId);
+
+        Assert.Same(original, initiative.Milestones.First(m => m.Id == milestoneId));
+        Assert.True(original.IsCompleted);
+    }
+
+    [Fact]
+    public void Create_EmptyUserId_Throws()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            Initiative.Create(Guid.Empty, "Test"));
+    }
+
     private static Initiative CreateWithStatus(InitiativeStatus status)
     {
         var initiative = Initiative.Create(UserId, "Test");

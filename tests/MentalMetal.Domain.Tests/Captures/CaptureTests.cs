@@ -472,4 +472,68 @@ public class CaptureTests
 
         Assert.Equal(ExtractionStatus.None, capture.ExtractionStatus);
     }
+
+    // Guid.Empty guard tests
+    [Fact]
+    public void Create_EmptyUserId_Throws()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            Capture.Create(Guid.Empty, "content", CaptureType.QuickNote));
+    }
+
+    [Fact]
+    public void LinkToPerson_EmptyPersonId_Throws()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+
+        Assert.Throws<ArgumentException>(() => capture.LinkToPerson(Guid.Empty));
+    }
+
+    [Fact]
+    public void UnlinkFromPerson_EmptyPersonId_Throws()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+
+        Assert.Throws<ArgumentException>(() => capture.UnlinkFromPerson(Guid.Empty));
+    }
+
+    [Fact]
+    public void LinkToInitiative_EmptyInitiativeId_Throws()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+
+        Assert.Throws<ArgumentException>(() => capture.LinkToInitiative(Guid.Empty));
+    }
+
+    [Fact]
+    public void UnlinkFromInitiative_EmptyInitiativeId_Throws()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+
+        Assert.Throws<ArgumentException>(() => capture.UnlinkFromInitiative(Guid.Empty));
+    }
+
+    [Fact]
+    public void RecordSpawnedCommitment_EmptyId_Throws()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+
+        Assert.Throws<ArgumentException>(() => capture.RecordSpawnedCommitment(Guid.Empty));
+    }
+
+    [Fact]
+    public void RecordSpawnedDelegation_EmptyId_Throws()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+
+        Assert.Throws<ArgumentException>(() => capture.RecordSpawnedDelegation(Guid.Empty));
+    }
+
+    [Fact]
+    public void RecordSpawnedObservation_EmptyId_Throws()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+
+        Assert.Throws<ArgumentException>(() => capture.RecordSpawnedObservation(Guid.Empty));
+    }
 }

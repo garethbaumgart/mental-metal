@@ -21,6 +21,9 @@ public sealed class Initiative : AggregateRoot, IUserScoped
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(title, nameof(title));
 
+        if (userId == Guid.Empty)
+            throw new ArgumentException("UserId is required.", nameof(userId));
+
         var now = DateTimeOffset.UtcNow;
 
         var initiative = new Initiative
@@ -94,8 +97,7 @@ public sealed class Initiative : AggregateRoot, IUserScoped
         var existing = _milestones.FirstOrDefault(m => m.Id == milestoneId)
             ?? throw new ArgumentException($"Milestone '{milestoneId}' not found.");
 
-        _milestones.Remove(existing);
-        _milestones.Add(existing.WithUpdates(title, targetDate, description));
+        existing.ApplyUpdates(title, targetDate, description);
         UpdatedAt = DateTimeOffset.UtcNow;
 
         RaiseDomainEvent(new MilestoneSet(Id, milestoneId));
@@ -121,8 +123,7 @@ public sealed class Initiative : AggregateRoot, IUserScoped
         var existing = _milestones.FirstOrDefault(m => m.Id == milestoneId)
             ?? throw new ArgumentException($"Milestone '{milestoneId}' not found.");
 
-        _milestones.Remove(existing);
-        _milestones.Add(existing.Complete());
+        existing.Complete();
         UpdatedAt = DateTimeOffset.UtcNow;
 
         RaiseDomainEvent(new MilestoneCompleted(Id, milestoneId));

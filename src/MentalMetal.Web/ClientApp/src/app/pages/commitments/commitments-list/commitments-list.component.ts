@@ -31,24 +31,24 @@ import { CommitmentDialogComponent } from '../commitment-dialog/commitment-dialo
       <div class="flex items-center gap-4 flex-wrap">
         <p-select
           [options]="directionFilterOptions"
-          [(ngModel)]="selectedDirection"
-          (ngModelChange)="onFilterChange()"
+          [ngModel]="selectedDirection()"
+          (ngModelChange)="selectedDirection.set($event); onFilterChange()"
           placeholder="All Directions"
           [showClear]="true"
           class="w-48"
         />
         <p-select
           [options]="statusFilterOptions"
-          [(ngModel)]="selectedStatus"
-          (ngModelChange)="onFilterChange()"
+          [ngModel]="selectedStatus()"
+          (ngModelChange)="selectedStatus.set($event); onFilterChange()"
           placeholder="All Statuses"
           [showClear]="true"
           class="w-48"
         />
         <p-select
           [options]="overdueFilterOptions"
-          [(ngModel)]="selectedOverdue"
-          (ngModelChange)="onFilterChange()"
+          [ngModel]="selectedOverdue()"
+          (ngModelChange)="selectedOverdue.set($event); onFilterChange()"
           placeholder="All"
           [showClear]="true"
           class="w-48"
@@ -137,9 +137,9 @@ export class CommitmentsListComponent implements OnInit {
   readonly showCreateDialog = signal(false);
   private readonly peopleMap = signal<Map<string, string>>(new Map());
 
-  protected selectedDirection: CommitmentDirection | null = null;
-  protected selectedStatus: CommitmentStatus | null = null;
-  protected selectedOverdue: boolean | null = null;
+  readonly selectedDirection = signal<CommitmentDirection | null>(null);
+  readonly selectedStatus = signal<CommitmentStatus | null>(null);
+  readonly selectedOverdue = signal<boolean | null>(null);
 
   protected readonly directionFilterOptions = [
     { label: 'I owe them', value: 'MineToThem' as CommitmentDirection },
@@ -227,17 +227,21 @@ export class CommitmentsListComponent implements OnInit {
   private loadCommitments(): void {
     this.loading.set(true);
     this.commitmentsService.list(
-      this.selectedDirection ?? undefined,
-      this.selectedStatus ?? undefined,
+      this.selectedDirection() ?? undefined,
+      this.selectedStatus() ?? undefined,
       undefined,
       undefined,
-      this.selectedOverdue ?? undefined,
+      this.selectedOverdue() ?? undefined,
     ).subscribe({
       next: (commitments) => {
         this.commitments.set(commitments);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false),
+      error: () => {
+        this.commitments.set([]);
+        this.loading.set(false);
+        this.messageService.add({ severity: 'error', summary: 'Failed to load commitments' });
+      },
     });
   }
 
@@ -248,6 +252,7 @@ export class CommitmentsListComponent implements OnInit {
         people.forEach(p => map.set(p.id, p.name));
         this.peopleMap.set(map);
       },
+      error: () => this.messageService.add({ severity: 'error', summary: 'Failed to load people' }),
     });
   }
 }

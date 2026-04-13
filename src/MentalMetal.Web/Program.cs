@@ -10,6 +10,7 @@ using MentalMetal.Application.People;
 using MentalMetal.Application.Users;
 using MentalMetal.Domain.Captures;
 using MentalMetal.Domain.Commitments;
+using MentalMetal.Domain.Common;
 using MentalMetal.Domain.Delegations;
 using MentalMetal.Domain.Initiatives;
 using MentalMetal.Domain.People;
@@ -503,7 +504,7 @@ app.MapPut("/api/initiatives/{id:guid}", async (
         var response = await handler.HandleAsync(id, request, cancellationToken);
         return Results.Ok(response);
     }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    catch (NotFoundException)
     {
         return Results.NotFound();
     }
@@ -524,7 +525,7 @@ app.MapPut("/api/initiatives/{id:guid}/status", async (
         var response = await handler.HandleAsync(id, request, cancellationToken);
         return Results.Ok(response);
     }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    catch (NotFoundException)
     {
         return Results.NotFound();
     }
@@ -545,7 +546,7 @@ app.MapPost("/api/initiatives/{id:guid}/milestones", async (
         var response = await handler.HandleAsync(id, request, cancellationToken);
         return Results.Ok(response);
     }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    catch (NotFoundException)
     {
         return Results.NotFound();
     }
@@ -567,7 +568,7 @@ app.MapPut("/api/initiatives/{id:guid}/milestones/{milestoneId:guid}", async (
         var response = await handler.HandleAsync(id, milestoneId, request, cancellationToken);
         return Results.Ok(response);
     }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    catch (NotFoundException)
     {
         return Results.NotFound();
     }
@@ -588,7 +589,7 @@ app.MapDelete("/api/initiatives/{id:guid}/milestones/{milestoneId:guid}", async 
         var response = await handler.HandleAsync(id, milestoneId, cancellationToken);
         return Results.Ok(response);
     }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    catch (NotFoundException)
     {
         return Results.NotFound();
     }
@@ -609,7 +610,7 @@ app.MapPost("/api/initiatives/{id:guid}/milestones/{milestoneId:guid}/complete",
         var response = await handler.HandleAsync(id, milestoneId, cancellationToken);
         return Results.Ok(response);
     }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    catch (NotFoundException)
     {
         return Results.NotFound();
     }
@@ -630,7 +631,7 @@ app.MapPost("/api/initiatives/{id:guid}/link-person", async (
         var response = await handler.HandleAsync(id, request, cancellationToken);
         return Results.Ok(response);
     }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    catch (NotFoundException)
     {
         return Results.NotFound();
     }
@@ -651,7 +652,7 @@ app.MapDelete("/api/initiatives/{id:guid}/link-person/{personId:guid}", async (
         var response = await handler.HandleAsync(id, personId, cancellationToken);
         return Results.Ok(response);
     }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    catch (NotFoundException)
     {
         return Results.NotFound();
     }
@@ -730,6 +731,10 @@ app.MapPost("/api/captures/{id:guid}/link-person", async (
     {
         return Results.NotFound();
     }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
 }).RequireAuthorization();
 
 app.MapPost("/api/captures/{id:guid}/link-initiative", async (
@@ -746,6 +751,10 @@ app.MapPost("/api/captures/{id:guid}/link-initiative", async (
     catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
     {
         return Results.NotFound();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
     }
 }).RequireAuthorization();
 
@@ -764,6 +773,10 @@ app.MapPost("/api/captures/{id:guid}/unlink-person", async (
     {
         return Results.NotFound();
     }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
 }).RequireAuthorization();
 
 app.MapPost("/api/captures/{id:guid}/unlink-initiative", async (
@@ -780,6 +793,10 @@ app.MapPost("/api/captures/{id:guid}/unlink-initiative", async (
     catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
     {
         return Results.NotFound();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
     }
 }).RequireAuthorization();
 
