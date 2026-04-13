@@ -8,7 +8,7 @@ import {
   DestroyRef,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Subject, EMPTY, debounceTime, switchMap } from 'rxjs';
+import { Subject, EMPTY, of, debounceTime, switchMap, catchError } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -215,26 +215,21 @@ export class AiProviderSettingsComponent implements OnInit {
             provider,
             apiKey: this.apiKey,
             model,
-          });
+          }).pipe(
+            catchError(() => of({ success: false as const, error: 'Connection failed', modelName: null })),
+          );
         }),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe({
-        next: (result) => {
-          this.validating.set(false);
-          if (result.success) {
-            this.validationResult.set('success');
-            this.validationMessage.set(`Connected to ${result.modelName}`);
-          } else {
-            this.validationResult.set('error');
-            this.validationMessage.set(result.error ?? 'Validation failed');
-          }
-        },
-        error: () => {
-          this.validating.set(false);
+      .subscribe((result) => {
+        this.validating.set(false);
+        if (result.success) {
+          this.validationResult.set('success');
+          this.validationMessage.set(`Connected to ${result.modelName}`);
+        } else {
           this.validationResult.set('error');
-          this.validationMessage.set('Connection failed');
-        },
+          this.validationMessage.set(result.error ?? 'Validation failed');
+        }
       });
   }
 
@@ -245,8 +240,10 @@ export class AiProviderSettingsComponent implements OnInit {
       this.providers.find((p) => p.name === provider) ?? null,
     );
     this.selectedModel = '';
+    this.apiKey = '';
     this.loadModels(provider);
     // Reset validation when provider changes
+    this.validating.set(false);
     this.validationResult.set(null);
     this.validationMessage.set(null);
   }
@@ -260,8 +257,10 @@ export class AiProviderSettingsComponent implements OnInit {
     const hasModel = !!this.selectedModel;
     const status = this.aiProviderService.status();
     const sameProvider = !!(status?.isConfigured && status.provider === provider);
-    const hasKey = !!this.apiKey || sameProvider;
-    return !!provider && hasModel && hasKey;
+    // Allow save if: (a) keeping the same provider with existing key (no new key entered),
+    // or (b) a new key was entered and validation passed
+    const keyValid = (sameProvider && !this.apiKey) || (!!this.apiKey && this.validationResult() === 'success');
+    return !!provider && hasModel && keyValid && !this.validating();
   }
 
   save(): void {
