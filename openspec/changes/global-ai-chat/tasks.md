@@ -53,8 +53,8 @@
 - [ ] 7.3 `GetGlobalChatThread` query handler (GET /api/chat/threads/{threadId}); 404 when threadId is initiative-scoped
 - [ ] 7.4 `RenameGlobalChatThread` command handler (PUT /api/chat/threads/{threadId})
 - [ ] 7.5 `PostGlobalChatMessage` command handler (POST /api/chat/threads/{threadId}/messages) — orchestrates GlobalChatCompletionService
-- [ ] 7.6 `ArchiveGlobalChatThread` command handler (POST /archive)
-- [ ] 7.7 `UnarchiveGlobalChatThread` command handler (POST /unarchive)
+- [ ] 7.6 `ArchiveGlobalChatThread` command handler (POST /api/chat/threads/{threadId}/archive)
+- [ ] 7.7 `UnarchiveGlobalChatThread` command handler (POST /api/chat/threads/{threadId}/unarchive)
 
 ## 8. Application Unit Tests
 

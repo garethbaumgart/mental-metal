@@ -187,7 +187,7 @@ gh api repos/{owner}/{repo}/issues/$PR_NUMBER/comments --jq '.[] | "[\(.user.log
 - If a new actionable comment appears, address it (Step 5c), push fixes (Step 5d), and **reset the counter to 0**
 - Only after 5 consecutive clean cycles may you report the PR as ready to merge
 - Track and report the cycle count to the user (e.g., "Clean cycle 3/5, no new comments")
-- **Docs-only PRs** are exempt from the 5-cycle requirement (see Step 6 stop conditions)
+- **All PRs — including docs-only / markdown-only — must complete the 5 clean cycles.** Review bots (Copilot, CodeRabbit, Sourcery) regularly post substantive comments on markdown files (OpenSpec proposals, design docs, specs), and merging before those land loses valuable feedback. Do not shortcut this step based on file types.
 
 ### 5c. Address Review Comments
 
@@ -221,7 +221,8 @@ The review loop stops when one of these conditions is met:
   gh pr merge $PR_NUMBER --squash --delete-branch
   ```
 - **User cancels** — leave the PR open, report current status and any unaddressed comments
-- **Docs-only PRs** (all changed files match `*.md`, `*.txt`, `docs/**`) — merge immediately without waiting for user approval
+- **5 consecutive clean review cycles achieved** (Step 5b) and CI is satisfied — proceed to squash merge. This applies to every PR, including markdown-only and OpenSpec proposals.
+  - CI is considered satisfied when all triggered checks are green **or** when no CI checks were triggered due to repository workflow path filters (e.g., `paths-ignore` excluding `**/*.md`, `.claude/**`, `docs/**`). Never treat pending or failed checks as satisfied.
 
 ---
 

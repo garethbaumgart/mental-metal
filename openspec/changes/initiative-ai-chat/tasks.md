@@ -36,7 +36,7 @@
 ## 4. Application Layer — Context Builder
 
 - [ ] 4.1 Create `IInitiativeChatContextBuilder` interface and `InitiativeChatContextBuilder` implementation
-- [ ] 4.2 Implement `Build(userId, initiativeId, recentMessages)` enforcing caps (20 decisions, all open risks, latest req/design snapshots, 50 commitments, 50 delegations, 30 capture summaries) and filtering by UserId
+- [ ] 4.2 Implement `Build(userId, initiativeId, userQuestion, recentMessages)` — `userId` is required and non-optional; every downstream query filters by it. Enforce caps (20 decisions, all open risks, latest req/design snapshots, 50 commitments, 50 delegations, 30 capture summaries).
 - [ ] 4.3 Define DTO `InitiativeChatContextPayload` returned by the builder
 - [ ] 4.4 Unit test the builder: caps enforced, cross-user data excluded, empty initiative produces minimal payload
 
@@ -52,13 +52,13 @@
 
 ## 6. Application Layer — Vertical Slice Handlers
 
-- [ ] 6.1 `StartInitiativeChatThread` command handler (POST /chat/threads)
-- [ ] 6.2 `ListInitiativeChatThreads` query handler (GET /chat/threads, filterable by status)
-- [ ] 6.3 `GetInitiativeChatThread` query handler (GET /chat/threads/{threadId})
-- [ ] 6.4 `RenameInitiativeChatThread` command handler (PUT /chat/threads/{threadId})
-- [ ] 6.5 `PostInitiativeChatMessage` command handler (POST /chat/threads/{threadId}/messages) — orchestrates the completion service
-- [ ] 6.6 `ArchiveInitiativeChatThread` command handler (POST /archive)
-- [ ] 6.7 `UnarchiveInitiativeChatThread` command handler (POST /unarchive)
+- [ ] 6.1 `StartInitiativeChatThread` command handler (POST /api/initiatives/{id}/chat/threads)
+- [ ] 6.2 `ListInitiativeChatThreads` query handler (GET /api/initiatives/{id}/chat/threads, filterable by status)
+- [ ] 6.3 `GetInitiativeChatThread` query handler (GET /api/initiatives/{id}/chat/threads/{threadId})
+- [ ] 6.4 `RenameInitiativeChatThread` command handler (PUT /api/initiatives/{id}/chat/threads/{threadId})
+- [ ] 6.5 `PostInitiativeChatMessage` command handler (POST /api/initiatives/{id}/chat/threads/{threadId}/messages) — orchestrates the completion service
+- [ ] 6.6 `ArchiveInitiativeChatThread` command handler (POST /api/initiatives/{id}/chat/threads/{threadId}/archive)
+- [ ] 6.7 `UnarchiveInitiativeChatThread` command handler (POST /api/initiatives/{id}/chat/threads/{threadId}/unarchive)
 
 ## 7. Application Unit Tests
 
