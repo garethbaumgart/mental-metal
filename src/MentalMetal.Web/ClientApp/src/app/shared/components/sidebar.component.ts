@@ -33,6 +33,10 @@ import { ThemeService } from '../services/theme.service';
       border-left: 3px solid var(--p-primary-color);
     }
 
+    :host-context(.dark) .sidebar-link-active {
+      background-color: var(--p-primary-950);
+    }
+
     .theme-toggle {
       color: var(--p-text-color);
     }

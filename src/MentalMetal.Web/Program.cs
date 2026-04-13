@@ -19,9 +19,15 @@ using MentalMetal.Domain.Delegations;
 using MentalMetal.Domain.Initiatives;
 using MentalMetal.Domain.Initiatives.LivingBrief;
 using MentalMetal.Domain.People;
+using Google.Cloud.Storage.V1;
 using MentalMetal.Infrastructure;
 using MentalMetal.Infrastructure.Auth;
+using MentalMetal.Web.Auth;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Microsoft.AspNetCore.DataProtection.Repositories;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -34,6 +40,37 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 builder.Services.AddInfrastructure(builder.Configuration);
+
+// --- DataProtection ---
+// In hosted environments (e.g. Cloud Run) the local filesystem is ephemeral, so
+// keys must be persisted to durable storage. When DataProtection:BucketName is
+// set, store keys in a Google Cloud Storage object so OAuth state cookies issued
+// by one container instance can be validated by another (#75 Bug 4). Otherwise
+// fall back to the framework default (filesystem under the current user profile),
+// which is fine for local development.
+var dataProtectionBucket = builder.Configuration["DataProtection:BucketName"];
+builder.Services.AddDataProtection()
+    .SetApplicationName("MentalMetal");
+if (!string.IsNullOrWhiteSpace(dataProtectionBucket))
+{
+    // Prefix under which each key is stored as its own object (one object per key,
+    // to avoid read-modify-write races between Cloud Run instances).
+    var dataProtectionObjectPrefix =
+        builder.Configuration["DataProtection:ObjectPrefix"] ?? "keys/";
+
+    builder.Services.TryAddSingleton(_ => StorageClient.Create());
+    builder.Services.AddSingleton<IXmlRepository>(sp =>
+        new GoogleCloudStorageXmlRepository(
+            sp.GetRequiredService<StorageClient>(),
+            dataProtectionBucket,
+            dataProtectionObjectPrefix,
+            sp.GetRequiredService<ILogger<GoogleCloudStorageXmlRepository>>()));
+    builder.Services.AddOptions<KeyManagementOptions>()
+        .Configure<IServiceProvider>((options, sp) =>
+        {
+            options.XmlRepository = sp.GetRequiredService<IXmlRepository>();
+        });
+}
 
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
     ?? throw new InvalidOperationException("JWT settings are not configured. Add a 'Jwt' section to appsettings.");

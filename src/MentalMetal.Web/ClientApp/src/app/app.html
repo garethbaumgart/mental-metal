@@ -1,44 +1,51 @@
-<div class="flex h-screen shell">
+@if (isLoginRoute()) {
+  <!-- Login route: full-screen with no shell chrome (#75 Bug 1) -->
+  <router-outlet />
+} @else {
+  <div class="flex h-screen shell">
 
-  <!-- Sidebar: always visible on desktop -->
-  <aside class="hidden lg:flex flex-col w-64 border-r shrink-0 shell-panel">
-    <app-sidebar />
-  </aside>
+    <!-- Sidebar: always visible on desktop -->
+    <aside class="hidden lg:flex flex-col w-64 border-r shrink-0 shell-panel">
+      <app-sidebar />
+    </aside>
 
-  <!-- Mobile sidebar overlay -->
-  @if (sidebarOpen()) {
-    <div class="fixed inset-0 z-40 lg:hidden">
-      <div class="absolute inset-0 sidebar-scrim" (click)="sidebarOpen.set(false)"></div>
-      <aside class="relative z-50 flex flex-col w-64 h-full shell-panel">
-        <app-sidebar (navClick)="sidebarOpen.set(false)" />
-      </aside>
+    <!-- Mobile sidebar overlay -->
+    @if (sidebarOpen()) {
+      <div class="fixed inset-0 z-40 lg:hidden">
+        <div class="absolute inset-0 sidebar-scrim" (click)="sidebarOpen.set(false)"></div>
+        <aside class="relative z-50 flex flex-col w-64 h-full shell-panel">
+          <app-sidebar (navClick)="sidebarOpen.set(false)" />
+        </aside>
+      </div>
+    }
+
+    <!-- Main content area -->
+    <div class="flex flex-col flex-1 min-w-0">
+
+      <!-- Header: shows current page title from route data, not duplicate brand (#75 Bug 2) -->
+      <header class="flex items-center gap-4 h-14 px-4 border-b shrink-0 shell-panel">
+        <button type="button" class="lg:hidden p-2 rounded-md hamburger-btn"
+                (click)="sidebarOpen.set(true)"
+                [attr.aria-expanded]="sidebarOpen()"
+                aria-label="Open navigation menu">
+          <i class="pi pi-bars text-lg"></i>
+        </button>
+        @if (pageTitle()) {
+          <span class="text-sm font-medium header-title">{{ pageTitle() }}</span>
+        }
+        <span class="ml-auto">
+          <app-global-chat-launcher />
+        </span>
+      </header>
+
+      <!-- Page content -->
+      <main class="flex-1 overflow-y-auto p-6">
+        <router-outlet />
+      </main>
+
     </div>
-  }
 
-  <!-- Main content area -->
-  <div class="flex flex-col flex-1 min-w-0">
-
-    <!-- Header -->
-    <header class="flex items-center gap-4 h-14 px-4 border-b shrink-0 shell-panel">
-      <button type="button" class="lg:hidden p-2 rounded-md hamburger-btn"
-              (click)="sidebarOpen.set(true)"
-              [attr.aria-expanded]="sidebarOpen()"
-              aria-label="Open navigation menu">
-        <i class="pi pi-bars text-lg"></i>
-      </button>
-      <span class="text-sm font-medium header-title">Mental Metal</span>
-      <span class="ml-auto">
-        <app-global-chat-launcher />
-      </span>
-    </header>
-
-    <!-- Page content -->
-    <main class="flex-1 overflow-y-auto p-6">
-      <router-outlet />
-    </main>
-
+    <!-- Global chat slide-over: rendered once for the whole shell, controlled by GlobalChatStateService. -->
+    <app-global-chat-slide-over />
   </div>
-
-  <!-- Global chat slide-over: rendered once for the whole shell, controlled by GlobalChatStateService. -->
-  <app-global-chat-slide-over />
-</div>
+}
