@@ -75,3 +75,8 @@ export interface LinkPersonRequest {
 export interface LinkInitiativeRequest {
   initiativeId: string;
 }
+
+export interface ConfirmExtractionResponse {
+  capture: Capture;
+  warnings: string[];
+}

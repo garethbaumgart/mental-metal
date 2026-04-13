@@ -31,9 +31,10 @@ public sealed class OpenAiAdapter : IAiProviderAdapter
         {
             var response = await client.CompleteChatAsync(messages, options, cancellationToken);
 
-            var content = response.Value.Content.Count > 0
-                ? response.Value.Content[0].Text
-                : "";
+            var firstPart = response.Value.Content.Count > 0
+                ? response.Value.Content[0]
+                : null;
+            var content = firstPart?.Text ?? "";
 
             return new AiCompletionResult(
                 Content: content,

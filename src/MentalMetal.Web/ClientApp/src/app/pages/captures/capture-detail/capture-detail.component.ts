@@ -492,11 +492,16 @@ export class CaptureDetailComponent implements OnInit {
 
     this.confirming.set(true);
     this.capturesService.confirmExtraction(c.id).subscribe({
-      next: (updated) => {
-        this.capture.set(updated);
+      next: (result) => {
+        this.capture.set(result.capture);
         this.confirming.set(false);
-        this.loadLinkedPeople(updated.linkedPersonIds);
-        this.loadLinkedInitiatives(updated.linkedInitiativeIds);
+        this.loadLinkedPeople(result.capture.linkedPersonIds);
+        this.loadLinkedInitiatives(result.capture.linkedInitiativeIds);
+        if (result.warnings.length > 0) {
+          for (const warning of result.warnings) {
+            this.messageService.add({ severity: 'warn', summary: 'Skipped item', detail: warning, life: 8000 });
+          }
+        }
         this.messageService.add({ severity: 'success', summary: 'Entities created from extraction' });
       },
       error: () => {

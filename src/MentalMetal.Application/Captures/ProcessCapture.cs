@@ -1,17 +1,19 @@
 using MentalMetal.Application.Common;
 using MentalMetal.Application.Common.Ai;
 using MentalMetal.Domain.Captures;
+using MentalMetal.Domain.Users;
 namespace MentalMetal.Application.Captures;
 
 public sealed class ProcessCaptureHandler(
     ICaptureRepository captureRepository,
     IAiCompletionService aiCompletionService,
+    ICurrentUserService currentUserService,
     IUnitOfWork unitOfWork)
 {
     public async Task<CaptureResponse> HandleAsync(Guid captureId, CancellationToken cancellationToken)
     {
-        var capture = await captureRepository.GetByIdAsync(captureId, cancellationToken)
-            ?? throw new InvalidOperationException($"Capture not found: {captureId}");
+        var capture = (await captureRepository.GetByIdAsync(captureId, cancellationToken))
+            .EnsureOwned(currentUserService.UserId, captureId);
 
         capture.BeginProcessing();
         await unitOfWork.SaveChangesAsync(cancellationToken);
