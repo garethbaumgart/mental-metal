@@ -52,4 +52,17 @@ public class ValidateAiProviderTests
         Assert.False(result.Success);
         Assert.Contains("Unsupported provider", result.Error);
     }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task BlankApiKey_ReturnsFailure(string? apiKey)
+    {
+        var request = new ValidateAiProviderRequest("Anthropic", apiKey!, "model");
+        var result = await _handler.HandleAsync(request, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal("API key is required.", result.Error);
+    }
 }

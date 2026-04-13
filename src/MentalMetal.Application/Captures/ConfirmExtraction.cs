@@ -92,7 +92,7 @@ public sealed class ConfirmExtractionHandler(
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        return new ConfirmExtractionResponse(CaptureResponse.From(capture), warnings);
+        return new ConfirmExtractionResponse(CaptureResponse.From(capture), warnings.AsReadOnly());
     }
 
     private static DateOnly? ParseIsoDate(string? value) =>
