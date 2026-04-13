@@ -80,9 +80,19 @@ resource "google_storage_bucket" "data_protection_keys" {
   }
 }
 
-resource "google_storage_bucket_iam_member" "data_protection_keys_writer" {
+# Least-privilege access: the repository needs to list + read existing key
+# objects and create new ones on key rotation. It never needs to delete keys
+# (stale keys are harmless and can be pruned administratively), so we split
+# the grants rather than using the broader roles/storage.objectAdmin.
+resource "google_storage_bucket_iam_member" "data_protection_keys_viewer" {
   bucket = google_storage_bucket.data_protection_keys.name
-  role   = "roles/storage.objectAdmin"
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:${google_service_account.cloud_run.email}"
+}
+
+resource "google_storage_bucket_iam_member" "data_protection_keys_creator" {
+  bucket = google_storage_bucket.data_protection_keys.name
+  role   = "roles/storage.objectCreator"
   member = "serviceAccount:${google_service_account.cloud_run.email}"
 }
 

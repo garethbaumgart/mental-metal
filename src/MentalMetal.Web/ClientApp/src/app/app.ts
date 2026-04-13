@@ -16,11 +16,12 @@ import { AuthService } from './shared/services/auth.service';
   styleUrl: './app.css',
 })
 export class App {
-  // Inject AuthService eagerly so its constructor runs during bootstrap —
-  // before Angular's router processes the initial navigation and strips the
-  // URL fragment via history.replaceState. This ensures extractTokenFromHash()
-  // sees the access token returned in the OAuth callback redirect (#75 Bug 5).
-  private readonly _auth = inject(AuthService);
+  // AuthService is injected for its constructor side effect: it calls
+  // extractTokenFromHash() during bootstrap, before Angular's router processes
+  // the initial navigation and strips the URL fragment via history.replaceState.
+  // The reference is intentionally unused — holding it keeps the DI instance
+  // alive and guarantees construction order (#75 Bug 5).
+  protected readonly eagerAuthInit = inject(AuthService);
 
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);

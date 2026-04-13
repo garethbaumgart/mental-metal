@@ -53,15 +53,17 @@ builder.Services.AddDataProtection()
     .SetApplicationName("MentalMetal");
 if (!string.IsNullOrWhiteSpace(dataProtectionBucket))
 {
-    var dataProtectionObjectName =
-        builder.Configuration["DataProtection:ObjectName"] ?? "data-protection-keys.xml";
+    // Prefix under which each key is stored as its own object (one object per key,
+    // to avoid read-modify-write races between Cloud Run instances).
+    var dataProtectionObjectPrefix =
+        builder.Configuration["DataProtection:ObjectPrefix"] ?? "keys/";
 
     builder.Services.TryAddSingleton(_ => StorageClient.Create());
     builder.Services.AddSingleton<IXmlRepository>(sp =>
         new GoogleCloudStorageXmlRepository(
             sp.GetRequiredService<StorageClient>(),
             dataProtectionBucket,
-            dataProtectionObjectName,
+            dataProtectionObjectPrefix,
             sp.GetRequiredService<ILogger<GoogleCloudStorageXmlRepository>>()));
     builder.Services.AddOptions<KeyManagementOptions>()
         .Configure<IServiceProvider>((options, sp) =>
