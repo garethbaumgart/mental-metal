@@ -243,10 +243,11 @@ export class AiProviderSettingsComponent implements OnInit {
     this.selectedModel = '';
     this.apiKey = '';
     this.loadModels(provider);
-    // Reset validation when provider changes
+    // Reset validation when provider changes and cancel any in-flight validation
     this.validating.set(false);
     this.validationResult.set(null);
     this.validationMessage.set(null);
+    this.validateSubject.next();
   }
 
   onApiKeyInput(): void {
