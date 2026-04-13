@@ -1,4 +1,5 @@
 using MentalMetal.Domain.Common;
+using MentalMetal.Domain.Initiatives.LivingBrief;
 
 namespace MentalMetal.Domain.Initiatives;
 
@@ -12,6 +13,7 @@ public sealed class Initiative : AggregateRoot, IUserScoped
     public InitiativeStatus Status { get; private set; }
     public IReadOnlyList<Milestone> Milestones => _milestones;
     public IReadOnlyList<Guid> LinkedPersonIds => _linkedPersonIds;
+    public LivingBrief.LivingBrief Brief { get; private set; } = LivingBrief.LivingBrief.Empty();
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
@@ -32,6 +34,7 @@ public sealed class Initiative : AggregateRoot, IUserScoped
             UserId = userId,
             Title = title.Trim(),
             Status = InitiativeStatus.Active,
+            Brief = LivingBrief.LivingBrief.Empty(),
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -160,4 +163,70 @@ public sealed class Initiative : AggregateRoot, IUserScoped
             throw new ArgumentException($"Cannot modify an initiative in '{Status}' status.");
     }
 
+    // Living Brief operations — apply to the embedded LivingBrief value cluster.
+    public void RefreshSummary(string summary, BriefSource source, IReadOnlyList<Guid> sourceCaptureIds)
+    {
+        ArgumentNullException.ThrowIfNull(summary);
+        Brief ??= LivingBrief.LivingBrief.Empty();
+        var now = DateTimeOffset.UtcNow;
+        Brief.SetSummary(summary, source, sourceCaptureIds ?? [], now);
+        UpdatedAt = now;
+        RaiseDomainEvent(new LivingBriefSummaryUpdated(Id, UserId, source, Brief.BriefVersion));
+    }
+
+    public KeyDecision RecordDecision(string description, string? rationale, BriefSource source, IReadOnlyList<Guid> sourceCaptureIds)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(description, nameof(description));
+        Brief ??= LivingBrief.LivingBrief.Empty();
+        var now = DateTimeOffset.UtcNow;
+        var decision = Brief.AppendDecision(description.Trim(), rationale?.Trim(), source, sourceCaptureIds ?? [], now);
+        UpdatedAt = now;
+        RaiseDomainEvent(new LivingBriefDecisionLogged(Id, UserId, decision.Id, source, Brief.BriefVersion));
+        return decision;
+    }
+
+    public Risk RaiseRisk(string description, RiskSeverity severity, BriefSource source, IReadOnlyList<Guid> sourceCaptureIds)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(description, nameof(description));
+        Brief ??= LivingBrief.LivingBrief.Empty();
+        var now = DateTimeOffset.UtcNow;
+        var risk = Brief.AppendRisk(description.Trim(), severity, source, sourceCaptureIds ?? [], now);
+        UpdatedAt = now;
+        RaiseDomainEvent(new LivingBriefRiskRaised(Id, UserId, risk.Id, severity, source, Brief.BriefVersion));
+        return risk;
+    }
+
+    public Risk ResolveRisk(Guid riskId, string? resolutionNote)
+    {
+        if (Brief is null)
+            throw new ArgumentException($"Risk '{riskId}' not found.", nameof(riskId));
+
+        var now = DateTimeOffset.UtcNow;
+        var resolved = Brief.ResolveRiskById(riskId, resolutionNote?.Trim(), now);
+        UpdatedAt = now;
+        RaiseDomainEvent(new LivingBriefRiskResolved(Id, UserId, riskId, Brief.BriefVersion));
+        return resolved;
+    }
+
+    public RequirementsSnapshot SnapshotRequirements(string content, BriefSource source, IReadOnlyList<Guid> sourceCaptureIds)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(content, nameof(content));
+        Brief ??= LivingBrief.LivingBrief.Empty();
+        var now = DateTimeOffset.UtcNow;
+        var snap = Brief.AppendRequirements(content.Trim(), source, sourceCaptureIds ?? [], now);
+        UpdatedAt = now;
+        RaiseDomainEvent(new LivingBriefRequirementsSnapshot(Id, UserId, snap.Id, source, Brief.BriefVersion));
+        return snap;
+    }
+
+    public DesignDirectionSnapshot SnapshotDesignDirection(string content, BriefSource source, IReadOnlyList<Guid> sourceCaptureIds)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(content, nameof(content));
+        Brief ??= LivingBrief.LivingBrief.Empty();
+        var now = DateTimeOffset.UtcNow;
+        var snap = Brief.AppendDesignDirection(content.Trim(), source, sourceCaptureIds ?? [], now);
+        UpdatedAt = now;
+        RaiseDomainEvent(new LivingBriefDesignDirectionSnapshot(Id, UserId, snap.Id, source, Brief.BriefVersion));
+        return snap;
+    }
 }

@@ -13,6 +13,7 @@ export interface UserPreferences {
   theme: string;
   notificationsEnabled: boolean;
   briefingTime: string;
+  livingBriefAutoApply?: boolean;
 }
 
 export interface UpdateProfileRequest {
@@ -25,6 +26,7 @@ export interface UpdatePreferencesRequest {
   theme: string;
   notificationsEnabled: boolean;
   briefingTime: string;
+  livingBriefAutoApply?: boolean;
 }
 
 export interface AuthTokenResponse {

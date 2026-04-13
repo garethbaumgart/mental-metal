@@ -6,6 +6,7 @@ using MentalMetal.Application.Commitments;
 using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.Delegations;
 using MentalMetal.Application.Initiatives;
+using MentalMetal.Application.Initiatives.Brief;
 using MentalMetal.Application.People;
 using MentalMetal.Application.Users;
 using MentalMetal.Domain.Captures;
@@ -13,6 +14,7 @@ using MentalMetal.Domain.Commitments;
 using MentalMetal.Domain.Common;
 using MentalMetal.Domain.Delegations;
 using MentalMetal.Domain.Initiatives;
+using MentalMetal.Domain.Initiatives.LivingBrief;
 using MentalMetal.Domain.People;
 using MentalMetal.Infrastructure;
 using MentalMetal.Infrastructure.Auth;
@@ -1257,6 +1259,122 @@ app.MapPost("/api/delegations/{id:guid}/reassign", async (
     {
         return Results.BadRequest(new { error = ex.Message });
     }
+}).RequireAuthorization();
+
+// ---- Living Brief endpoints --------------------------------------------------
+
+app.MapGet("/api/initiatives/{id:guid}/brief", async (
+    Guid id, GetInitiativeBriefHandler handler, CancellationToken ct) =>
+{
+    var brief = await handler.HandleAsync(id, ct);
+    return brief is null ? Results.NotFound() : Results.Ok(brief);
+}).RequireAuthorization();
+
+app.MapPut("/api/initiatives/{id:guid}/brief/summary", async (
+    Guid id, UpdateSummaryRequest request, UpdateInitiativeBriefSummaryHandler handler, CancellationToken ct) =>
+{
+    try { return Results.Ok(await handler.HandleAsync(id, request, ct)); }
+    catch (NotFoundException) { return Results.NotFound(); }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/initiatives/{id:guid}/brief/decisions", async (
+    Guid id, LogDecisionRequest request, LogInitiativeBriefDecisionHandler handler, CancellationToken ct) =>
+{
+    try { return Results.Ok(await handler.HandleAsync(id, request, ct)); }
+    catch (NotFoundException) { return Results.NotFound(); }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/initiatives/{id:guid}/brief/risks", async (
+    Guid id, RaiseRiskRequest request, RaiseInitiativeBriefRiskHandler handler, CancellationToken ct) =>
+{
+    try { return Results.Ok(await handler.HandleAsync(id, request, ct)); }
+    catch (NotFoundException) { return Results.NotFound(); }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/initiatives/{id:guid}/brief/risks/{riskId:guid}/resolve", async (
+    Guid id, Guid riskId, ResolveRiskRequest? request, ResolveInitiativeBriefRiskHandler handler, CancellationToken ct) =>
+{
+    try { return Results.Ok(await handler.HandleAsync(id, riskId, request ?? new ResolveRiskRequest(null), ct)); }
+    catch (NotFoundException) { return Results.NotFound(); }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+    catch (InvalidOperationException ex) { return Results.Conflict(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/initiatives/{id:guid}/brief/requirements", async (
+    Guid id, SnapshotRequest request, SnapshotInitiativeBriefRequirementsHandler handler, CancellationToken ct) =>
+{
+    try { return Results.Ok(await handler.HandleAsync(id, request, ct)); }
+    catch (NotFoundException) { return Results.NotFound(); }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/initiatives/{id:guid}/brief/design-direction", async (
+    Guid id, SnapshotRequest request, SnapshotInitiativeBriefDesignDirectionHandler handler, CancellationToken ct) =>
+{
+    try { return Results.Ok(await handler.HandleAsync(id, request, ct)); }
+    catch (NotFoundException) { return Results.NotFound(); }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/initiatives/{id:guid}/brief/refresh", async (
+    Guid id, RefreshInitiativeBriefHandler handler, CancellationToken ct) =>
+{
+    try
+    {
+        var pendingId = await handler.HandleAsync(id, ct);
+        return Results.Accepted($"/api/initiatives/{id}/brief/pending-updates/{pendingId}",
+            new { pendingUpdateId = pendingId });
+    }
+    catch (NotFoundException) { return Results.NotFound(); }
+}).RequireAuthorization();
+
+app.MapGet("/api/initiatives/{id:guid}/brief/pending-updates", async (
+    Guid id, PendingBriefUpdateStatus? status, ListPendingBriefUpdatesHandler handler, CancellationToken ct) =>
+{
+    var list = await handler.HandleAsync(id, status, ct);
+    return list is null ? Results.NotFound() : Results.Ok(list);
+}).RequireAuthorization();
+
+app.MapGet("/api/initiatives/{id:guid}/brief/pending-updates/{updateId:guid}", async (
+    Guid id, Guid updateId, GetPendingBriefUpdateHandler handler, CancellationToken ct) =>
+{
+    var dto = await handler.HandleAsync(updateId, ct);
+    return dto is null || dto.InitiativeId != id ? Results.NotFound() : Results.Ok(dto);
+}).RequireAuthorization();
+
+app.MapPost("/api/initiatives/{id:guid}/brief/pending-updates/{updateId:guid}/apply", async (
+    Guid id, Guid updateId, ApplyPendingBriefUpdateHandler handler, CancellationToken ct) =>
+{
+    try { return Results.Ok(await handler.HandleAsync(updateId, ct)); }
+    catch (NotFoundException) { return Results.NotFound(); }
+    catch (ApplyPendingBriefUpdateHandler.StaleProposalException ex)
+    {
+        return Results.Conflict(new
+        {
+            error = ex.Message,
+            currentBriefVersion = ex.CurrentBriefVersion,
+            proposalBriefVersion = ex.ProposalBriefVersion
+        });
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/initiatives/{id:guid}/brief/pending-updates/{updateId:guid}/reject", async (
+    Guid id, Guid updateId, RejectPendingUpdateRequest? request, RejectPendingBriefUpdateHandler handler, CancellationToken ct) =>
+{
+    try { await handler.HandleAsync(updateId, request, ct); return Results.NoContent(); }
+    catch (NotFoundException) { return Results.NotFound(); }
+    catch (InvalidOperationException ex) { return Results.Conflict(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPut("/api/initiatives/{id:guid}/brief/pending-updates/{updateId:guid}", async (
+    Guid id, Guid updateId, EditPendingUpdateRequest request, EditPendingBriefUpdateHandler handler, CancellationToken ct) =>
+{
+    try { return Results.Ok(await handler.HandleAsync(updateId, request, ct)); }
+    catch (NotFoundException) { return Results.NotFound(); }
+    catch (InvalidOperationException ex) { return Results.Conflict(new { error = ex.Message }); }
 }).RequireAuthorization();
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
