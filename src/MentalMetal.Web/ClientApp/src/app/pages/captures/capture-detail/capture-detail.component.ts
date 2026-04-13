@@ -7,6 +7,8 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TagModule } from 'primeng/tag';
 import { ChipModule } from 'primeng/chip';
 import { ToastModule } from 'primeng/toast';
+import { PanelModule } from 'primeng/panel';
+import { DividerModule } from 'primeng/divider';
 import { AutoCompleteModule, AutoCompleteCompleteEvent } from 'primeng/autocomplete';
 import { MessageService } from 'primeng/api';
 import { CapturesService } from '../../../shared/services/captures.service';
@@ -28,6 +30,8 @@ import { Initiative } from '../../../shared/models/initiative.model';
     TagModule,
     ChipModule,
     ToastModule,
+    PanelModule,
+    DividerModule,
     AutoCompleteModule,
   ],
   styles: [`
@@ -35,6 +39,33 @@ import { Initiative } from '../../../shared/models/initiative.model';
       border-color: var(--p-surface-200);
       background-color: var(--p-surface-50);
     }
+    .extraction-section {
+      border-color: var(--p-surface-200);
+      background-color: var(--p-surface-50);
+    }
+    .extraction-item {
+      border-color: var(--p-surface-100);
+    }
+    .error-banner {
+      border-color: var(--p-red-200);
+      background-color: var(--p-red-50);
+    }
+    .error-icon { color: var(--p-red-500); }
+    .error-title { color: var(--p-red-700); }
+    .error-detail { color: var(--p-red-600); }
+    .success-banner {
+      background-color: var(--p-green-50);
+      border-color: var(--p-green-200);
+    }
+    .success-icon { color: var(--p-green-600); }
+    .success-text { color: var(--p-green-700); }
+    .warn-banner {
+      background-color: var(--p-yellow-50);
+      border-color: var(--p-yellow-200);
+    }
+    .warn-icon { color: var(--p-yellow-600); }
+    .warn-text { color: var(--p-yellow-700); }
+    .risk-icon { color: var(--p-yellow-500); }
   `],
   providers: [MessageService],
   template: `
@@ -51,7 +82,13 @@ import { Initiative } from '../../../shared/models/initiative.model';
           <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="goBack()" />
           <h1 class="text-2xl font-bold flex-1">{{ capture()!.title || 'Untitled Capture' }}</h1>
           <p-tag [value]="formatType(capture()!.captureType)" [severity]="typeSeverity(capture()!.captureType)" />
-          <p-tag [value]="formatStatus(capture()!.processingStatus)" [severity]="statusSeverity(capture()!.processingStatus)" />
+          @if (capture()!.processingStatus === 'Processing') {
+            <p-tag severity="warn">
+              <i class="pi pi-spinner pi-spin mr-1"></i> Processing
+            </p-tag>
+          } @else {
+            <p-tag [value]="formatStatus(capture()!.processingStatus)" [severity]="statusSeverity(capture()!.processingStatus)" />
+          }
         </div>
 
         <!-- Timestamps -->
@@ -65,11 +102,201 @@ import { Initiative } from '../../../shared/models/initiative.model';
           }
         </div>
 
+        <!-- Action Buttons -->
+        @if (capture()!.processingStatus === 'Raw') {
+          <div>
+            <p-button
+              label="Process with AI"
+              icon="pi pi-sparkles"
+              (onClick)="processCapture()"
+              [loading]="processing()"
+            />
+          </div>
+        }
+        @if (capture()!.processingStatus === 'Failed') {
+          <div class="flex items-center gap-4 p-4 rounded-md border error-banner">
+            <i class="pi pi-exclamation-triangle error-icon"></i>
+            <div class="flex-1">
+              <p class="font-medium error-title">Processing Failed</p>
+              @if (capture()!.failureReason) {
+                <p class="text-sm error-detail">{{ capture()!.failureReason }}</p>
+              }
+            </div>
+            <p-button
+              label="Retry"
+              icon="pi pi-refresh"
+              severity="warn"
+              (onClick)="retryProcessing()"
+              [loading]="retrying()"
+            />
+          </div>
+        }
+
         <!-- Raw Content -->
         <section class="flex flex-col gap-4">
           <h2 class="text-xl font-semibold">Content</h2>
           <div class="p-4 rounded-md border content-block whitespace-pre-wrap text-sm">{{ capture()!.rawContent }}</div>
         </section>
+
+        <!-- AI Extraction Review Panel -->
+        @if (capture()!.processingStatus === 'Processed' && capture()!.aiExtraction) {
+          <section class="flex flex-col gap-4">
+            <div class="flex items-center justify-between">
+              <h2 class="text-xl font-semibold">AI Extraction</h2>
+              <p-tag
+                [value]="'Confidence: ' + (capture()!.aiExtraction!.confidenceScore * 100).toFixed(0) + '%'"
+                severity="info"
+              />
+            </div>
+
+            @if (capture()!.extractionStatus === 'Confirmed') {
+              <div class="flex items-center gap-2 p-3 rounded-md border success-banner">
+                <i class="pi pi-check-circle success-icon"></i>
+                <span class="success-text font-medium">Entities created</span>
+              </div>
+            } @else if (capture()!.extractionStatus === 'Discarded') {
+              <div class="flex items-center gap-2 p-3 rounded-md border warn-banner">
+                <i class="pi pi-info-circle warn-icon"></i>
+                <span class="warn-text font-medium">Extraction discarded</span>
+              </div>
+            } @else {
+              <div class="flex gap-2">
+                <p-button
+                  label="Confirm & Create"
+                  icon="pi pi-check"
+                  (onClick)="confirmExtraction()"
+                  [loading]="confirming()"
+                />
+                <p-button
+                  label="Discard"
+                  icon="pi pi-times"
+                  severity="secondary"
+                  [outlined]="true"
+                  (onClick)="discardExtraction()"
+                  [loading]="discarding()"
+                />
+              </div>
+            }
+
+            <!-- Summary -->
+            <div class="p-4 rounded-md border extraction-section">
+              <h3 class="font-semibold mb-2">Summary</h3>
+              <p class="text-sm">{{ capture()!.aiExtraction!.summary }}</p>
+            </div>
+
+            <!-- Commitments -->
+            @if (capture()!.aiExtraction!.commitments.length > 0) {
+              <div class="p-4 rounded-md border extraction-section">
+                <h3 class="font-semibold mb-2">Commitments ({{ capture()!.aiExtraction!.commitments.length }})</h3>
+                @for (c of capture()!.aiExtraction!.commitments; track $index) {
+                  <div class="p-3 mb-2 rounded border extraction-item flex items-start gap-3">
+                    <p-tag [value]="c.direction === 'MineToThem' ? 'Mine → Them' : 'Theirs → Me'" [severity]="c.direction === 'MineToThem' ? 'warn' : 'info'" />
+                    <div class="flex-1">
+                      <p class="text-sm font-medium">{{ c.description }}</p>
+                      <div class="flex gap-3 mt-1 text-xs text-muted-color">
+                        @if (c.personHint) {
+                          <span><i class="pi pi-user mr-1"></i>{{ c.personHint }}</span>
+                        }
+                        @if (c.dueDate) {
+                          <span><i class="pi pi-calendar mr-1"></i>{{ c.dueDate }}</span>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Delegations -->
+            @if (capture()!.aiExtraction!.delegations.length > 0) {
+              <div class="p-4 rounded-md border extraction-section">
+                <h3 class="font-semibold mb-2">Delegations ({{ capture()!.aiExtraction!.delegations.length }})</h3>
+                @for (d of capture()!.aiExtraction!.delegations; track $index) {
+                  <div class="p-3 mb-2 rounded border extraction-item">
+                    <p class="text-sm font-medium">{{ d.description }}</p>
+                    <div class="flex gap-3 mt-1 text-xs text-muted-color">
+                      @if (d.personHint) {
+                        <span><i class="pi pi-user mr-1"></i>{{ d.personHint }}</span>
+                      }
+                      @if (d.dueDate) {
+                        <span><i class="pi pi-calendar mr-1"></i>{{ d.dueDate }}</span>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Observations -->
+            @if (capture()!.aiExtraction!.observations.length > 0) {
+              <div class="p-4 rounded-md border extraction-section">
+                <h3 class="font-semibold mb-2">Observations ({{ capture()!.aiExtraction!.observations.length }})</h3>
+                @for (o of capture()!.aiExtraction!.observations; track $index) {
+                  <div class="p-3 mb-2 rounded border extraction-item flex items-start gap-3">
+                    @if (o.tag) {
+                      <p-tag [value]="o.tag" severity="secondary" />
+                    }
+                    <div class="flex-1">
+                      <p class="text-sm font-medium">{{ o.description }}</p>
+                      @if (o.personHint) {
+                        <span class="text-xs text-muted-color"><i class="pi pi-user mr-1"></i>{{ o.personHint }}</span>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Decisions -->
+            @if (capture()!.aiExtraction!.decisions.length > 0) {
+              <div class="p-4 rounded-md border extraction-section">
+                <h3 class="font-semibold mb-2">Decisions ({{ capture()!.aiExtraction!.decisions.length }})</h3>
+                @for (d of capture()!.aiExtraction!.decisions; track $index) {
+                  <div class="p-2 mb-1 text-sm flex items-start gap-2">
+                    <i class="pi pi-check-square text-muted-color mt-0.5"></i>
+                    <span>{{ d }}</span>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Risks -->
+            @if (capture()!.aiExtraction!.risksIdentified.length > 0) {
+              <div class="p-4 rounded-md border extraction-section">
+                <h3 class="font-semibold mb-2">Risks ({{ capture()!.aiExtraction!.risksIdentified.length }})</h3>
+                @for (r of capture()!.aiExtraction!.risksIdentified; track $index) {
+                  <div class="p-2 mb-1 text-sm flex items-start gap-2">
+                    <i class="pi pi-exclamation-triangle risk-icon mt-0.5"></i>
+                    <span>{{ r }}</span>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Suggested Links -->
+            @if (capture()!.aiExtraction!.suggestedPersonLinks.length > 0 || capture()!.aiExtraction!.suggestedInitiativeLinks.length > 0) {
+              <div class="p-4 rounded-md border extraction-section">
+                <h3 class="font-semibold mb-2">Suggested Links</h3>
+                @if (capture()!.aiExtraction!.suggestedPersonLinks.length > 0) {
+                  <div class="flex flex-wrap gap-2 mb-2">
+                    <span class="text-sm text-muted-color mr-2">People:</span>
+                    @for (p of capture()!.aiExtraction!.suggestedPersonLinks; track $index) {
+                      <p-tag [value]="p" severity="info" />
+                    }
+                  </div>
+                }
+                @if (capture()!.aiExtraction!.suggestedInitiativeLinks.length > 0) {
+                  <div class="flex flex-wrap gap-2">
+                    <span class="text-sm text-muted-color mr-2">Initiatives:</span>
+                    @for (i of capture()!.aiExtraction!.suggestedInitiativeLinks; track $index) {
+                      <p-tag [value]="i" severity="success" />
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </section>
+        }
 
         <!-- Metadata Section -->
         <section class="flex flex-col gap-4">
@@ -186,6 +413,10 @@ export class CaptureDetailComponent implements OnInit {
   readonly savingMetadata = signal(false);
   readonly linkingPerson = signal(false);
   readonly linkingInitiative = signal(false);
+  readonly processing = signal(false);
+  readonly retrying = signal(false);
+  readonly confirming = signal(false);
+  readonly discarding = signal(false);
   readonly linkedPeople = signal<Person[]>([]);
   readonly linkedInitiatives = signal<Initiative[]>([]);
   readonly peopleSuggestions = signal<Person[]>([]);
@@ -211,6 +442,86 @@ export class CaptureDetailComponent implements OnInit {
     const c = this.capture();
     if (!c) return false;
     return this.editTitle !== (c.title ?? '') || this.editSource !== (c.source ?? '');
+  }
+
+  protected processCapture(): void {
+    const c = this.capture();
+    if (!c) return;
+
+    this.processing.set(true);
+    this.capturesService.process(c.id).subscribe({
+      next: (updated) => {
+        this.capture.set(updated);
+        this.processing.set(false);
+        if (updated.processingStatus === 'Processed') {
+          this.messageService.add({ severity: 'success', summary: 'Processing complete' });
+        } else if (updated.processingStatus === 'Failed') {
+          this.messageService.add({ severity: 'error', summary: 'Processing failed', detail: updated.failureReason ?? undefined });
+        } else {
+          this.messageService.add({ severity: 'info', summary: 'Processing started' });
+        }
+      },
+      error: () => {
+        this.processing.set(false);
+        this.messageService.add({ severity: 'error', summary: 'Failed to start processing' });
+      },
+    });
+  }
+
+  protected retryProcessing(): void {
+    const c = this.capture();
+    if (!c) return;
+
+    this.retrying.set(true);
+    this.capturesService.retry(c.id).subscribe({
+      next: (updated) => {
+        this.capture.set(updated);
+        this.retrying.set(false);
+        this.messageService.add({ severity: 'success', summary: 'Ready for reprocessing' });
+      },
+      error: () => {
+        this.retrying.set(false);
+        this.messageService.add({ severity: 'error', summary: 'Failed to retry' });
+      },
+    });
+  }
+
+  protected confirmExtraction(): void {
+    const c = this.capture();
+    if (!c) return;
+
+    this.confirming.set(true);
+    this.capturesService.confirmExtraction(c.id).subscribe({
+      next: (updated) => {
+        this.capture.set(updated);
+        this.confirming.set(false);
+        this.loadLinkedPeople(updated.linkedPersonIds);
+        this.loadLinkedInitiatives(updated.linkedInitiativeIds);
+        this.messageService.add({ severity: 'success', summary: 'Entities created from extraction' });
+      },
+      error: () => {
+        this.confirming.set(false);
+        this.messageService.add({ severity: 'error', summary: 'Failed to confirm extraction' });
+      },
+    });
+  }
+
+  protected discardExtraction(): void {
+    const c = this.capture();
+    if (!c) return;
+
+    this.discarding.set(true);
+    this.capturesService.discardExtraction(c.id).subscribe({
+      next: (updated) => {
+        this.capture.set(updated);
+        this.discarding.set(false);
+        this.messageService.add({ severity: 'info', summary: 'Extraction discarded' });
+      },
+      error: () => {
+        this.discarding.set(false);
+        this.messageService.add({ severity: 'error', summary: 'Failed to discard extraction' });
+      },
+    });
   }
 
   protected saveMetadata(): void {

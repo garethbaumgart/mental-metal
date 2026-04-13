@@ -2,13 +2,48 @@ export type CaptureType = 'QuickNote' | 'Transcript' | 'MeetingNotes';
 
 export type ProcessingStatus = 'Raw' | 'Processing' | 'Processed' | 'Failed';
 
+export type ExtractionStatus = 'None' | 'Pending' | 'Confirmed' | 'Discarded';
+
+export interface ExtractedCommitment {
+  description: string;
+  direction: 'MineToThem' | 'TheirsToMe';
+  personHint: string | null;
+  dueDate: string | null;
+}
+
+export interface ExtractedDelegation {
+  description: string;
+  personHint: string | null;
+  dueDate: string | null;
+}
+
+export interface ExtractedObservation {
+  description: string;
+  personHint: string | null;
+  tag: string | null;
+}
+
+export interface AiExtraction {
+  summary: string;
+  commitments: ExtractedCommitment[];
+  delegations: ExtractedDelegation[];
+  observations: ExtractedObservation[];
+  decisions: string[];
+  risksIdentified: string[];
+  suggestedPersonLinks: string[];
+  suggestedInitiativeLinks: string[];
+  confidenceScore: number;
+}
+
 export interface Capture {
   id: string;
   userId: string;
   rawContent: string;
   captureType: CaptureType;
   processingStatus: ProcessingStatus;
-  aiExtraction: string | null;
+  extractionStatus: ExtractionStatus;
+  aiExtraction: AiExtraction | null;
+  failureReason: string | null;
   linkedPersonIds: string[];
   linkedInitiativeIds: string[];
   spawnedCommitmentIds: string[];

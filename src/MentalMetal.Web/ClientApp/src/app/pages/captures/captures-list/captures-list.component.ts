@@ -73,7 +73,13 @@ import { QuickCaptureDialogComponent } from '../quick-capture-dialog/quick-captu
                 <p-tag [value]="formatType(capture.captureType)" [severity]="typeSeverity(capture.captureType)" />
               </td>
               <td>
-                <p-tag [value]="formatStatus(capture.processingStatus)" [severity]="statusSeverity(capture.processingStatus)" />
+                @if (capture.processingStatus === 'Processing') {
+                  <p-tag severity="warn">
+                    <i class="pi pi-spinner pi-spin mr-1"></i> Processing
+                  </p-tag>
+                } @else {
+                  <p-tag [value]="formatStatus(capture.processingStatus)" [severity]="statusSeverity(capture.processingStatus)" />
+                }
               </td>
               <td class="text-muted-color text-sm">{{ capture.capturedAt | date:'short' }}</td>
             </tr>

@@ -3,6 +3,7 @@ using System;
 using MentalMetal.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MentalMetal.Infrastructure.Migrations
 {
     [DbContext(typeof(MentalMetalDbContext))]
-    partial class MentalMetalDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260413031942_AddAiExtractionJsonAndFailureReason")]
+    partial class AddAiExtractionJsonAndFailureReason
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -35,13 +38,6 @@ namespace MentalMetal.Infrastructure.Migrations
 
                     b.Property<DateTimeOffset>("CapturedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ExtractionStatus")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasDefaultValue("None");
 
                     b.Property<string>("FailureReason")
                         .HasMaxLength(2000)
@@ -458,7 +454,8 @@ namespace MentalMetal.Infrastructure.Migrations
                                     b2.Property<string>("Description")
                                         .IsRequired();
 
-                                    b2.Property<int>("Direction");
+                                    b2.Property<string>("Direction")
+                                        .IsRequired();
 
                                     b2.Property<string>("DueDate");
 

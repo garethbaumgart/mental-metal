@@ -51,3 +51,13 @@ public sealed record CaptureMetadataUpdated(Guid CaptureId) : IDomainEvent
 {
     public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
 }
+
+public sealed record CaptureExtractionConfirmed(Guid CaptureId) : IDomainEvent
+{
+    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+}
+
+public sealed record CaptureExtractionDiscarded(Guid CaptureId) : IDomainEvent
+{
+    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+}

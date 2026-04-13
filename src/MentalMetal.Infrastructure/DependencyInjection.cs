@@ -138,6 +138,10 @@ public static class DependencyInjection
         services.AddScoped<LinkCaptureToInitiativeHandler>();
         services.AddScoped<UnlinkCaptureFromPersonHandler>();
         services.AddScoped<UnlinkCaptureFromInitiativeHandler>();
+        services.AddScoped<ProcessCaptureHandler>();
+        services.AddScoped<RetryProcessingHandler>();
+        services.AddScoped<ConfirmExtractionHandler>();
+        services.AddScoped<DiscardExtractionHandler>();
 
         return services;
     }

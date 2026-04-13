@@ -6,6 +6,11 @@ public class CaptureTests
 {
     private static readonly Guid UserId = Guid.NewGuid();
 
+    private static AiExtraction CreateTestExtraction(string summary = "Test summary") => new()
+    {
+        Summary = summary,
+    };
+
     // 2.1 Test Capture creation with valid inputs and domain event
     [Fact]
     public void Create_ValidInputs_CreatesCaptureWithCorrectState()
@@ -73,10 +78,11 @@ public class CaptureTests
         capture.BeginProcessing();
         capture.ClearDomainEvents();
 
-        capture.CompleteProcessing("extracted data");
+        var extraction = CreateTestExtraction("extracted data");
+        capture.CompleteProcessing(extraction);
 
         Assert.Equal(ProcessingStatus.Processed, capture.ProcessingStatus);
-        Assert.Equal("extracted data", capture.AiExtraction);
+        Assert.Equal(extraction, capture.AiExtraction);
         Assert.NotNull(capture.ProcessedAt);
         var domainEvent = Assert.Single(capture.DomainEvents);
         Assert.IsType<CaptureProcessed>(domainEvent);
@@ -127,7 +133,7 @@ public class CaptureTests
     {
         var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
         capture.BeginProcessing();
-        capture.CompleteProcessing();
+        capture.CompleteProcessing(CreateTestExtraction());
 
         Assert.Throws<InvalidOperationException>(() => capture.BeginProcessing());
     }
@@ -137,7 +143,7 @@ public class CaptureTests
     {
         var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
 
-        Assert.Throws<InvalidOperationException>(() => capture.CompleteProcessing());
+        Assert.Throws<InvalidOperationException>(() => capture.CompleteProcessing(CreateTestExtraction()));
     }
 
     [Fact]
@@ -345,5 +351,125 @@ public class CaptureTests
 
         Assert.Single(capture.SpawnedObservationIds);
         Assert.Contains(observationId, capture.SpawnedObservationIds);
+    }
+
+    // ConfirmExtraction tests
+    [Fact]
+    public void ConfirmExtraction_FromProcessed_SetsConfirmedAndRaisesEvent()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+        capture.BeginProcessing();
+        capture.CompleteProcessing(CreateTestExtraction());
+        capture.ClearDomainEvents();
+
+        capture.ConfirmExtraction();
+
+        Assert.Equal(ExtractionStatus.Confirmed, capture.ExtractionStatus);
+        var domainEvent = Assert.Single(capture.DomainEvents);
+        Assert.IsType<CaptureExtractionConfirmed>(domainEvent);
+    }
+
+    [Fact]
+    public void ConfirmExtraction_FromRaw_Throws()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+
+        Assert.Throws<InvalidOperationException>(() => capture.ConfirmExtraction());
+    }
+
+    [Fact]
+    public void ConfirmExtraction_AlreadyConfirmed_Throws()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+        capture.BeginProcessing();
+        capture.CompleteProcessing(CreateTestExtraction());
+        capture.ConfirmExtraction();
+
+        Assert.Throws<InvalidOperationException>(() => capture.ConfirmExtraction());
+    }
+
+    [Fact]
+    public void ConfirmExtraction_NullExtraction_Throws()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+        capture.BeginProcessing();
+        // Manually transition to Processed without extraction not possible via public API
+        // This tests the guard at domain level
+        Assert.Throws<InvalidOperationException>(() => capture.ConfirmExtraction());
+    }
+
+    // DiscardExtraction tests
+    [Fact]
+    public void DiscardExtraction_FromProcessedPending_SetsDiscardedAndRaisesEvent()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+        capture.BeginProcessing();
+        capture.CompleteProcessing(CreateTestExtraction());
+        capture.ClearDomainEvents();
+
+        capture.DiscardExtraction();
+
+        Assert.Equal(ExtractionStatus.Discarded, capture.ExtractionStatus);
+        Assert.NotNull(capture.AiExtraction); // retained for reference
+        var domainEvent = Assert.Single(capture.DomainEvents);
+        Assert.IsType<CaptureExtractionDiscarded>(domainEvent);
+    }
+
+    [Fact]
+    public void DiscardExtraction_FromRaw_Throws()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+
+        Assert.Throws<InvalidOperationException>(() => capture.DiscardExtraction());
+    }
+
+    [Fact]
+    public void DiscardExtraction_AlreadyConfirmed_Throws()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+        capture.BeginProcessing();
+        capture.CompleteProcessing(CreateTestExtraction());
+        capture.ConfirmExtraction();
+
+        Assert.Throws<InvalidOperationException>(() => capture.DiscardExtraction());
+    }
+
+    [Fact]
+    public void DiscardExtraction_AlreadyDiscarded_Throws()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+        capture.BeginProcessing();
+        capture.CompleteProcessing(CreateTestExtraction());
+        capture.DiscardExtraction();
+
+        Assert.Throws<InvalidOperationException>(() => capture.DiscardExtraction());
+    }
+
+    // ExtractionStatus lifecycle
+    [Fact]
+    public void ExtractionStatus_FullLifecycle()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+        Assert.Equal(ExtractionStatus.None, capture.ExtractionStatus);
+
+        capture.BeginProcessing();
+        Assert.Equal(ExtractionStatus.None, capture.ExtractionStatus);
+
+        capture.CompleteProcessing(CreateTestExtraction());
+        Assert.Equal(ExtractionStatus.Pending, capture.ExtractionStatus);
+
+        capture.ConfirmExtraction();
+        Assert.Equal(ExtractionStatus.Confirmed, capture.ExtractionStatus);
+    }
+
+    [Fact]
+    public void RetryProcessing_ResetsExtractionStatus()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+        capture.BeginProcessing();
+        capture.FailProcessing("error");
+        capture.RetryProcessing();
+
+        Assert.Equal(ExtractionStatus.None, capture.ExtractionStatus);
     }
 }

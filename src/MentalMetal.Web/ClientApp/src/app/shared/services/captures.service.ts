@@ -37,6 +37,22 @@ export class CapturesService {
     return this.http.put<Capture>(`${this.baseUrl}/${id}`, request);
   }
 
+  process(id: string): Observable<Capture> {
+    return this.http.post<Capture>(`${this.baseUrl}/${id}/process`, {});
+  }
+
+  retry(id: string): Observable<Capture> {
+    return this.http.post<Capture>(`${this.baseUrl}/${id}/retry`, {});
+  }
+
+  confirmExtraction(id: string): Observable<Capture> {
+    return this.http.post<Capture>(`${this.baseUrl}/${id}/confirm-extraction`, {});
+  }
+
+  discardExtraction(id: string): Observable<Capture> {
+    return this.http.post<Capture>(`${this.baseUrl}/${id}/discard-extraction`, {});
+  }
+
   linkPerson(id: string, personId: string): Observable<Capture> {
     return this.http.post<Capture>(`${this.baseUrl}/${id}/link-person`, { personId });
   }
