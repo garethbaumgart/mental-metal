@@ -73,7 +73,7 @@ authTest.describe('Living Brief', () => {
     expect(afterBrief.briefVersion).toBe(versionBefore);
   });
 
-  authTest('user isolation: User A cannot read or apply User B pending updates', async ({ browser }) => {
+  authTest('user isolation: User B cannot read User A brief or list User A pending updates', async ({ browser }) => {
     // Create two distinct contexts (two users)
     const ctxA = await browser.newContext();
     const ctxB = await browser.newContext();

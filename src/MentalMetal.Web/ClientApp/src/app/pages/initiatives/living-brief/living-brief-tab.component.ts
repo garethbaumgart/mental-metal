@@ -347,7 +347,10 @@ export class LivingBriefTabComponent {
     this.loading.set(true);
     this.briefService.get(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: b => { this.brief.set(b); this.loading.set(false); },
-      error: () => { this.loading.set(false); },
+      error: () => {
+        this.loading.set(false);
+        this.toast.add({ severity: 'error', summary: 'Failed to load brief', detail: 'Please try again.' });
+      },
     });
     this.reloadPending();
   }
@@ -355,6 +358,9 @@ export class LivingBriefTabComponent {
   private reloadPending() {
     this.briefService.listPending(this.initiativeId()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: list => this.pendingUpdates.set(list),
+      error: () => {
+        this.toast.add({ severity: 'error', summary: 'Failed to load pending updates' });
+      },
     });
   }
 
@@ -377,6 +383,7 @@ export class LivingBriefTabComponent {
     this.briefService.updateSummary(this.initiativeId(), { summary: this.newSummary() })
       .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: b => { this.brief.set(b); this.editSummaryDialog.set(false); },
+        error: () => this.toast.add({ severity: 'error', summary: 'Failed to save summary' }),
       });
   }
 
@@ -391,6 +398,7 @@ export class LivingBriefTabComponent {
         this.newDecisionDescription.set('');
         this.newDecisionRationale.set('');
       },
+      error: () => this.toast.add({ severity: 'error', summary: 'Failed to log decision' }),
     });
   }
 
@@ -404,6 +412,7 @@ export class LivingBriefTabComponent {
         this.raiseRiskDialog.set(false);
         this.newRiskDescription.set('');
       },
+      error: () => this.toast.add({ severity: 'error', summary: 'Failed to raise risk' }),
     });
   }
 
@@ -411,6 +420,7 @@ export class LivingBriefTabComponent {
     this.briefService.resolveRisk(this.initiativeId(), riskId, { resolutionNote: null })
       .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: b => this.brief.set(b),
+        error: () => this.toast.add({ severity: 'error', summary: 'Failed to resolve risk' }),
       });
   }
 
@@ -418,6 +428,7 @@ export class LivingBriefTabComponent {
     this.briefService.snapshotRequirements(this.initiativeId(), { content: this.newReqContent() })
       .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: b => { this.brief.set(b); this.reqDialog.set(false); this.newReqContent.set(''); },
+        error: () => this.toast.add({ severity: 'error', summary: 'Failed to save requirements snapshot' }),
       });
   }
 
@@ -425,6 +436,7 @@ export class LivingBriefTabComponent {
     this.briefService.snapshotDesignDirection(this.initiativeId(), { content: this.newDesignContent() })
       .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: b => { this.brief.set(b); this.designDialog.set(false); this.newDesignContent.set(''); },
+        error: () => this.toast.add({ severity: 'error', summary: 'Failed to save design direction snapshot' }),
       });
   }
 
@@ -448,6 +460,13 @@ export class LivingBriefTabComponent {
     this.briefService.rejectPending(this.initiativeId(), updateId, { reason: null })
       .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: () => { this.toast.add({ severity: 'info', summary: 'Update rejected' }); this.reloadPending(); },
+        error: err => {
+          const msg = err?.status === 409
+            ? 'This update is already in a terminal state.'
+            : 'Failed to reject update';
+          this.toast.add({ severity: 'warn', summary: msg });
+          this.reloadPending();
+        },
       });
   }
 
