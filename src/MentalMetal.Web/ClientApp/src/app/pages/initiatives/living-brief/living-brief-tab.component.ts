@@ -370,7 +370,10 @@ export class LivingBriefTabComponent {
       next: () => {
         this.refreshing.set(false);
         this.toast.add({ severity: 'success', summary: 'Refresh requested' });
-        this.reloadPending();
+        // Refresh runs synchronously server-side; with livingBriefAutoApply=true the
+        // initiative may already reflect the new version. Reload the brief itself so
+        // the UI isn't showing stale summary/decisions/risks next to the new pending row.
+        this.loadAll(this.initiativeId());
       },
       error: () => {
         this.refreshing.set(false);

@@ -126,9 +126,14 @@ public sealed class BriefMaintenanceService(
 
         foreach (var rid in proposal.RisksToResolve)
         {
-            try { initiative.ResolveRisk(rid, "Resolved by AI proposal"); }
-            catch (ArgumentException) { /* unknown risk id — skip */ }
-            catch (InvalidOperationException) { /* already resolved — skip */ }
+            // Pre-check existence and status so unknown/already-resolved ids are silently skipped,
+            // while genuine aggregate errors (e.g. terminal initiative status) still propagate.
+            // Note: ResolveRisk throws ArgumentException both for "risk not found" AND for the
+            // EnsureNotTerminal guard — catching ArgumentException indiscriminately would mask
+            // a real invariant violation.
+            var existing = initiative.Brief?.Risks.FirstOrDefault(r => r.Id == rid);
+            if (existing is null || existing.Status == RiskStatus.Resolved) continue;
+            initiative.ResolveRisk(rid, "Resolved by AI proposal");
         }
 
         if (!string.IsNullOrWhiteSpace(proposal.ProposedRequirementsContent))
@@ -280,9 +285,28 @@ public sealed class BriefRefreshQueue
         var key = (userId, initiativeId);
         if (!_inFlight.TryAdd(key, 0))
         {
-            // Already in-flight or pending — flag rerun so MarkComplete will requeue.
-            _inFlight[key] = 1;
-            return false;
+            // Already in-flight or pending — flag rerun ONLY if the entry still exists.
+            // Using the indexer directly would race with MarkComplete's TryRemove and
+            // recreate a ghost entry that permanently coalesces future enqueues.
+            // AddOrUpdate returns the resulting value atomically; we treat a missing
+            // entry (updateValueFactory not invoked — TryAdd path taken the second time)
+            // as "retry the enqueue" rather than leaving a ghost `1`.
+            while (true)
+            {
+                if (_inFlight.TryGetValue(key, out _))
+                {
+                    // Attempt to flip existing 0 -> 1 atomically. If the entry disappears
+                    // between our read and update, loop and retry — eventually we either
+                    // see no entry (and do a fresh TryAdd/TryWrite) or successfully update.
+                    if (_inFlight.TryUpdate(key, 1, 0) || _inFlight.TryUpdate(key, 1, 1))
+                        return false;
+                    continue;
+                }
+                // Entry vanished (MarkComplete won the race) — fall through to fresh enqueue.
+                if (!_inFlight.TryAdd(key, 0))
+                    continue;
+                break;
+            }
         }
         if (!_channel.Writer.TryWrite(key))
         {
