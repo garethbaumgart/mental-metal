@@ -10,6 +10,9 @@ namespace MentalMetal.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // Clear any existing non-JSON text values before converting to jsonb
+            migrationBuilder.Sql("""UPDATE "Captures" SET "AiExtraction" = NULL WHERE "AiExtraction" IS NOT NULL""");
+
             migrationBuilder.AlterColumn<string>(
                 name: "AiExtraction",
                 table: "Captures",

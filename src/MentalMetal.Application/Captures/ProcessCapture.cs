@@ -37,6 +37,10 @@ public sealed class ProcessCaptureHandler(
         {
             capture.FailProcessing($"Failed to parse AI response: {ex.Message}");
         }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            capture.FailProcessing($"Unexpected error: {ex.Message}");
+        }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return CaptureResponse.From(capture);
@@ -51,7 +55,7 @@ public sealed class ProcessCaptureHandler(
           "commitments": [
             {
               "description": "What was committed to",
-              "direction": "MineToThem" or "TheirsToMe",
+              "direction": "MineToThem",
               "personHint": "Name of the person involved (if mentioned)",
               "dueDate": "Due date if mentioned (ISO format YYYY-MM-DD or null)"
             }
@@ -79,7 +83,7 @@ public sealed class ProcessCaptureHandler(
 
         Rules:
         - Only extract items explicitly stated or strongly implied in the content.
-        - For commitments, determine the direction: "MineToThem" if the user committed to doing something for someone, "TheirsToMe" if someone committed to doing something for the user.
+        - For commitments, set direction to exactly "MineToThem" if the user committed to doing something for someone, or "TheirsToMe" if someone committed to doing something for the user.
         - For delegations, these are tasks the user assigned to someone else.
         - Observations are notable characteristics, behaviors, or feedback about people.
         - The confidence score (0.0-1.0) reflects how confident you are in the overall extraction quality.
