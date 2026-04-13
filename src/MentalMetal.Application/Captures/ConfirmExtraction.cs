@@ -39,7 +39,8 @@ public sealed class ConfirmExtractionHandler(
             var personId = MatchPerson(ec.PersonHint, people);
             if (personId == Guid.Empty)
             {
-                warnings.Add($"Commitment skipped — no matching person for \"{ec.PersonHint ?? "(none)"}\": {ec.Description}");
+                var hint = string.IsNullOrWhiteSpace(ec.PersonHint) ? "(none)" : ec.PersonHint;
+                warnings.Add($"Commitment skipped — no matching person for \"{hint}\": {ec.Description}");
                 continue;
             }
 
@@ -61,7 +62,8 @@ public sealed class ConfirmExtractionHandler(
             var personId = MatchPerson(ed.PersonHint, people);
             if (personId == Guid.Empty)
             {
-                warnings.Add($"Delegation skipped — no matching person for \"{ed.PersonHint ?? "(none)"}\": {ed.Description}");
+                var hint = string.IsNullOrWhiteSpace(ed.PersonHint) ? "(none)" : ed.PersonHint;
+                warnings.Add($"Delegation skipped — no matching person for \"{hint}\": {ed.Description}");
                 continue;
             }
 
