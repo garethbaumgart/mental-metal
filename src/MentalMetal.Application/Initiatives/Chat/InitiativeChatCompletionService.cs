@@ -1,5 +1,5 @@
 using System.Text;
-using System.Text.Json;
+using MentalMetal.Application.Chat.Common;
 using MentalMetal.Application.Common.Ai;
 using MentalMetal.Domain.ChatThreads;
 
@@ -14,12 +14,6 @@ public sealed class InitiativeChatCompletionService(
     public const int HistoryTokenBudget = 4000;
     public const int MaxHistoryMessages = 20;
     public const int CompletionMaxTokens = 1200;
-
-    private static readonly JsonSerializerOptions EnvelopeJson = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true,
-    };
 
     public async Task GenerateReplyAsync(
         Guid userId,
@@ -53,7 +47,7 @@ public sealed class InitiativeChatCompletionService(
                 new AiCompletionRequest(systemPrompt, userPrompt, MaxTokens: CompletionMaxTokens, Temperature: 0.2f),
                 cancellationToken);
 
-            var envelope = TryParseEnvelope(result.Content);
+            var envelope = ChatResponseParser.TryParse(result.Content);
             var known = context.KnownCitations();
 
             if (envelope is null)
@@ -66,8 +60,8 @@ public sealed class InitiativeChatCompletionService(
                 return;
             }
 
-            var refs = (envelope.SourceReferences ?? [])
-                .Select(r => TryBuildReference(r, known))
+            var refs = envelope.SourceReferences
+                .Select(r => ChatResponseParser.TryBuildReference(r, known))
                 .Where(r => r is not null)
                 .Select(r => r!)
                 .ToList();
@@ -87,55 +81,6 @@ public sealed class InitiativeChatCompletionService(
                 "AI service unavailable, please retry.",
                 sourceReferences: [],
                 tokenUsage: null);
-        }
-    }
-
-    private static SourceReference? TryBuildReference(
-        EnvelopeSourceReference raw,
-        HashSet<(SourceReferenceEntityType Type, Guid Id)> known)
-    {
-        if (!Enum.TryParse<SourceReferenceEntityType>(raw.EntityType, ignoreCase: true, out var type))
-            return null;
-        if (raw.EntityId == Guid.Empty) return null;
-        if (!known.Contains((type, raw.EntityId))) return null;
-
-        try
-        {
-            return new SourceReference(type, raw.EntityId, raw.SnippetText, raw.RelevanceScore);
-        }
-        catch (ArgumentException)
-        {
-            return null;
-        }
-    }
-
-    private static ChatCompletionEnvelope? TryParseEnvelope(string content)
-    {
-        if (string.IsNullOrWhiteSpace(content)) return null;
-
-        // Strip common code-fence wrappers the model might add.
-        var stripped = content.Trim();
-        if (stripped.StartsWith("```"))
-        {
-            var firstNl = stripped.IndexOf('\n');
-            if (firstNl > 0) stripped = stripped[(firstNl + 1)..];
-            if (stripped.EndsWith("```")) stripped = stripped[..^3];
-            stripped = stripped.Trim();
-        }
-
-        // Locate first { and last } to tolerate stray prose.
-        var firstBrace = stripped.IndexOf('{');
-        var lastBrace = stripped.LastIndexOf('}');
-        if (firstBrace < 0 || lastBrace <= firstBrace) return null;
-
-        var json = stripped[firstBrace..(lastBrace + 1)];
-        try
-        {
-            return JsonSerializer.Deserialize<ChatCompletionEnvelope>(json, EnvelopeJson);
-        }
-        catch (JsonException)
-        {
-            return null;
         }
     }
 
