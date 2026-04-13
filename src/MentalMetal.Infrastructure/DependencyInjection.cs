@@ -1,4 +1,5 @@
 using MentalMetal.Application.Captures;
+using MentalMetal.Application.Chat.Global;
 using MentalMetal.Application.Initiatives.Chat;
 using MentalMetal.Application.Commitments;
 using MentalMetal.Application.Delegations;
@@ -179,6 +180,20 @@ public static class DependencyInjection
         services.AddScoped<PostInitiativeChatMessageHandler>();
         services.AddScoped<ArchiveInitiativeChatThreadHandler>();
         services.AddScoped<UnarchiveInitiativeChatThreadHandler>();
+
+        // Global chat services and handlers
+        services.AddScoped<RuleIntentClassifier>();
+        services.AddScoped<AiIntentClassifier>();
+        services.AddScoped<IIntentClassifier, HybridIntentClassifier>();
+        services.AddScoped<IGlobalChatContextBuilder, GlobalChatContextBuilder>();
+        services.AddScoped<IGlobalChatCompletionService, GlobalChatCompletionService>();
+        services.AddScoped<StartGlobalChatThreadHandler>();
+        services.AddScoped<ListGlobalChatThreadsHandler>();
+        services.AddScoped<GetGlobalChatThreadHandler>();
+        services.AddScoped<RenameGlobalChatThreadHandler>();
+        services.AddScoped<PostGlobalChatMessageHandler>();
+        services.AddScoped<ArchiveGlobalChatThreadHandler>();
+        services.AddScoped<UnarchiveGlobalChatThreadHandler>();
 
         return services;
     }
