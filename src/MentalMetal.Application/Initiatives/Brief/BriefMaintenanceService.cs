@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using System.Text.Json;
 using System.Threading.Channels;
 using MentalMetal.Application.Common;
@@ -50,17 +51,25 @@ public sealed class BriefMaintenanceService(
 
             var proposal = ParseProposal(aiResponse.Content, linkedCaptures.Select(c => c.Id).ToList());
 
-            var pending = PendingBriefUpdate.Create(userId, initiativeId, proposal, briefVersion);
-            await pendingBriefUpdateRepository.AddAsync(pending, cancellationToken);
-
-            // Auto-apply gating
+            // Auto-apply gating: when enabled, mutate the initiative FIRST so any failure
+            // (e.g. domain invariant violation) leaves the unit of work untouched and we can
+            // record the failure cleanly via PersistFailedAsync without flushing partial work.
             var user = await userRepository.GetByIdAsync(userId, cancellationToken);
-            if (user?.Preferences.LivingBriefAutoApply == true)
+            var autoApply = user?.Preferences.LivingBriefAutoApply == true;
+
+            PendingBriefUpdate pending;
+            if (autoApply)
             {
                 ApplyProposalToInitiative(initiative, proposal);
+                pending = PendingBriefUpdate.Create(userId, initiativeId, proposal, briefVersion);
                 pending.MarkApplied();
             }
+            else
+            {
+                pending = PendingBriefUpdate.Create(userId, initiativeId, proposal, briefVersion);
+            }
 
+            await pendingBriefUpdateRepository.AddAsync(pending, cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken);
             return pending.Id;
         }
@@ -89,6 +98,10 @@ public sealed class BriefMaintenanceService(
 
     private async Task<Guid> PersistFailedAsync(Guid userId, Guid initiativeId, int briefVersion, string reason, CancellationToken ct)
     {
+        // The catch path may run after partial mutations to the tracked Initiative. Discard those
+        // pending changes so that recording the failure does NOT also flush half-applied state.
+        unitOfWork.DiscardPendingChanges();
+
         var failed = PendingBriefUpdate.CreateFailed(userId, initiativeId, briefVersion, reason);
         await pendingBriefUpdateRepository.AddAsync(failed, ct);
         await unitOfWork.SaveChangesAsync(ct);
@@ -105,11 +118,11 @@ public sealed class BriefMaintenanceService(
 
         foreach (var d in proposal.NewDecisions)
             initiative.RecordDecision(d.Description, d.Rationale, BriefSource.AI,
-                d.SourceCaptureIds.Count > 0 ? d.SourceCaptureIds : proposal.SourceCaptureIds);
+                d.SourceCaptureIds.IsDefaultOrEmpty ? proposal.SourceCaptureIds : d.SourceCaptureIds);
 
         foreach (var r in proposal.NewRisks)
             initiative.RaiseRisk(r.Description, r.Severity, BriefSource.AI,
-                r.SourceCaptureIds.Count > 0 ? r.SourceCaptureIds : proposal.SourceCaptureIds);
+                r.SourceCaptureIds.IsDefaultOrEmpty ? proposal.SourceCaptureIds : r.SourceCaptureIds);
 
         foreach (var rid in proposal.RisksToResolve)
         {
@@ -192,17 +205,17 @@ public sealed class BriefMaintenanceService(
                 Description = e.GetProperty("description").GetString() ?? string.Empty,
                 Rationale = ReadOptionalString(e, "rationale"),
                 SourceCaptureIds = ReadGuidArray(e, "sourceCaptureIds"),
-            }).Where(d => !string.IsNullOrWhiteSpace(d.Description)).ToList(),
+            }).Where(d => !string.IsNullOrWhiteSpace(d.Description)).ToImmutableArray(),
             NewRisks = ReadArray(root, "newRisks", e => new ProposedRisk
             {
                 Description = e.GetProperty("description").GetString() ?? string.Empty,
                 Severity = ParseSeverity(ReadOptionalString(e, "severity")),
                 SourceCaptureIds = ReadGuidArray(e, "sourceCaptureIds"),
-            }).Where(r => !string.IsNullOrWhiteSpace(r.Description)).ToList(),
+            }).Where(r => !string.IsNullOrWhiteSpace(r.Description)).ToImmutableArray(),
             RisksToResolve = ReadGuidArray(root, "risksToResolve"),
             ProposedRequirementsContent = ReadOptionalString(root, "proposedRequirementsContent"),
             ProposedDesignDirectionContent = ReadOptionalString(root, "proposedDesignDirectionContent"),
-            SourceCaptureIds = sourceCaptureIds,
+            SourceCaptureIds = sourceCaptureIds is null ? [] : [.. sourceCaptureIds],
             AiConfidence = ReadOptionalDecimal(root, "aiConfidence"),
             Rationale = ReadOptionalString(root, "rationale"),
         };
@@ -215,17 +228,17 @@ public sealed class BriefMaintenanceService(
         return arr.EnumerateArray().Select(map).ToList();
     }
 
-    private static List<Guid> ReadGuidArray(JsonElement root, string property)
+    private static ImmutableArray<Guid> ReadGuidArray(JsonElement root, string property)
     {
         if (!root.TryGetProperty(property, out var arr) || arr.ValueKind != JsonValueKind.Array)
             return [];
-        var result = new List<Guid>();
+        var result = ImmutableArray.CreateBuilder<Guid>();
         foreach (var e in arr.EnumerateArray())
         {
             if (e.ValueKind == JsonValueKind.String && Guid.TryParse(e.GetString(), out var g))
                 result.Add(g);
         }
-        return result;
+        return result.ToImmutable();
     }
 
     private static string? ReadOptionalString(JsonElement root, string property)
@@ -249,25 +262,33 @@ public sealed class BriefMaintenanceService(
 
 /// <summary>
 /// Per-(user,initiative) debounced job queue. Concurrent enqueues for the same key
-/// are coalesced — if a job is already in-flight or pending, additional triggers are dropped
-/// because the in-flight job will pick up the latest state when it runs.
+/// are coalesced: while a job is in-flight, additional triggers set a "rerun requested"
+/// flag. When the in-flight job completes, we requeue once so the latest state is captured
+/// — preventing stale briefs caused by triggers arriving after the worker has already
+/// read its inputs.
 /// </summary>
 public sealed class BriefRefreshQueue
 {
+    // _inFlight value: 0 = running, no rerun requested. 1 = running, rerun requested.
     private readonly Channel<(Guid UserId, Guid InitiativeId)> _channel =
         Channel.CreateUnbounded<(Guid, Guid)>(new UnboundedChannelOptions { SingleReader = true });
 
-    private readonly ConcurrentDictionary<(Guid, Guid), byte> _inFlight = new();
+    private readonly ConcurrentDictionary<(Guid, Guid), int> _inFlight = new();
 
     public bool Enqueue(Guid userId, Guid initiativeId)
     {
-        if (!_inFlight.TryAdd((userId, initiativeId), 0))
-            return false; // coalesced
-        if (!_channel.Writer.TryWrite((userId, initiativeId)))
+        var key = (userId, initiativeId);
+        if (!_inFlight.TryAdd(key, 0))
+        {
+            // Already in-flight or pending — flag rerun so MarkComplete will requeue.
+            _inFlight[key] = 1;
+            return false;
+        }
+        if (!_channel.Writer.TryWrite(key))
         {
             // Channel writer was completed (shutting down). Remove the key so we don't
             // permanently coalesce future enqueues for this (user, initiative).
-            _inFlight.TryRemove((userId, initiativeId), out _);
+            _inFlight.TryRemove(key, out _);
             return false;
         }
         return true;
@@ -275,8 +296,17 @@ public sealed class BriefRefreshQueue
 
     public ChannelReader<(Guid UserId, Guid InitiativeId)> Reader => _channel.Reader;
 
-    public void MarkComplete(Guid userId, Guid initiativeId) =>
-        _inFlight.TryRemove((userId, initiativeId), out _);
+    public void MarkComplete(Guid userId, Guid initiativeId)
+    {
+        var key = (userId, initiativeId);
+        if (_inFlight.TryRemove(key, out var flag) && flag == 1)
+        {
+            // A trigger arrived during the in-flight run. Requeue once so the next worker
+            // pass sees any captures that were confirmed after this run started.
+            if (_inFlight.TryAdd(key, 0) && !_channel.Writer.TryWrite(key))
+                _inFlight.TryRemove(key, out _);
+        }
+    }
 
     public int InFlightCount => _inFlight.Count;
 }

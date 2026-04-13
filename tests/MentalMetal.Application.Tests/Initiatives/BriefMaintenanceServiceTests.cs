@@ -98,6 +98,48 @@ public class BriefMaintenanceServiceTests
     }
 
     [Fact]
+    public async Task Queue_CoalescesUnderConcurrentContentionForSameKey()
+    {
+        // Race two enqueues for the same key. Coalescing must hold under contention:
+        // exactly one should win the channel write, the other should be coalesced.
+        var initiativeId = Guid.NewGuid();
+        using var barrier = new Barrier(2);
+
+        var taskA = Task.Run(() => { barrier.SignalAndWait(); return _queue.Enqueue(_userId, initiativeId); });
+        var taskB = Task.Run(() => { barrier.SignalAndWait(); return _queue.Enqueue(_userId, initiativeId); });
+
+        var results = await Task.WhenAll(taskA, taskB);
+        // One must win and the other must be coalesced (exactly one true).
+        Assert.Single(results, r => r);
+        Assert.Equal(1, _queue.InFlightCount);
+    }
+
+    [Fact]
+    public async Task Queue_RerunRequestedDuringInFlight_RequeuesOnComplete()
+    {
+        // Simulate: caller A enqueues; worker picks it up (drains channel) but is "still running";
+        // caller B enqueues during that window — it must be coalesced, but MarkComplete must
+        // requeue exactly once so the second trigger is not lost.
+        var initiativeId = Guid.NewGuid();
+        Assert.True(_queue.Enqueue(_userId, initiativeId));
+
+        // Worker drains from the channel
+        var first = await _queue.Reader.ReadAsync(CancellationToken.None);
+        Assert.Equal((_userId, initiativeId), first);
+
+        // While the worker is "running", a second trigger arrives (coalesced).
+        Assert.False(_queue.Enqueue(_userId, initiativeId));
+
+        // Worker completes: the rerun-requested flag must cause exactly one requeue.
+        _queue.MarkComplete(_userId, initiativeId);
+
+        var requeued = await _queue.Reader.ReadAsync(CancellationToken.None);
+        Assert.Equal((_userId, initiativeId), requeued);
+        _queue.MarkComplete(_userId, initiativeId);
+        Assert.Equal(0, _queue.InFlightCount);
+    }
+
+    [Fact]
     public async Task RefreshAsync_AutoApplyOn_AppliesProposalAndMarksApplied()
     {
         var initiative = MakeInitiative();

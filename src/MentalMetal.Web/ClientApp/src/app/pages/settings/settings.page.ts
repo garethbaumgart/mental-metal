@@ -87,6 +87,11 @@ import { AiProviderSettingsComponent } from './ai-provider-settings.component';
           <input pInputText id="briefingTime" type="time" [(ngModel)]="briefingTime" class="w-full" />
         </div>
 
+        <div class="flex items-center justify-between">
+          <label for="livingBriefAutoApply" class="text-sm font-medium">Auto-apply AI brief updates</label>
+          <p-toggleSwitch id="livingBriefAutoApply" [(ngModel)]="livingBriefAutoApply" />
+        </div>
+
         <p-button
           label="Save Preferences"
           (onClick)="savePreferences()"
@@ -114,6 +119,7 @@ export class SettingsPage implements OnInit {
   protected darkMode = false;
   protected notificationsEnabled = true;
   protected briefingTime = '08:00';
+  protected livingBriefAutoApply = false;
 
   protected readonly timezones = Intl.supportedValuesOf('timeZone').map((tz) => ({
     label: tz,
@@ -129,6 +135,7 @@ export class SettingsPage implements OnInit {
       this.darkMode = user.preferences.theme === 'Dark';
       this.notificationsEnabled = user.preferences.notificationsEnabled;
       this.briefingTime = user.preferences.briefingTime;
+      this.livingBriefAutoApply = user.preferences.livingBriefAutoApply;
     }
   }
 
@@ -172,6 +179,7 @@ export class SettingsPage implements OnInit {
         theme: this.darkMode ? 'Dark' : 'Light',
         notificationsEnabled: this.notificationsEnabled,
         briefingTime: this.briefingTime,
+        livingBriefAutoApply: this.livingBriefAutoApply,
       })
       .subscribe({
         next: () => {

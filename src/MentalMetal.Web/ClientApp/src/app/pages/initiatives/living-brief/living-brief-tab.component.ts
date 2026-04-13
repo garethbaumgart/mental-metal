@@ -226,7 +226,7 @@ import {
 
     <!-- Dialogs -->
     <p-dialog header="Edit Summary" [(visible)]="editSummaryDialogValue" [modal]="true" [style]="{ width: '32rem' }">
-      <textarea pInputTextarea [(ngModel)]="newSummary" rows="6" class="w-full"></textarea>
+      <textarea pInputTextarea [ngModel]="newSummary()" (ngModelChange)="newSummary.set($event)" rows="6" class="w-full"></textarea>
       <div class="flex justify-end gap-2 mt-3">
         <p-button label="Cancel" severity="secondary" (onClick)="editSummaryDialog.set(false)" />
         <p-button label="Save" (onClick)="saveSummary()" />
@@ -235,39 +235,39 @@ import {
 
     <p-dialog header="Log Decision" [(visible)]="logDecisionDialogValue" [modal]="true" [style]="{ width: '32rem' }">
       <div class="flex flex-col gap-3">
-        <input pInputText [(ngModel)]="newDecisionDescription" placeholder="Decision" />
-        <textarea pInputTextarea [(ngModel)]="newDecisionRationale" placeholder="Rationale (optional)" rows="3"></textarea>
+        <input pInputText [ngModel]="newDecisionDescription()" (ngModelChange)="newDecisionDescription.set($event)" placeholder="Decision" />
+        <textarea pInputTextarea [ngModel]="newDecisionRationale()" (ngModelChange)="newDecisionRationale.set($event)" placeholder="Rationale (optional)" rows="3"></textarea>
       </div>
       <div class="flex justify-end gap-2 mt-3">
         <p-button label="Cancel" severity="secondary" (onClick)="logDecisionDialog.set(false)" />
-        <p-button label="Log" (onClick)="logDecision()" [disabled]="!newDecisionDescription.trim()" />
+        <p-button label="Log" (onClick)="logDecision()" [disabled]="!newDecisionDescription().trim()" />
       </div>
     </p-dialog>
 
     <p-dialog header="Raise Risk" [(visible)]="raiseRiskDialogValue" [modal]="true" [style]="{ width: '32rem' }">
       <div class="flex flex-col gap-3">
-        <input pInputText [(ngModel)]="newRiskDescription" placeholder="Risk description" />
-        <p-select [options]="severityOptions" [(ngModel)]="newRiskSeverity" placeholder="Severity" />
+        <input pInputText [ngModel]="newRiskDescription()" (ngModelChange)="newRiskDescription.set($event)" placeholder="Risk description" />
+        <p-select [options]="severityOptions" [ngModel]="newRiskSeverity()" (ngModelChange)="newRiskSeverity.set($event)" placeholder="Severity" />
       </div>
       <div class="flex justify-end gap-2 mt-3">
         <p-button label="Cancel" severity="secondary" (onClick)="raiseRiskDialog.set(false)" />
-        <p-button label="Raise" (onClick)="raiseRisk()" [disabled]="!newRiskDescription.trim()" />
+        <p-button label="Raise" (onClick)="raiseRisk()" [disabled]="!newRiskDescription().trim()" />
       </div>
     </p-dialog>
 
     <p-dialog header="Snapshot Requirements" [(visible)]="reqDialogValue" [modal]="true" [style]="{ width: '36rem' }">
-      <textarea pInputTextarea [(ngModel)]="newReqContent" rows="8" class="w-full" placeholder="Full requirements text"></textarea>
+      <textarea pInputTextarea [ngModel]="newReqContent()" (ngModelChange)="newReqContent.set($event)" rows="8" class="w-full" placeholder="Full requirements text"></textarea>
       <div class="flex justify-end gap-2 mt-3">
         <p-button label="Cancel" severity="secondary" (onClick)="reqDialog.set(false)" />
-        <p-button label="Save Snapshot" (onClick)="snapshotReq()" [disabled]="!newReqContent.trim()" />
+        <p-button label="Save Snapshot" (onClick)="snapshotReq()" [disabled]="!newReqContent().trim()" />
       </div>
     </p-dialog>
 
     <p-dialog header="Snapshot Design Direction" [(visible)]="designDialogValue" [modal]="true" [style]="{ width: '36rem' }">
-      <textarea pInputTextarea [(ngModel)]="newDesignContent" rows="8" class="w-full" placeholder="Full design direction text"></textarea>
+      <textarea pInputTextarea [ngModel]="newDesignContent()" (ngModelChange)="newDesignContent.set($event)" rows="8" class="w-full" placeholder="Full design direction text"></textarea>
       <div class="flex justify-end gap-2 mt-3">
         <p-button label="Cancel" severity="secondary" (onClick)="designDialog.set(false)" />
-        <p-button label="Save Snapshot" (onClick)="snapshotDesign()" [disabled]="!newDesignContent.trim()" />
+        <p-button label="Save Snapshot" (onClick)="snapshotDesign()" [disabled]="!newDesignContent().trim()" />
       </div>
     </p-dialog>
   `,
@@ -321,13 +321,14 @@ export class LivingBriefTabComponent {
   get designDialogValue() { return this.designDialog(); }
   set designDialogValue(v: boolean) { this.designDialog.set(v); }
 
-  newSummary = '';
-  newDecisionDescription = '';
-  newDecisionRationale = '';
-  newRiskDescription = '';
-  newRiskSeverity: RiskSeverity = 'Medium';
-  newReqContent = '';
-  newDesignContent = '';
+  // Form state must be signal-backed to drive zoneless change detection (templates read these).
+  readonly newSummary = signal('');
+  readonly newDecisionDescription = signal('');
+  readonly newDecisionRationale = signal('');
+  readonly newRiskDescription = signal('');
+  readonly newRiskSeverity = signal<RiskSeverity>('Medium');
+  readonly newReqContent = signal('');
+  readonly newDesignContent = signal('');
 
   readonly severityOptions = ['Low', 'Medium', 'High', 'Critical'];
 
@@ -338,7 +339,7 @@ export class LivingBriefTabComponent {
     });
     effect(() => {
       const b = this.brief();
-      if (b) this.newSummary = b.summary ?? '';
+      if (b) this.newSummary.set(b.summary ?? '');
     });
   }
 
@@ -373,7 +374,7 @@ export class LivingBriefTabComponent {
   }
 
   saveSummary() {
-    this.briefService.updateSummary(this.initiativeId(), { summary: this.newSummary })
+    this.briefService.updateSummary(this.initiativeId(), { summary: this.newSummary() })
       .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: b => { this.brief.set(b); this.editSummaryDialog.set(false); },
       });
@@ -381,27 +382,27 @@ export class LivingBriefTabComponent {
 
   logDecision() {
     this.briefService.logDecision(this.initiativeId(), {
-      description: this.newDecisionDescription,
-      rationale: this.newDecisionRationale || null,
+      description: this.newDecisionDescription(),
+      rationale: this.newDecisionRationale() || null,
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: b => {
         this.brief.set(b);
         this.logDecisionDialog.set(false);
-        this.newDecisionDescription = '';
-        this.newDecisionRationale = '';
+        this.newDecisionDescription.set('');
+        this.newDecisionRationale.set('');
       },
     });
   }
 
   raiseRisk() {
     this.briefService.raiseRisk(this.initiativeId(), {
-      description: this.newRiskDescription,
-      severity: this.newRiskSeverity,
+      description: this.newRiskDescription(),
+      severity: this.newRiskSeverity(),
     }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: b => {
         this.brief.set(b);
         this.raiseRiskDialog.set(false);
-        this.newRiskDescription = '';
+        this.newRiskDescription.set('');
       },
     });
   }
@@ -414,16 +415,16 @@ export class LivingBriefTabComponent {
   }
 
   snapshotReq() {
-    this.briefService.snapshotRequirements(this.initiativeId(), { content: this.newReqContent })
+    this.briefService.snapshotRequirements(this.initiativeId(), { content: this.newReqContent() })
       .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-        next: b => { this.brief.set(b); this.reqDialog.set(false); this.newReqContent = ''; },
+        next: b => { this.brief.set(b); this.reqDialog.set(false); this.newReqContent.set(''); },
       });
   }
 
   snapshotDesign() {
-    this.briefService.snapshotDesignDirection(this.initiativeId(), { content: this.newDesignContent })
+    this.briefService.snapshotDesignDirection(this.initiativeId(), { content: this.newDesignContent() })
       .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-        next: b => { this.brief.set(b); this.designDialog.set(false); this.newDesignContent = ''; },
+        next: b => { this.brief.set(b); this.designDialog.set(false); this.newDesignContent.set(''); },
       });
   }
 

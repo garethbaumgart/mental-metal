@@ -167,6 +167,7 @@ public sealed class Initiative : AggregateRoot, IUserScoped
     public void RefreshSummary(string summary, BriefSource source, IReadOnlyList<Guid> sourceCaptureIds)
     {
         ArgumentNullException.ThrowIfNull(summary);
+        EnsureNotTerminal();
         Brief ??= LivingBrief.LivingBrief.Empty();
         var now = DateTimeOffset.UtcNow;
         Brief.SetSummary(summary, source, sourceCaptureIds ?? [], now);
@@ -177,6 +178,7 @@ public sealed class Initiative : AggregateRoot, IUserScoped
     public KeyDecision RecordDecision(string description, string? rationale, BriefSource source, IReadOnlyList<Guid> sourceCaptureIds)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(description, nameof(description));
+        EnsureNotTerminal();
         Brief ??= LivingBrief.LivingBrief.Empty();
         var now = DateTimeOffset.UtcNow;
         var decision = Brief.AppendDecision(description.Trim(), rationale?.Trim(), source, sourceCaptureIds ?? [], now);
@@ -188,6 +190,7 @@ public sealed class Initiative : AggregateRoot, IUserScoped
     public Risk RaiseRisk(string description, RiskSeverity severity, BriefSource source, IReadOnlyList<Guid> sourceCaptureIds)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(description, nameof(description));
+        EnsureNotTerminal();
         Brief ??= LivingBrief.LivingBrief.Empty();
         var now = DateTimeOffset.UtcNow;
         var risk = Brief.AppendRisk(description.Trim(), severity, source, sourceCaptureIds ?? [], now);
@@ -198,6 +201,7 @@ public sealed class Initiative : AggregateRoot, IUserScoped
 
     public Risk ResolveRisk(Guid riskId, string? resolutionNote)
     {
+        EnsureNotTerminal();
         if (Brief is null)
             throw new ArgumentException($"Risk '{riskId}' not found.", nameof(riskId));
 
@@ -211,6 +215,7 @@ public sealed class Initiative : AggregateRoot, IUserScoped
     public RequirementsSnapshot SnapshotRequirements(string content, BriefSource source, IReadOnlyList<Guid> sourceCaptureIds)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(content, nameof(content));
+        EnsureNotTerminal();
         Brief ??= LivingBrief.LivingBrief.Empty();
         var now = DateTimeOffset.UtcNow;
         var snap = Brief.AppendRequirements(content.Trim(), source, sourceCaptureIds ?? [], now);
@@ -222,6 +227,7 @@ public sealed class Initiative : AggregateRoot, IUserScoped
     public DesignDirectionSnapshot SnapshotDesignDirection(string content, BriefSource source, IReadOnlyList<Guid> sourceCaptureIds)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(content, nameof(content));
+        EnsureNotTerminal();
         Brief ??= LivingBrief.LivingBrief.Empty();
         var now = DateTimeOffset.UtcNow;
         var snap = Brief.AppendDesignDirection(content.Trim(), source, sourceCaptureIds ?? [], now);

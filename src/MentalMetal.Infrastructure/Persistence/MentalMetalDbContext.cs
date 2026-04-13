@@ -28,6 +28,8 @@ public sealed class MentalMetalDbContext(
     public DbSet<AiTasteBudget> AiTasteBudgets => Set<AiTasteBudget>();
     public DbSet<PendingBriefUpdate> PendingBriefUpdates => Set<PendingBriefUpdate>();
 
+    public void DiscardPendingChanges() => ChangeTracker.Clear();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(MentalMetalDbContext).Assembly);

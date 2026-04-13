@@ -13,7 +13,8 @@ export interface UserPreferences {
   theme: string;
   notificationsEnabled: boolean;
   briefingTime: string;
-  livingBriefAutoApply?: boolean;
+  // Required so callers cannot accidentally omit the flag and reset the persisted preference.
+  livingBriefAutoApply: boolean;
 }
 
 export interface UpdateProfileRequest {
@@ -26,7 +27,8 @@ export interface UpdatePreferencesRequest {
   theme: string;
   notificationsEnabled: boolean;
   briefingTime: string;
-  livingBriefAutoApply?: boolean;
+  // Required: omitting this on an update would silently reset the persisted preference.
+  livingBriefAutoApply: boolean;
 }
 
 export interface AuthTokenResponse {

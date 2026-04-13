@@ -88,3 +88,16 @@ export interface RaiseRiskRequest { description: string; severity: RiskSeverity;
 export interface ResolveRiskRequest { resolutionNote?: string | null; }
 export interface SnapshotRequest { content: string; }
 export interface RejectPendingUpdateRequest { reason?: string | null; }
+
+// Mirrors the server-side EditPendingUpdateRequest DTO. Each field is optional —
+// omitting a field on the request leaves the corresponding part of the proposal unchanged.
+// Severity is sent as the enum string (matching ProposedRiskDto on the server).
+export interface EditPendingUpdateRequest {
+  proposedSummary?: string | null;
+  newDecisions?: ProposedDecision[] | null;
+  newRisks?: { description: string; severity: RiskSeverity; sourceCaptureIds: string[] }[] | null;
+  risksToResolve?: string[] | null;
+  proposedRequirementsContent?: string | null;
+  proposedDesignDirectionContent?: string | null;
+  rationale?: string | null;
+}

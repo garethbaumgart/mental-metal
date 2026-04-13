@@ -11,12 +11,15 @@ public sealed class LivingBrief
     public DateTimeOffset? SummaryLastRefreshedAt { get; private set; }
     public int BriefVersion { get; private set; }
     public BriefSource SummarySource { get; private set; } = BriefSource.Manual;
-    public IReadOnlyList<Guid> SummarySourceCaptureIds { get; private set; } = [];
+    // Backed by a ReadOnlyCollection so callers cannot cast back to List<Guid> and mutate history.
+    public IReadOnlyList<Guid> SummarySourceCaptureIds { get; private set; } = new List<Guid>().AsReadOnly();
 
-    public IReadOnlyList<KeyDecision> KeyDecisions => _keyDecisions;
-    public IReadOnlyList<Risk> Risks => _risks;
-    public IReadOnlyList<RequirementsSnapshot> RequirementsHistory => _requirementsHistory;
-    public IReadOnlyList<DesignDirectionSnapshot> DesignDirectionHistory => _designDirectionHistory;
+    // .AsReadOnly() returns a ReadOnlyCollection<T> wrapper that does not expose the underlying List<T>,
+    // preventing callers from downcasting and mutating brief history outside the aggregate.
+    public IReadOnlyList<KeyDecision> KeyDecisions => _keyDecisions.AsReadOnly();
+    public IReadOnlyList<Risk> Risks => _risks.AsReadOnly();
+    public IReadOnlyList<RequirementsSnapshot> RequirementsHistory => _requirementsHistory.AsReadOnly();
+    public IReadOnlyList<DesignDirectionSnapshot> DesignDirectionHistory => _designDirectionHistory.AsReadOnly();
 
     private LivingBrief() { }
 
@@ -27,7 +30,8 @@ public sealed class LivingBrief
     {
         Summary = summary ?? string.Empty;
         SummarySource = source;
-        SummarySourceCaptureIds = sourceCaptureIds?.ToList() ?? [];
+        // Defensive copy + read-only wrapper so the caller's List<Guid> cannot be reused to mutate brief state.
+        SummarySourceCaptureIds = (sourceCaptureIds?.ToList() ?? []).AsReadOnly();
         SummaryLastRefreshedAt = now;
         BriefVersion++;
     }
@@ -40,7 +44,7 @@ public sealed class LivingBrief
             Description = description,
             Rationale = rationale,
             Source = source,
-            SourceCaptureIds = sourceCaptureIds?.ToList() ?? [],
+            SourceCaptureIds = sourceCaptureIds is null ? [] : [.. sourceCaptureIds],
             LoggedAt = now
         };
         _keyDecisions.Add(decision);
@@ -57,7 +61,7 @@ public sealed class LivingBrief
             Severity = severity,
             Status = RiskStatus.Open,
             Source = source,
-            SourceCaptureIds = sourceCaptureIds?.ToList() ?? [],
+            SourceCaptureIds = sourceCaptureIds is null ? [] : [.. sourceCaptureIds],
             RaisedAt = now
         };
         _risks.Add(risk);
@@ -88,7 +92,7 @@ public sealed class LivingBrief
             Id = Guid.NewGuid(),
             Content = content,
             Source = source,
-            SourceCaptureIds = sourceCaptureIds?.ToList() ?? [],
+            SourceCaptureIds = sourceCaptureIds is null ? [] : [.. sourceCaptureIds],
             CapturedAt = now
         };
         _requirementsHistory.Add(snap);
@@ -103,7 +107,7 @@ public sealed class LivingBrief
             Id = Guid.NewGuid(),
             Content = content,
             Source = source,
-            SourceCaptureIds = sourceCaptureIds?.ToList() ?? [],
+            SourceCaptureIds = sourceCaptureIds is null ? [] : [.. sourceCaptureIds],
             CapturedAt = now
         };
         _designDirectionHistory.Add(snap);

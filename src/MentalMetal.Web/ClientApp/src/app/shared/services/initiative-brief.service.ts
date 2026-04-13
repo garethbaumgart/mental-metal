@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
+  EditPendingUpdateRequest,
   LivingBrief,
   LogDecisionRequest,
   PendingBriefUpdate,
@@ -11,7 +12,6 @@ import {
   ResolveRiskRequest,
   SnapshotRequest,
   UpdateSummaryRequest,
-  BriefUpdateProposal,
 } from '../models/living-brief.model';
 
 @Injectable({ providedIn: 'root' })
@@ -72,7 +72,7 @@ export class InitiativeBriefService {
     return this.http.post<void>(`${this.base(initiativeId)}/pending-updates/${updateId}/reject`, request);
   }
 
-  editPending(initiativeId: string, updateId: string, body: Partial<BriefUpdateProposal>): Observable<PendingBriefUpdate> {
+  editPending(initiativeId: string, updateId: string, body: EditPendingUpdateRequest): Observable<PendingBriefUpdate> {
     return this.http.put<PendingBriefUpdate>(`${this.base(initiativeId)}/pending-updates/${updateId}`, body);
   }
 }

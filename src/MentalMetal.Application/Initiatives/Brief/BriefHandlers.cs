@@ -236,16 +236,23 @@ public sealed class EditPendingBriefUpdateHandler(
         var newProposal = new BriefUpdateProposal
         {
             ProposedSummary = string.IsNullOrWhiteSpace(request.ProposedSummary) ? pending.Proposal.ProposedSummary : request.ProposedSummary,
-            NewDecisions = (request.NewDecisions ?? pending.Proposal.NewDecisions.Select(d => new ProposedDecisionDto(d.Description, d.Rationale, d.SourceCaptureIds)).ToList())
-                .Select(d => new ProposedDecision { Description = d.Description, Rationale = d.Rationale, SourceCaptureIds = d.SourceCaptureIds }).ToList(),
-            NewRisks = (request.NewRisks ?? pending.Proposal.NewRisks.Select(r => new ProposedRiskDto(r.Description, r.Severity.ToString(), r.SourceCaptureIds)).ToList())
-                .Select(r => new ProposedRisk
+            NewDecisions = request.NewDecisions is not null
+                ? [.. request.NewDecisions.Select(d => new ProposedDecision
+                {
+                    Description = d.Description,
+                    Rationale = d.Rationale,
+                    SourceCaptureIds = [.. d.SourceCaptureIds]
+                })]
+                : pending.Proposal.NewDecisions,
+            NewRisks = request.NewRisks is not null
+                ? [.. request.NewRisks.Select(r => new ProposedRisk
                 {
                     Description = r.Description,
                     Severity = Enum.TryParse<RiskSeverity>(r.Severity, true, out var s) ? s : RiskSeverity.Medium,
-                    SourceCaptureIds = r.SourceCaptureIds
-                }).ToList(),
-            RisksToResolve = request.RisksToResolve ?? pending.Proposal.RisksToResolve.ToList(),
+                    SourceCaptureIds = [.. r.SourceCaptureIds]
+                })]
+                : pending.Proposal.NewRisks,
+            RisksToResolve = request.RisksToResolve is not null ? [.. request.RisksToResolve] : pending.Proposal.RisksToResolve,
             ProposedRequirementsContent = request.ProposedRequirementsContent ?? pending.Proposal.ProposedRequirementsContent,
             ProposedDesignDirectionContent = request.ProposedDesignDirectionContent ?? pending.Proposal.ProposedDesignDirectionContent,
             SourceCaptureIds = pending.Proposal.SourceCaptureIds,
