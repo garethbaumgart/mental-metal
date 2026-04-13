@@ -1348,7 +1348,7 @@ app.MapGet("/api/initiatives/{id:guid}/brief/pending-updates/{updateId:guid}", a
 app.MapPost("/api/initiatives/{id:guid}/brief/pending-updates/{updateId:guid}/apply", async (
     Guid id, Guid updateId, ApplyPendingBriefUpdateHandler handler, CancellationToken ct) =>
 {
-    try { return Results.Ok(await handler.HandleAsync(updateId, ct)); }
+    try { return Results.Ok(await handler.HandleAsync(id, updateId, ct)); }
     catch (NotFoundException) { return Results.NotFound(); }
     catch (ApplyPendingBriefUpdateHandler.StaleProposalException ex)
     {
@@ -1359,12 +1359,13 @@ app.MapPost("/api/initiatives/{id:guid}/brief/pending-updates/{updateId:guid}/ap
             proposalBriefVersion = ex.ProposalBriefVersion
         });
     }
+    catch (InvalidOperationException ex) { return Results.Conflict(new { error = ex.Message }); }
 }).RequireAuthorization();
 
 app.MapPost("/api/initiatives/{id:guid}/brief/pending-updates/{updateId:guid}/reject", async (
     Guid id, Guid updateId, RejectPendingUpdateRequest? request, RejectPendingBriefUpdateHandler handler, CancellationToken ct) =>
 {
-    try { await handler.HandleAsync(updateId, request, ct); return Results.NoContent(); }
+    try { await handler.HandleAsync(id, updateId, request, ct); return Results.NoContent(); }
     catch (NotFoundException) { return Results.NotFound(); }
     catch (InvalidOperationException ex) { return Results.Conflict(new { error = ex.Message }); }
 }).RequireAuthorization();
@@ -1372,7 +1373,7 @@ app.MapPost("/api/initiatives/{id:guid}/brief/pending-updates/{updateId:guid}/re
 app.MapPut("/api/initiatives/{id:guid}/brief/pending-updates/{updateId:guid}", async (
     Guid id, Guid updateId, EditPendingUpdateRequest request, EditPendingBriefUpdateHandler handler, CancellationToken ct) =>
 {
-    try { return Results.Ok(await handler.HandleAsync(updateId, request, ct)); }
+    try { return Results.Ok(await handler.HandleAsync(id, updateId, request, ct)); }
     catch (NotFoundException) { return Results.NotFound(); }
     catch (InvalidOperationException ex) { return Results.Conflict(new { error = ex.Message }); }
 }).RequireAuthorization();

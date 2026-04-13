@@ -183,9 +183,11 @@ public sealed class ApplyPendingBriefUpdateHandler(
         }
     }
 
-    public async Task<LivingBriefDto> HandleAsync(Guid updateId, CancellationToken ct)
+    public async Task<LivingBriefDto> HandleAsync(Guid initiativeId, Guid updateId, CancellationToken ct)
     {
         var pending = (await repo.GetByIdAsync(updateId, ct)).EnsureOwned(currentUser.UserId, updateId);
+        if (pending.InitiativeId != initiativeId)
+            throw new NotFoundException("PendingBriefUpdate", updateId);
 
         var initiative = await initiativeRepo.GetByIdAsync(pending.InitiativeId, ct)
             ?? throw new NotFoundException("Initiative", pending.InitiativeId);
@@ -209,22 +211,27 @@ public sealed class RejectPendingBriefUpdateHandler(
     ICurrentUserService currentUser,
     IUnitOfWork uow)
 {
-    public async Task HandleAsync(Guid updateId, RejectPendingUpdateRequest? request, CancellationToken ct)
+    public async Task HandleAsync(Guid initiativeId, Guid updateId, RejectPendingUpdateRequest? request, CancellationToken ct)
     {
         var pending = (await repo.GetByIdAsync(updateId, ct)).EnsureOwned(currentUser.UserId, updateId);
+        if (pending.InitiativeId != initiativeId)
+            throw new NotFoundException("PendingBriefUpdate", updateId);
         pending.Reject(request?.Reason);
         await uow.SaveChangesAsync(ct);
     }
 }
 
 public sealed class EditPendingBriefUpdateHandler(
+    IInitiativeRepository initiativeRepo,
     IPendingBriefUpdateRepository repo,
     ICurrentUserService currentUser,
     IUnitOfWork uow)
 {
-    public async Task<PendingBriefUpdateDto> HandleAsync(Guid updateId, EditPendingUpdateRequest request, CancellationToken ct)
+    public async Task<PendingBriefUpdateDto> HandleAsync(Guid initiativeId, Guid updateId, EditPendingUpdateRequest request, CancellationToken ct)
     {
         var pending = (await repo.GetByIdAsync(updateId, ct)).EnsureOwned(currentUser.UserId, updateId);
+        if (pending.InitiativeId != initiativeId)
+            throw new NotFoundException("PendingBriefUpdate", updateId);
 
         var newProposal = new BriefUpdateProposal
         {
@@ -248,6 +255,10 @@ public sealed class EditPendingBriefUpdateHandler(
 
         pending.Edit(newProposal);
         await uow.SaveChangesAsync(ct);
-        return PendingBriefUpdateDto.From(pending, pending.BriefVersionAtProposal);
+
+        // Use the initiative's CURRENT brief version so CurrentInitiativeBriefVersion / IsStale are accurate.
+        var initiative = await initiativeRepo.GetByIdAsync(pending.InitiativeId, ct);
+        var currentVersion = initiative?.Brief?.BriefVersion ?? pending.BriefVersionAtProposal;
+        return PendingBriefUpdateDto.From(pending, currentVersion);
     }
 }

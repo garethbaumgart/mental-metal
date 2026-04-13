@@ -46,27 +46,31 @@ authTest.describe('Living Brief', () => {
     const versionBefore = beforeBrief.briefVersion;
 
     // Trigger a refresh — likely fails (no AI key) and yields a Failed proposal we can reject.
-    await authenticatedPage.request.post(
+    const refreshResp = await authenticatedPage.request.post(
       `${API_BASE}/api/initiatives/${initiative.id}/brief/refresh`, { headers, data: {} });
+    expect(refreshResp.status()).toBe(202);
+    const { pendingUpdateId } = await refreshResp.json();
+    expect(pendingUpdateId).toBeTruthy();
 
-    // Wait briefly for background processing
-    await authenticatedPage.waitForTimeout(2000);
-
-    const pending = await (await authenticatedPage.request.get(
-      `${API_BASE}/api/initiatives/${initiative.id}/brief/pending-updates`, { headers })).json();
-
-    if (pending.length > 0) {
-      const target = pending[0];
-      const rejectResponse = await authenticatedPage.request.post(
-        `${API_BASE}/api/initiatives/${initiative.id}/brief/pending-updates/${target.id}/reject`,
-        { headers, data: { reason: 'not useful' } });
-      // Failed updates can't be rejected (they're terminal) — that's also fine
-      expect([204, 409]).toContain(rejectResponse.status());
-
-      const afterBrief = await (await authenticatedPage.request.get(
-        `${API_BASE}/api/initiatives/${initiative.id}/brief`, { headers })).json();
-      expect(afterBrief.briefVersion).toBe(versionBefore);
+    // Poll for the pending update to materialize after background processing.
+    const pollUrl = `${API_BASE}/api/initiatives/${initiative.id}/brief/pending-updates/${pendingUpdateId}`;
+    let target: any = null;
+    for (let i = 0; i < 20; i++) {
+      const r = await authenticatedPage.request.get(pollUrl, { headers });
+      if (r.status() === 200) { target = await r.json(); break; }
+      await authenticatedPage.waitForTimeout(250);
     }
+    expect(target).not.toBeNull();
+
+    const rejectResponse = await authenticatedPage.request.post(
+      `${API_BASE}/api/initiatives/${initiative.id}/brief/pending-updates/${target.id}/reject`,
+      { headers, data: { reason: 'not useful' } });
+    // Failed updates can't be rejected (they're terminal) — that's also fine
+    expect([204, 409]).toContain(rejectResponse.status());
+
+    const afterBrief = await (await authenticatedPage.request.get(
+      `${API_BASE}/api/initiatives/${initiative.id}/brief`, { headers })).json();
+    expect(afterBrief.briefVersion).toBe(versionBefore);
   });
 
   authTest('user isolation: User A cannot read or apply User B pending updates', async ({ browser }) => {
@@ -115,18 +119,38 @@ authTest.describe('Living Brief', () => {
     const token = await authenticatedPage.evaluate(() => localStorage.getItem('access_token'));
     const headers = { Authorization: `Bearer ${token}` };
 
-    // For a deterministic stale-proposal test, we'd need to seed a pending update directly.
-    // The HTTP-only path can't easily simulate this without DB seeding, so we verify
-    // the contract by exercising the endpoint with a non-existent updateId (404 path).
     const initiative = await (await authenticatedPage.request.post(`${API_BASE}/api/initiatives`, {
       headers, data: { title: 'Stale Test' },
     })).json();
 
-    const fakeUpdateId = '00000000-0000-0000-0000-000000000000';
-    const resp = await authenticatedPage.request.post(
-      `${API_BASE}/api/initiatives/${initiative.id}/brief/pending-updates/${fakeUpdateId}/apply`,
+    // 1. Seed a real pending update at briefVersion=0 via the refresh endpoint.
+    const refreshResp = await authenticatedPage.request.post(
+      `${API_BASE}/api/initiatives/${initiative.id}/brief/refresh`, { headers, data: {} });
+    expect(refreshResp.status()).toBe(202);
+    const { pendingUpdateId } = await refreshResp.json();
+
+    // Poll until the background worker materializes the update.
+    const pollUrl = `${API_BASE}/api/initiatives/${initiative.id}/brief/pending-updates/${pendingUpdateId}`;
+    let appeared = false;
+    for (let i = 0; i < 20; i++) {
+      const r = await authenticatedPage.request.get(pollUrl, { headers });
+      if (r.status() === 200) { appeared = true; break; }
+      await authenticatedPage.waitForTimeout(250);
+    }
+    expect(appeared).toBe(true);
+
+    // 2. Bump the brief version with a manual edit, making the pending update stale.
+    const bumped = await (await authenticatedPage.request.post(
+      `${API_BASE}/api/initiatives/${initiative.id}/brief/decisions`,
+      { headers, data: { description: 'Force version bump' } })).json();
+    expect(bumped.briefVersion).toBeGreaterThan(0);
+
+    // 3. Attempting to apply the now-stale proposal MUST return 409.
+    const applyResp = await authenticatedPage.request.post(
+      `${API_BASE}/api/initiatives/${initiative.id}/brief/pending-updates/${pendingUpdateId}/apply`,
       { headers, data: {} });
-    // Either 404 (not found) or 409 (stale) — both are valid contract responses.
-    expect([404, 409]).toContain(resp.status());
+    expect(applyResp.status()).toBe(409);
+    const body = await applyResp.json();
+    expect(body.currentBriefVersion).toBeGreaterThan(body.proposalBriefVersion);
   });
 });

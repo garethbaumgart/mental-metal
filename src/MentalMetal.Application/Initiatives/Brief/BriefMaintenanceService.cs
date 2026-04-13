@@ -36,15 +36,10 @@ public sealed class BriefMaintenanceService(
 
         var briefVersion = initiative.Brief?.BriefVersion ?? 0;
 
-        // Gather linked confirmed captures (we filter in-memory because cross-user-scoped reads
-        // would require a separate user-scoped lookup; in production this would use a query).
-        var allCaptures = await captureRepository.GetAllAsync(userId, typeFilter: null, statusFilter: null, cancellationToken);
-        var linkedCaptures = allCaptures
-            .Where(c => c.LinkedInitiativeIds.Contains(initiativeId))
-            .Where(c => c.ExtractionStatus == ExtractionStatus.Confirmed && c.AiExtraction is not null)
-            .OrderByDescending(c => c.CapturedAt)
-            .Take(20)
-            .ToList();
+        // Gather the latest 20 confirmed captures linked to this initiative (filtered at the DB level).
+        var dbCaptures = await captureRepository.GetConfirmedForInitiativeAsync(userId, initiativeId, take: 20, cancellationToken);
+        // AiExtraction is JSON-serialized as an owned type; the not-null check stays in memory.
+        var linkedCaptures = dbCaptures.Where(c => c.AiExtraction is not null).ToList();
 
         try
         {
@@ -268,7 +263,14 @@ public sealed class BriefRefreshQueue
     {
         if (!_inFlight.TryAdd((userId, initiativeId), 0))
             return false; // coalesced
-        return _channel.Writer.TryWrite((userId, initiativeId));
+        if (!_channel.Writer.TryWrite((userId, initiativeId)))
+        {
+            // Channel writer was completed (shutting down). Remove the key so we don't
+            // permanently coalesce future enqueues for this (user, initiative).
+            _inFlight.TryRemove((userId, initiativeId), out _);
+            return false;
+        }
+        return true;
     }
 
     public ChannelReader<(Guid UserId, Guid InitiativeId)> Reader => _channel.Reader;
@@ -291,6 +293,9 @@ public sealed class BriefRefreshHostedService(
             try
             {
                 using var scope = scopeFactory.CreateScope();
+                // Background work has no HttpContext, so set the ambient user id on the scope
+                // before resolving anything that touches user-scoped EF query filters.
+                scope.ServiceProvider.GetRequiredService<IBackgroundUserScope>().SetUserId(userId);
                 var service = scope.ServiceProvider.GetRequiredService<IBriefMaintenanceService>();
                 await service.RefreshAsync(userId, initiativeId, stoppingToken);
             }

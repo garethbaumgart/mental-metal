@@ -34,6 +34,8 @@ public class BriefMaintenanceServiceTests
         _initiatives.GetByIdAsync(i.Id, Arg.Any<CancellationToken>()).Returns(i);
         _captures.GetAllAsync(_userId, Arg.Any<CaptureType?>(), Arg.Any<ProcessingStatus?>(), Arg.Any<CancellationToken>())
             .Returns(new List<Capture>());
+        _captures.GetConfirmedForInitiativeAsync(_userId, i.Id, Arg.Any<int>(), Arg.Any<CancellationToken>())
+            .Returns(new List<Capture>());
         return i;
     }
 
@@ -162,7 +164,7 @@ public class ApplyPendingBriefUpdateHandlerTests
 
         var handler = new ApplyPendingBriefUpdateHandler(_initiatives, _pending, _currentUser, _uow);
         await Assert.ThrowsAsync<ApplyPendingBriefUpdateHandler.StaleProposalException>(() =>
-            handler.HandleAsync(update.Id, CancellationToken.None));
+            handler.HandleAsync(update.InitiativeId, update.Id, CancellationToken.None));
     }
 
     [Fact]
@@ -177,6 +179,6 @@ public class ApplyPendingBriefUpdateHandlerTests
 
         var handler = new ApplyPendingBriefUpdateHandler(_initiatives, _pending, _currentUser, _uow);
         await Assert.ThrowsAsync<MentalMetal.Domain.Common.NotFoundException>(() =>
-            handler.HandleAsync(update.Id, CancellationToken.None));
+            handler.HandleAsync(update.InitiativeId, update.Id, CancellationToken.None));
     }
 }

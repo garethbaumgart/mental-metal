@@ -48,7 +48,9 @@ public static class DependencyInjection
         // Infrastructure services
         services.AddHttpContextAccessor();
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<MentalMetalDbContext>());
-        services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<CurrentUserService>();
+        services.AddScoped<ICurrentUserService>(sp => sp.GetRequiredService<CurrentUserService>());
+        services.AddScoped<IBackgroundUserScope>(sp => sp.GetRequiredService<CurrentUserService>());
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPersonRepository, PersonRepository>();
         services.AddScoped<IInitiativeRepository, InitiativeRepository>();

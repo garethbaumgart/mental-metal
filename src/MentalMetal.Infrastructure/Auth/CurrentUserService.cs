@@ -4,12 +4,16 @@ using Microsoft.AspNetCore.Http;
 
 namespace MentalMetal.Infrastructure.Auth;
 
-public sealed class CurrentUserService(IHttpContextAccessor httpContextAccessor) : ICurrentUserService
+public sealed class CurrentUserService(IHttpContextAccessor httpContextAccessor) : ICurrentUserService, IBackgroundUserScope
 {
+    private Guid? _backgroundUserId;
+
     public Guid UserId
     {
         get
         {
+            if (_backgroundUserId is { } overridden) return overridden;
+
             var claim = httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)
                 ?? throw new InvalidOperationException("User is not authenticated.");
 
@@ -18,5 +22,8 @@ public sealed class CurrentUserService(IHttpContextAccessor httpContextAccessor)
     }
 
     public bool IsAuthenticated =>
-        httpContextAccessor.HttpContext?.User.Identity?.IsAuthenticated ?? false;
+        _backgroundUserId.HasValue ||
+        (httpContextAccessor.HttpContext?.User.Identity?.IsAuthenticated ?? false);
+
+    public void SetUserId(Guid userId) => _backgroundUserId = userId;
 }

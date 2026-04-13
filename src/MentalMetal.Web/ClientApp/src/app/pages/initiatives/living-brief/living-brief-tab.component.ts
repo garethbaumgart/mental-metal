@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -276,6 +277,7 @@ export class LivingBriefTabComponent {
 
   private readonly briefService = inject(InitiativeBriefService);
   private readonly toast = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly loading = signal(true);
   readonly refreshing = signal(false);
@@ -342,7 +344,7 @@ export class LivingBriefTabComponent {
 
   private loadAll(id: string) {
     this.loading.set(true);
-    this.briefService.get(id).subscribe({
+    this.briefService.get(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: b => { this.brief.set(b); this.loading.set(false); },
       error: () => { this.loading.set(false); },
     });
@@ -350,14 +352,14 @@ export class LivingBriefTabComponent {
   }
 
   private reloadPending() {
-    this.briefService.listPending(this.initiativeId()).subscribe({
+    this.briefService.listPending(this.initiativeId()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: list => this.pendingUpdates.set(list),
     });
   }
 
   refreshNow() {
     this.refreshing.set(true);
-    this.briefService.refresh(this.initiativeId()).subscribe({
+    this.briefService.refresh(this.initiativeId()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.refreshing.set(false);
         this.toast.add({ severity: 'success', summary: 'Refresh requested' });
@@ -371,16 +373,17 @@ export class LivingBriefTabComponent {
   }
 
   saveSummary() {
-    this.briefService.updateSummary(this.initiativeId(), { summary: this.newSummary }).subscribe({
-      next: b => { this.brief.set(b); this.editSummaryDialog.set(false); },
-    });
+    this.briefService.updateSummary(this.initiativeId(), { summary: this.newSummary })
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: b => { this.brief.set(b); this.editSummaryDialog.set(false); },
+      });
   }
 
   logDecision() {
     this.briefService.logDecision(this.initiativeId(), {
       description: this.newDecisionDescription,
       rationale: this.newDecisionRationale || null,
-    }).subscribe({
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: b => {
         this.brief.set(b);
         this.logDecisionDialog.set(false);
@@ -394,7 +397,7 @@ export class LivingBriefTabComponent {
     this.briefService.raiseRisk(this.initiativeId(), {
       description: this.newRiskDescription,
       severity: this.newRiskSeverity,
-    }).subscribe({
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: b => {
         this.brief.set(b);
         this.raiseRiskDialog.set(false);
@@ -404,42 +407,47 @@ export class LivingBriefTabComponent {
   }
 
   resolveRisk(riskId: string) {
-    this.briefService.resolveRisk(this.initiativeId(), riskId, { resolutionNote: null }).subscribe({
-      next: b => this.brief.set(b),
-    });
+    this.briefService.resolveRisk(this.initiativeId(), riskId, { resolutionNote: null })
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: b => this.brief.set(b),
+      });
   }
 
   snapshotReq() {
-    this.briefService.snapshotRequirements(this.initiativeId(), { content: this.newReqContent }).subscribe({
-      next: b => { this.brief.set(b); this.reqDialog.set(false); this.newReqContent = ''; },
-    });
+    this.briefService.snapshotRequirements(this.initiativeId(), { content: this.newReqContent })
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: b => { this.brief.set(b); this.reqDialog.set(false); this.newReqContent = ''; },
+      });
   }
 
   snapshotDesign() {
-    this.briefService.snapshotDesignDirection(this.initiativeId(), { content: this.newDesignContent }).subscribe({
-      next: b => { this.brief.set(b); this.designDialog.set(false); this.newDesignContent = ''; },
-    });
+    this.briefService.snapshotDesignDirection(this.initiativeId(), { content: this.newDesignContent })
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: b => { this.brief.set(b); this.designDialog.set(false); this.newDesignContent = ''; },
+      });
   }
 
   applyUpdate(updateId: string) {
-    this.briefService.applyPending(this.initiativeId(), updateId).subscribe({
-      next: b => {
-        this.brief.set(b);
-        this.toast.add({ severity: 'success', summary: 'Update applied' });
-        this.reloadPending();
-      },
-      error: err => {
-        const msg = err?.status === 409 ? 'This proposal is stale — refresh to regenerate.' : 'Apply failed';
-        this.toast.add({ severity: 'warn', summary: msg });
-        this.reloadPending();
-      },
-    });
+    this.briefService.applyPending(this.initiativeId(), updateId)
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: b => {
+          this.brief.set(b);
+          this.toast.add({ severity: 'success', summary: 'Update applied' });
+          this.reloadPending();
+        },
+        error: err => {
+          const msg = err?.status === 409 ? 'This proposal is stale — refresh to regenerate.' : 'Apply failed';
+          this.toast.add({ severity: 'warn', summary: msg });
+          this.reloadPending();
+        },
+      });
   }
 
   rejectUpdate(updateId: string) {
-    this.briefService.rejectPending(this.initiativeId(), updateId, { reason: null }).subscribe({
-      next: () => { this.toast.add({ severity: 'info', summary: 'Update rejected' }); this.reloadPending(); },
-    });
+    this.briefService.rejectPending(this.initiativeId(), updateId, { reason: null })
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: () => { this.toast.add({ severity: 'info', summary: 'Update rejected' }); this.reloadPending(); },
+      });
   }
 
   statusSeverity(s: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
