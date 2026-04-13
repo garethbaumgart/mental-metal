@@ -216,11 +216,14 @@ export class GlobalChatSlideOverComponent {
       this.composer.set('');
       this.awaitingReply.set(true);
 
+      const sendingThreadId = thread.id;
       this.chatService.postMessage(thread.id, { content: draft }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (resp) => {
+          // Only mutate activeThread / clear awaitingReply if user hasn't switched threads in-flight.
+          if (this.state.activeThread()?.id !== sendingThreadId) return;
           this.awaitingReply.set(false);
           this.state.activeThread.update((t) => {
-            if (!t) return t;
+            if (!t || t.id !== sendingThreadId) return t;
             const base = t.messages.filter((m) => m !== optimistic);
             return {
               ...t,
@@ -232,20 +235,22 @@ export class GlobalChatSlideOverComponent {
           });
         },
         error: (err) => {
-          this.awaitingReply.set(false);
           const status = err?.status as number | undefined;
           this.messageService.add({
             severity: 'error',
             summary: status === 409 ? 'This thread is archived' : 'Failed to send message',
           });
-          this.state.activeThread.update((t) => t ? { ...t, messages: t.messages.filter((m) => m !== optimistic) } : t);
+          // Only roll back optimistic state / clear awaitingReply / reconcile if still on the originating thread.
+          if (this.state.activeThread()?.id !== sendingThreadId) return;
+          this.awaitingReply.set(false);
+          this.state.activeThread.update((t) => t && t.id === sendingThreadId ? { ...t, messages: t.messages.filter((m) => m !== optimistic) } : t);
           if (status === 409) {
             // Server archived this thread concurrently: mirror that locally so the composer
             // disables itself via [disabled]="composerDisabled()" and the rail is consistent.
-            this.state.activeThread.update((t) => t && t.id === thread.id ? { ...t, status: 'Archived' } : t);
-            const moved = this.state.activeThreads().find((t) => t.id === thread.id);
-            this.state.activeThreads.update((list) => list.filter((t) => t.id !== thread.id));
-            if (moved && !this.state.archivedThreads().some((t) => t.id === thread.id)) {
+            this.state.activeThread.update((t) => t && t.id === sendingThreadId ? { ...t, status: 'Archived' } : t);
+            const moved = this.state.activeThreads().find((t) => t.id === sendingThreadId);
+            this.state.activeThreads.update((list) => list.filter((t) => t.id !== sendingThreadId));
+            if (moved && !this.state.archivedThreads().some((t) => t.id === sendingThreadId)) {
               this.state.archivedThreads.update((list) => [{ ...moved, status: 'Archived' }, ...list]);
             }
           }

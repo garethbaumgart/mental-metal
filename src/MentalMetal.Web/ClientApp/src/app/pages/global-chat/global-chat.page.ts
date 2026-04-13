@@ -317,22 +317,28 @@ export class GlobalChatPageComponent {
     this.composer.set('');
     this.awaitingReply.set(true);
 
+    const sendingThreadId = thread.id;
     this.chatService.postMessage(thread.id, { content: draft }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (resp) => {
+        // Always update the rail summary so background threads still reflect server state.
+        this.state.activeThreads.update((list) => list.map((x) => x.id === resp.thread.id ? { ...x, ...resp.thread } : x));
+        // But only mutate activeThread / awaitingReply if the user is still viewing the originating thread.
+        if (this.state.activeThread()?.id !== sendingThreadId) return;
         this.awaitingReply.set(false);
         this.state.activeThread.update((t) => {
-          if (!t) return t;
+          if (!t || t.id !== sendingThreadId) return t;
           const base = t.messages.filter((m) => m !== optimistic);
           return { ...t, title: resp.thread.title, messages: [...base, resp.userMessage, resp.assistantMessage], messageCount: resp.thread.messageCount, lastMessageAt: resp.thread.lastMessageAt ?? resp.assistantMessage.createdAt };
         });
-        this.state.activeThreads.update((list) => list.map((x) => x.id === resp.thread.id ? { ...x, ...resp.thread } : x));
       },
       error: (err) => {
-        this.awaitingReply.set(false);
         const status = err?.status as number | undefined;
         this.messageService.add({ severity: 'error', summary: status === 409 ? 'This thread is archived' : 'Failed to send message' });
-        this.state.activeThread.update((t) => t ? { ...t, messages: t.messages.filter((m) => m !== optimistic) } : t);
-        if (status === 409) this.reconcileArchivedThread(thread.id);
+        // Only roll back optimistic state / clear awaitingReply / reconcile if still on the originating thread.
+        if (this.state.activeThread()?.id !== sendingThreadId) return;
+        this.awaitingReply.set(false);
+        this.state.activeThread.update((t) => t && t.id === sendingThreadId ? { ...t, messages: t.messages.filter((m) => m !== optimistic) } : t);
+        if (status === 409) this.reconcileArchivedThread(sendingThreadId);
       },
     });
   }
