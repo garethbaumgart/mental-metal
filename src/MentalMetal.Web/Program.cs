@@ -783,6 +783,86 @@ app.MapPost("/api/captures/{id:guid}/unlink-initiative", async (
     }
 }).RequireAuthorization();
 
+app.MapPost("/api/captures/{id:guid}/process", async (
+    Guid id,
+    ProcessCaptureHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, cancellationToken);
+        return Results.Accepted(null, response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("Cannot begin processing"))
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/captures/{id:guid}/retry", async (
+    Guid id,
+    RetryProcessingHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("Cannot retry"))
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/captures/{id:guid}/confirm-extraction", async (
+    Guid id,
+    ConfirmExtractionHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("Cannot confirm"))
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/captures/{id:guid}/discard-extraction", async (
+    Guid id,
+    DiscardExtractionHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("Cannot discard"))
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
 // --- Commitment Endpoints ---
 
 app.MapPost("/api/commitments", async (

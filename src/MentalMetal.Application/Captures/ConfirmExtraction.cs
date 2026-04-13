@@ -1,0 +1,124 @@
+using MentalMetal.Application.Common;
+using MentalMetal.Domain.Captures;
+using MentalMetal.Domain.Commitments;
+using MentalMetal.Domain.Delegations;
+using MentalMetal.Domain.People;
+using MentalMetal.Domain.Initiatives;
+using MentalMetal.Domain.Users;
+
+namespace MentalMetal.Application.Captures;
+
+public sealed class ConfirmExtractionHandler(
+    ICaptureRepository captureRepository,
+    ICommitmentRepository commitmentRepository,
+    IDelegationRepository delegationRepository,
+    IPersonRepository personRepository,
+    IInitiativeRepository initiativeRepository,
+    ICurrentUserService currentUserService,
+    IUnitOfWork unitOfWork)
+{
+    public async Task<CaptureResponse> HandleAsync(Guid captureId, CancellationToken cancellationToken)
+    {
+        var capture = await captureRepository.GetByIdAsync(captureId, cancellationToken)
+            ?? throw new InvalidOperationException($"Capture not found: {captureId}");
+
+        capture.ConfirmExtraction();
+
+        var extraction = capture.AiExtraction!;
+        var userId = currentUserService.UserId;
+
+        // Load all people and initiatives for matching
+        var people = await personRepository.GetAllAsync(userId, null, false, cancellationToken);
+        var initiatives = await initiativeRepository.GetAllAsync(userId, null, cancellationToken);
+
+        // Spawn commitments
+        foreach (var ec in extraction.Commitments)
+        {
+            var personId = MatchPerson(ec.PersonHint, people);
+            if (personId == Guid.Empty) continue; // Skip if no person match — PersonId is required
+
+            var direction = ec.Direction == "MineToThem"
+                ? CommitmentDirection.MineToThem
+                : CommitmentDirection.TheirsToMe;
+
+            DateOnly? dueDate = DateOnly.TryParse(ec.DueDate, out var d) ? d : null;
+
+            var commitment = Commitment.Create(userId, ec.Description, direction, personId, dueDate,
+                sourceCaptureId: capture.Id);
+            await commitmentRepository.AddAsync(commitment, cancellationToken);
+            capture.RecordSpawnedCommitment(commitment.Id);
+        }
+
+        // Spawn delegations
+        foreach (var ed in extraction.Delegations)
+        {
+            var personId = MatchPerson(ed.PersonHint, people);
+            if (personId == Guid.Empty) continue; // Skip if no person match — DelegatePersonId is required
+
+            DateOnly? dueDate = DateOnly.TryParse(ed.DueDate, out var d) ? d : null;
+
+            var delegation = Delegation.Create(userId, ed.Description, personId, dueDate,
+                sourceCaptureId: capture.Id);
+            await delegationRepository.AddAsync(delegation, cancellationToken);
+            capture.RecordSpawnedDelegation(delegation.Id);
+        }
+
+        // Auto-link matched people
+        foreach (var personHint in extraction.SuggestedPersonLinks)
+        {
+            var personId = MatchPerson(personHint, people);
+            if (personId != Guid.Empty)
+                capture.LinkToPerson(personId);
+        }
+
+        // Auto-link matched initiatives
+        foreach (var initiativeHint in extraction.SuggestedInitiativeLinks)
+        {
+            var initiativeId = MatchInitiative(initiativeHint, initiatives);
+            if (initiativeId != Guid.Empty)
+                capture.LinkToInitiative(initiativeId);
+        }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return CaptureResponse.From(capture);
+    }
+
+    private static Guid MatchPerson(string? hint, IReadOnlyList<Person> people)
+    {
+        if (string.IsNullOrWhiteSpace(hint)) return Guid.Empty;
+
+        var normalizedHint = hint.Trim().ToLower();
+
+        // Exact match first
+        var exact = people.FirstOrDefault(p => p.Name.ToLower() == normalizedHint);
+        if (exact is not null) return exact.Id;
+
+        // Contains match (e.g., "Sarah" matches "Sarah Chen")
+        var partial = people.FirstOrDefault(p =>
+            p.Name.ToLower().Contains(normalizedHint) ||
+            normalizedHint.Contains(p.Name.ToLower()));
+        if (partial is not null) return partial.Id;
+
+        // First name match
+        var firstName = people.FirstOrDefault(p =>
+            p.Name.ToLower().Split(' ')[0] == normalizedHint);
+
+        return firstName?.Id ?? Guid.Empty;
+    }
+
+    private static Guid MatchInitiative(string? hint, IReadOnlyList<Initiative> initiatives)
+    {
+        if (string.IsNullOrWhiteSpace(hint)) return Guid.Empty;
+
+        var normalizedHint = hint.Trim().ToLower();
+
+        var exact = initiatives.FirstOrDefault(i => i.Title.ToLower() == normalizedHint);
+        if (exact is not null) return exact.Id;
+
+        var partial = initiatives.FirstOrDefault(i =>
+            i.Title.ToLower().Contains(normalizedHint) ||
+            normalizedHint.Contains(i.Title.ToLower()));
+
+        return partial?.Id ?? Guid.Empty;
+    }
+}

@@ -14,7 +14,8 @@ public sealed class Capture : AggregateRoot, IUserScoped
     public string RawContent { get; private set; } = null!;
     public CaptureType CaptureType { get; private set; }
     public ProcessingStatus ProcessingStatus { get; private set; }
-    public string? AiExtraction { get; private set; }
+    public AiExtraction? AiExtraction { get; private set; }
+    public string? FailureReason { get; private set; }
     public IReadOnlyList<Guid> LinkedPersonIds => _linkedPersonIds;
     public IReadOnlyList<Guid> LinkedInitiativeIds => _linkedInitiativeIds;
     public IReadOnlyList<Guid> SpawnedCommitmentIds => _spawnedCommitmentIds;
@@ -64,14 +65,17 @@ public sealed class Capture : AggregateRoot, IUserScoped
         RaiseDomainEvent(new CaptureProcessingStarted(Id));
     }
 
-    public void CompleteProcessing(string? extraction = null)
+    public void CompleteProcessing(AiExtraction extraction)
     {
+        ArgumentNullException.ThrowIfNull(extraction, nameof(extraction));
+
         if (ProcessingStatus != ProcessingStatus.Processing)
             throw new InvalidOperationException(
                 $"Cannot complete processing from '{ProcessingStatus}' status. Must be 'Processing'.");
 
         ProcessingStatus = ProcessingStatus.Processed;
         AiExtraction = extraction;
+        FailureReason = null;
         ProcessedAt = DateTimeOffset.UtcNow;
         UpdatedAt = DateTimeOffset.UtcNow;
 
@@ -85,6 +89,7 @@ public sealed class Capture : AggregateRoot, IUserScoped
                 $"Cannot fail processing from '{ProcessingStatus}' status. Must be 'Processing'.");
 
         ProcessingStatus = ProcessingStatus.Failed;
+        FailureReason = reason;
         UpdatedAt = DateTimeOffset.UtcNow;
 
         RaiseDomainEvent(new CaptureProcessingFailed(Id, reason));
@@ -97,9 +102,34 @@ public sealed class Capture : AggregateRoot, IUserScoped
                 $"Cannot retry processing from '{ProcessingStatus}' status. Must be 'Failed'.");
 
         ProcessingStatus = ProcessingStatus.Raw;
+        FailureReason = null;
+        AiExtraction = null;
         UpdatedAt = DateTimeOffset.UtcNow;
 
         RaiseDomainEvent(new CaptureRetryRequested(Id));
+    }
+
+    public void ConfirmExtraction()
+    {
+        if (ProcessingStatus != ProcessingStatus.Processed)
+            throw new InvalidOperationException(
+                $"Cannot confirm extraction from '{ProcessingStatus}' status. Must be 'Processed'.");
+
+        if (AiExtraction is null)
+            throw new InvalidOperationException("No extraction to confirm.");
+
+        RaiseDomainEvent(new CaptureExtractionConfirmed(Id));
+    }
+
+    public void DiscardExtraction()
+    {
+        if (ProcessingStatus != ProcessingStatus.Processed)
+            throw new InvalidOperationException(
+                $"Cannot discard extraction from '{ProcessingStatus}' status. Must be 'Processed'.");
+
+        UpdatedAt = DateTimeOffset.UtcNow;
+
+        RaiseDomainEvent(new CaptureExtractionDiscarded(Id));
     }
 
     public void LinkToPerson(Guid personId)
