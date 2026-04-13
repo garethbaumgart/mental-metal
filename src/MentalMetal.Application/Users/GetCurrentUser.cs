@@ -21,7 +21,8 @@ public sealed class GetCurrentUserHandler(
             new UserPreferencesDto(
                 user.Preferences.Theme.ToString(),
                 user.Preferences.NotificationsEnabled,
-                user.Preferences.BriefingTime),
+                user.Preferences.BriefingTime,
+                user.Preferences.LivingBriefAutoApply),
             user.AiProviderConfig is not null,
             user.CreatedAt,
             user.LastLoginAt);

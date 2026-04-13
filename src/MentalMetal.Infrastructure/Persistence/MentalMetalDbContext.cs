@@ -4,6 +4,7 @@ using MentalMetal.Domain.Commitments;
 using MentalMetal.Domain.Common;
 using MentalMetal.Domain.Delegations;
 using MentalMetal.Domain.Initiatives;
+using MentalMetal.Domain.Initiatives.LivingBrief;
 using MentalMetal.Domain.People;
 using MentalMetal.Domain.Users;
 using MentalMetal.Infrastructure.Ai;
@@ -25,6 +26,9 @@ public sealed class MentalMetalDbContext(
     public DbSet<Commitment> Commitments => Set<Commitment>();
     public DbSet<Delegation> Delegations => Set<Delegation>();
     public DbSet<AiTasteBudget> AiTasteBudgets => Set<AiTasteBudget>();
+    public DbSet<PendingBriefUpdate> PendingBriefUpdates => Set<PendingBriefUpdate>();
+
+    public void DiscardPendingChanges() => ChangeTracker.Clear();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -37,5 +41,6 @@ public sealed class MentalMetalDbContext(
         modelBuilder.Entity<Capture>().HasQueryFilter(c => c.UserId == currentUserService.UserId);
         modelBuilder.Entity<Commitment>().HasQueryFilter(c => c.UserId == currentUserService.UserId);
         modelBuilder.Entity<Delegation>().HasQueryFilter(d => d.UserId == currentUserService.UserId);
+        modelBuilder.Entity<PendingBriefUpdate>().HasQueryFilter(p => p.UserId == currentUserService.UserId);
     }
 }

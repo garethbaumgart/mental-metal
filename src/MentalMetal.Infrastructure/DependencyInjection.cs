@@ -5,12 +5,14 @@ using MentalMetal.Application.Common;
 using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.Common.Auth;
 using MentalMetal.Application.Initiatives;
+using MentalMetal.Application.Initiatives.Brief;
 using MentalMetal.Application.People;
 using MentalMetal.Application.Users;
 using MentalMetal.Domain.Captures;
 using MentalMetal.Domain.Commitments;
 using MentalMetal.Domain.Delegations;
 using MentalMetal.Domain.Initiatives;
+using MentalMetal.Domain.Initiatives.LivingBrief;
 using MentalMetal.Domain.People;
 using MentalMetal.Domain.Users;
 using MentalMetal.Infrastructure.Ai;
@@ -46,10 +48,13 @@ public static class DependencyInjection
         // Infrastructure services
         services.AddHttpContextAccessor();
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<MentalMetalDbContext>());
-        services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<CurrentUserService>();
+        services.AddScoped<ICurrentUserService>(sp => sp.GetRequiredService<CurrentUserService>());
+        services.AddScoped<IBackgroundUserScope>(sp => sp.GetRequiredService<CurrentUserService>());
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPersonRepository, PersonRepository>();
         services.AddScoped<IInitiativeRepository, InitiativeRepository>();
+        services.AddScoped<IPendingBriefUpdateRepository, PendingBriefUpdateRepository>();
         services.AddScoped<ICaptureRepository, CaptureRepository>();
         services.AddScoped<ICommitmentRepository, CommitmentRepository>();
         services.AddScoped<IDelegationRepository, DelegationRepository>();
@@ -103,6 +108,24 @@ public static class DependencyInjection
         services.AddScoped<CompleteMilestoneHandler>();
         services.AddScoped<LinkPersonHandler>();
         services.AddScoped<UnlinkPersonHandler>();
+
+        // Living Brief services and handlers
+        services.AddSingleton<BriefRefreshQueue>();
+        services.AddScoped<IBriefMaintenanceService, BriefMaintenanceService>();
+        services.AddHostedService<BriefRefreshHostedService>();
+        services.AddScoped<GetInitiativeBriefHandler>();
+        services.AddScoped<UpdateInitiativeBriefSummaryHandler>();
+        services.AddScoped<LogInitiativeBriefDecisionHandler>();
+        services.AddScoped<RaiseInitiativeBriefRiskHandler>();
+        services.AddScoped<ResolveInitiativeBriefRiskHandler>();
+        services.AddScoped<SnapshotInitiativeBriefRequirementsHandler>();
+        services.AddScoped<SnapshotInitiativeBriefDesignDirectionHandler>();
+        services.AddScoped<RefreshInitiativeBriefHandler>();
+        services.AddScoped<ListPendingBriefUpdatesHandler>();
+        services.AddScoped<GetPendingBriefUpdateHandler>();
+        services.AddScoped<ApplyPendingBriefUpdateHandler>();
+        services.AddScoped<RejectPendingBriefUpdateHandler>();
+        services.AddScoped<EditPendingBriefUpdateHandler>();
 
         // Commitment handlers
         services.AddScoped<CreateCommitmentHandler>();

@@ -10,11 +10,13 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { AutoCompleteModule, AutoCompleteCompleteEvent } from 'primeng/autocomplete';
 import { DatePickerModule } from 'primeng/datepicker';
+import { TabsModule } from 'primeng/tabs';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { InitiativesService } from '../../../shared/services/initiatives.service';
 import { PeopleService } from '../../../shared/services/people.service';
 import { Initiative, InitiativeStatus, Milestone } from '../../../shared/models/initiative.model';
 import { Person } from '../../../shared/models/person.model';
+import { LivingBriefTabComponent } from '../living-brief/living-brief-tab.component';
 
 @Component({
   selector: 'app-initiative-detail',
@@ -31,6 +33,8 @@ import { Person } from '../../../shared/models/person.model';
     ConfirmDialogModule,
     AutoCompleteModule,
     DatePickerModule,
+    TabsModule,
+    LivingBriefTabComponent,
   ],
   styles: [`
     .milestone-card, .milestone-form {
@@ -57,6 +61,15 @@ import { Person } from '../../../shared/models/person.model';
             [severity]="statusSeverity(initiative()!.status)"
           />
         </div>
+
+        <p-tabs value="overview">
+          <p-tablist>
+            <p-tab value="overview">Overview</p-tab>
+            <p-tab value="brief">Living Brief</p-tab>
+          </p-tablist>
+          <p-tabpanels>
+            <p-tabpanel value="overview">
+              <div class="flex flex-col gap-8">
 
         <!-- Title Section -->
         <section class="flex flex-col gap-4">
@@ -205,6 +218,13 @@ import { Person } from '../../../shared/models/person.model';
             />
           </div>
         </section>
+              </div>
+            </p-tabpanel>
+            <p-tabpanel value="brief">
+              <app-living-brief-tab [initiativeId]="initiative()!.id" />
+            </p-tabpanel>
+          </p-tabpanels>
+        </p-tabs>
       </div>
     }
   `,

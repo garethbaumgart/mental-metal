@@ -49,6 +49,10 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
 
             prefs.Property(p => p.BriefingTime)
                 .HasColumnName("PreferencesBriefingTime");
+
+            prefs.Property(p => p.LivingBriefAutoApply)
+                .HasColumnName("PreferencesLivingBriefAutoApply")
+                .HasDefaultValue(false);
         });
 
         builder.OwnsOne(u => u.AiProviderConfig, ai =>

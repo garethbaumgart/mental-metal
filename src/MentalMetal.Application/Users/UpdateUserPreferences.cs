@@ -17,7 +17,7 @@ public sealed class UpdateUserPreferencesHandler(
         if (!Enum.TryParse<Theme>(request.Theme, ignoreCase: true, out var theme))
             throw new ArgumentException($"'{request.Theme}' is not a valid theme.", nameof(request));
 
-        var preferences = UserPreferences.Create(theme, request.NotificationsEnabled, request.BriefingTime);
+        var preferences = UserPreferences.Create(theme, request.NotificationsEnabled, request.BriefingTime, request.LivingBriefAutoApply);
         user.UpdatePreferences(preferences);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);

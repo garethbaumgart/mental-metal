@@ -14,7 +14,8 @@ public sealed record UserProfileResponse(
 public sealed record UserPreferencesDto(
     string Theme,
     bool NotificationsEnabled,
-    TimeOnly BriefingTime);
+    TimeOnly BriefingTime,
+    bool LivingBriefAutoApply = false);
 
 public sealed record UpdateProfileRequest(
     string Name,
@@ -24,6 +25,7 @@ public sealed record UpdateProfileRequest(
 public sealed record UpdatePreferencesRequest(
     string Theme,
     bool NotificationsEnabled,
-    TimeOnly BriefingTime);
+    TimeOnly BriefingTime,
+    bool LivingBriefAutoApply = false);
 
 public sealed record AuthTokenResponse(string AccessToken, string? RefreshToken = null);

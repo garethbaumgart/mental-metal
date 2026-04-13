@@ -1,5 +1,6 @@
 using System.Globalization;
 using MentalMetal.Application.Common;
+using MentalMetal.Application.Initiatives.Brief;
 using MentalMetal.Domain.Captures;
 using MentalMetal.Domain.Commitments;
 using MentalMetal.Domain.Delegations;
@@ -16,7 +17,8 @@ public sealed class ConfirmExtractionHandler(
     IPersonRepository personRepository,
     IInitiativeRepository initiativeRepository,
     ICurrentUserService currentUserService,
-    IUnitOfWork unitOfWork)
+    IUnitOfWork unitOfWork,
+    IBriefMaintenanceService? briefMaintenanceService = null)
 {
     public async Task<ConfirmExtractionResponse> HandleAsync(Guid captureId, CancellationToken cancellationToken)
     {
@@ -92,6 +94,16 @@ public sealed class ConfirmExtractionHandler(
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Trigger a debounced living-brief refresh for each linked initiative belonging to this user.
+        if (briefMaintenanceService is not null)
+        {
+            foreach (var linkedInitiativeId in capture.LinkedInitiativeIds)
+            {
+                briefMaintenanceService.EnqueueRefresh(userId, linkedInitiativeId);
+            }
+        }
+
         return new ConfirmExtractionResponse(CaptureResponse.From(capture), warnings.AsReadOnly());
     }
 
