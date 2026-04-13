@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import {
   Capture,
   CaptureType,
+  ConfirmExtractionResponse,
   CreateCaptureRequest,
   ProcessingStatus,
   UpdateCaptureMetadataRequest,
@@ -45,8 +46,8 @@ export class CapturesService {
     return this.http.post<Capture>(`${this.baseUrl}/${id}/retry`, {});
   }
 
-  confirmExtraction(id: string): Observable<Capture> {
-    return this.http.post<Capture>(`${this.baseUrl}/${id}/confirm-extraction`, {});
+  confirmExtraction(id: string): Observable<ConfirmExtractionResponse> {
+    return this.http.post<ConfirmExtractionResponse>(`${this.baseUrl}/${id}/confirm-extraction`, {});
   }
 
   discardExtraction(id: string): Observable<Capture> {

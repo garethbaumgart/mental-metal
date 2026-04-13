@@ -12,6 +12,9 @@ public sealed class ValidateAiProviderHandler(IAiProviderValidator providerValid
             || !Enum.IsDefined(provider))
             return new ValidateAiProviderResponse(false, null, $"Unsupported provider: {request.Provider}");
 
+        if (string.IsNullOrWhiteSpace(request.ApiKey))
+            return new ValidateAiProviderResponse(false, null, "API key is required.");
+
         try
         {
             var model = await providerValidator.ValidateAsync(

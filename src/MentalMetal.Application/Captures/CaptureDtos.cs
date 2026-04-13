@@ -38,6 +38,8 @@ public sealed record ExtractedCommitmentResponse(string Description, string Dire
 public sealed record ExtractedDelegationResponse(string Description, string? PersonHint, string? DueDate);
 public sealed record ExtractedObservationResponse(string Description, string? PersonHint, string? Tag);
 
+public sealed record ConfirmExtractionResponse(CaptureResponse Capture, List<string> Warnings);
+
 public sealed record CaptureResponse(
     Guid Id,
     Guid UserId,

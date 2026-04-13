@@ -18,15 +18,18 @@ public sealed class ConfirmExtractionHandler(
     ICurrentUserService currentUserService,
     IUnitOfWork unitOfWork)
 {
-    public async Task<CaptureResponse> HandleAsync(Guid captureId, CancellationToken cancellationToken)
+    public async Task<ConfirmExtractionResponse> HandleAsync(Guid captureId, CancellationToken cancellationToken)
     {
-        var capture = await captureRepository.GetByIdAsync(captureId, cancellationToken)
-            ?? throw new InvalidOperationException($"Capture not found: {captureId}");
+        var capture = await captureRepository.GetByIdAsync(captureId, cancellationToken);
+
+        if (capture is null || capture.UserId != currentUserService.UserId)
+            throw new InvalidOperationException($"Capture not found: {captureId}");
 
         capture.ConfirmExtraction();
 
         var extraction = capture.AiExtraction!;
         var userId = currentUserService.UserId;
+        var warnings = new List<string>();
 
         // Load all people and initiatives for matching
         var people = await personRepository.GetAllAsync(userId, null, false, cancellationToken);
@@ -36,7 +39,11 @@ public sealed class ConfirmExtractionHandler(
         foreach (var ec in extraction.Commitments)
         {
             var personId = MatchPerson(ec.PersonHint, people);
-            if (personId == Guid.Empty) continue; // Skip if no person match — PersonId is required
+            if (personId == Guid.Empty)
+            {
+                warnings.Add($"Commitment skipped — no matching person for \"{ec.PersonHint ?? "(none)"}\": {ec.Description}");
+                continue;
+            }
 
             var direction = ec.Direction == ExtractionDirection.MineToThem
                 ? CommitmentDirection.MineToThem
@@ -54,7 +61,11 @@ public sealed class ConfirmExtractionHandler(
         foreach (var ed in extraction.Delegations)
         {
             var personId = MatchPerson(ed.PersonHint, people);
-            if (personId == Guid.Empty) continue; // Skip if no person match — DelegatePersonId is required
+            if (personId == Guid.Empty)
+            {
+                warnings.Add($"Delegation skipped — no matching person for \"{ed.PersonHint ?? "(none)"}\": {ed.Description}");
+                continue;
+            }
 
             DateOnly? dueDate = ParseIsoDate(ed.DueDate);
 
@@ -81,7 +92,7 @@ public sealed class ConfirmExtractionHandler(
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        return CaptureResponse.From(capture);
+        return new ConfirmExtractionResponse(CaptureResponse.From(capture), warnings);
     }
 
     private static DateOnly? ParseIsoDate(string? value) =>
