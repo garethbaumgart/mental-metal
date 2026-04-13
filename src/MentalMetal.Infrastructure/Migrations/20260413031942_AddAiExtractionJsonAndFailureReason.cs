@@ -13,14 +13,8 @@ namespace MentalMetal.Infrastructure.Migrations
             // Clear any existing non-JSON text values before converting to jsonb
             migrationBuilder.Sql("""UPDATE "Captures" SET "AiExtraction" = NULL WHERE "AiExtraction" IS NOT NULL""");
 
-            migrationBuilder.AlterColumn<string>(
-                name: "AiExtraction",
-                table: "Captures",
-                type: "jsonb",
-                nullable: true,
-                oldClrType: typeof(string),
-                oldType: "text",
-                oldNullable: true);
+            // AlterColumn doesn't generate USING clause; PostgreSQL requires it for text→jsonb cast
+            migrationBuilder.Sql("""ALTER TABLE "Captures" ALTER COLUMN "AiExtraction" TYPE jsonb USING "AiExtraction"::jsonb""");
 
             migrationBuilder.AddColumn<string>(
                 name: "FailureReason",
@@ -37,14 +31,7 @@ namespace MentalMetal.Infrastructure.Migrations
                 name: "FailureReason",
                 table: "Captures");
 
-            migrationBuilder.AlterColumn<string>(
-                name: "AiExtraction",
-                table: "Captures",
-                type: "text",
-                nullable: true,
-                oldClrType: typeof(string),
-                oldType: "jsonb",
-                oldNullable: true);
+            migrationBuilder.Sql("""ALTER TABLE "Captures" ALTER COLUMN "AiExtraction" TYPE text USING "AiExtraction"::text""");
         }
     }
 }
