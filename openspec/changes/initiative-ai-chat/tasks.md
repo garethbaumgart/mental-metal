@@ -52,13 +52,13 @@
 
 ## 6. Application Layer — Vertical Slice Handlers
 
-- [ ] 6.1 `StartInitiativeChatThread` command handler (POST /chat/threads)
-- [ ] 6.2 `ListInitiativeChatThreads` query handler (GET /chat/threads, filterable by status)
-- [ ] 6.3 `GetInitiativeChatThread` query handler (GET /chat/threads/{threadId})
-- [ ] 6.4 `RenameInitiativeChatThread` command handler (PUT /chat/threads/{threadId})
-- [ ] 6.5 `PostInitiativeChatMessage` command handler (POST /chat/threads/{threadId}/messages) — orchestrates the completion service
-- [ ] 6.6 `ArchiveInitiativeChatThread` command handler (POST /archive)
-- [ ] 6.7 `UnarchiveInitiativeChatThread` command handler (POST /unarchive)
+- [ ] 6.1 `StartInitiativeChatThread` command handler (POST /api/initiatives/{id}/chat/threads)
+- [ ] 6.2 `ListInitiativeChatThreads` query handler (GET /api/initiatives/{id}/chat/threads, filterable by status)
+- [ ] 6.3 `GetInitiativeChatThread` query handler (GET /api/initiatives/{id}/chat/threads/{threadId})
+- [ ] 6.4 `RenameInitiativeChatThread` command handler (PUT /api/initiatives/{id}/chat/threads/{threadId})
+- [ ] 6.5 `PostInitiativeChatMessage` command handler (POST /api/initiatives/{id}/chat/threads/{threadId}/messages) — orchestrates the completion service
+- [ ] 6.6 `ArchiveInitiativeChatThread` command handler (POST /api/initiatives/{id}/chat/threads/{threadId}/archive)
+- [ ] 6.7 `UnarchiveInitiativeChatThread` command handler (POST /api/initiatives/{id}/chat/threads/{threadId}/unarchive)
 
 ## 7. Application Unit Tests
 

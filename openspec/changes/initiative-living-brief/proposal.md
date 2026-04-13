@@ -2,7 +2,7 @@
 
 Initiatives in Mental Metal currently hold static metadata (name, status, milestones) but no narrative summary, decisions log, or evolving requirements/design history. As captures (notes, transcripts) flow in and get linked to an initiative, the manager's mental model of that initiative changes — but those changes are stranded inside individual captures rather than rolled up into a coherent, current-state view.
 
-This is a Tier 2 spec (`initiative-living-brief`) that depends on `ai-provider-abstraction` and `capture-ai-extraction` (both Tier 2). It introduces an AI-maintained "living brief" that updates automatically when linked captures are processed, plus a human review workflow so the user retains editorial control.
+This is a Tier 2 spec (`initiative-living-brief`) that depends on `ai-provider-abstraction` (Tier 1) and `capture-ai-extraction` (Tier 2). It introduces an AI-maintained "living brief" that updates automatically when linked captures are processed, plus a human review workflow so the user retains editorial control.
 
 ## Non-goals
 
@@ -36,7 +36,7 @@ _(none — the existing `initiative-management` and `capture-ai-extraction` spec
 
 ## Impact
 
-- **Domain:** `Initiative` aggregate gains the `LivingBrief` value-object cluster and new business actions (`RefreshSummary`, `RecordDecision`, `RaiseRisk`, `ResolveRisk`, `SnapshotRequirements`, `SnapshotDesignDirection`). New `PendingBriefUpdate` aggregate root, `BriefUpdateProposal` value object, and supporting enums (`RiskSeverity`, `RiskStatus`, `BriefSection`).
+- **Domain:** `Initiative` aggregate gains the `LivingBrief` value-object cluster and new business actions (`RefreshSummary`, `RecordDecision`, `RaiseRisk`, `ResolveRisk`, `SnapshotRequirements`, `SnapshotDesignDirection`). New `PendingBriefUpdate` aggregate root, `BriefUpdateProposal` value object, and supporting enums (`RiskSeverity`, `RiskStatus`).
 - **Application:** New `BriefMaintenanceService`, new vertical-slice handlers under `Initiatives/Brief/`, and a domain-event handler subscribing to `CaptureExtractionConfirmed`.
 - **Infrastructure:** EF Core configuration for the new owned types and the `PendingBriefUpdates` table; one migration.
 - **Web API:** New endpoints under `/api/initiatives/{id}/brief`.

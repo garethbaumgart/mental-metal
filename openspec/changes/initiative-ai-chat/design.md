@@ -56,7 +56,7 @@ The Living Brief turns captures into structured initiative knowledge. Chat is th
 
 ### 4. Context assembly is rule-based and bounded
 
-**Decision:** `InitiativeChatContextBuilder.Build(initiativeId, userQuestion, recentMessages)` returns a structured payload:
+**Decision:** `InitiativeChatContextBuilder.Build(userId, initiativeId, userQuestion, recentMessages)` returns a structured payload. `userId` is required and non-optional — every downstream query filters by it, and the handler must pass the authenticated user's ID even though the initiative is already user-scoped (defence in depth against future refactors that might weaken that invariant).
 
 - `initiativeMetadata`: { id, name, status, milestones }
 - `livingBrief`: { summary, recentDecisions[20], openRisks, latestRequirements, latestDesignDirection }

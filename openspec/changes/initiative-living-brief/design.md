@@ -144,7 +144,6 @@ The prompt instructs the AI to return a structured `BriefUpdateProposal` with: a
 ## Migration Plan
 
 - One EF Core migration adds: `LivingBrief` owned columns on `Initiatives` (initially empty), and a new `PendingBriefUpdates` table. Existing initiatives get a default empty brief on first read (no backfill needed).
-- Feature flag `LivingBriefEnabled` (per-user preference, default `true`) gates the domain-event handler subscription; users can opt out if AI cost is a concern.
 
 ## Open Questions
 

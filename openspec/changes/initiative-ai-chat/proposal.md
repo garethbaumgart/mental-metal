@@ -17,8 +17,8 @@ This is a Tier 2 spec (`initiative-ai-chat`) that depends on `ai-provider-abstra
 ## What Changes
 
 - **New `ChatThread` aggregate root** in the Domain layer, scoped to a User and bound to an Initiative via `ContextScope` (a value object — this spec only implements `ContextScope.Initiative(initiativeId)`; `Global()` is reserved for `global-ai-chat`).
-- **New `ChatMessage` value object** embedded on the thread (Role: `User | Assistant | System`, Content, CreatedAt, optional `SourceReferences` list, optional `TokenUsage`, and an `MessageOrdinal` for stable ordering).
-- **New `SourceReference` value object** capturing a citation: `EntityType` (Capture | Commitment | Delegation | LivingBrief | Initiative), `EntityId`, optional `SnippetText`, and an optional `RelevanceScore`.
+- **New `ChatMessage` value object** embedded on the thread (Role: `User | Assistant | System`, Content, CreatedAt, optional `SourceReferences` list, optional `TokenUsage`, and a `MessageOrdinal` for stable ordering).
+- **New `SourceReference` value object** capturing a citation: `EntityType` (Capture | Commitment | Delegation | LivingBriefDecision | LivingBriefRisk | LivingBriefRequirements | LivingBriefDesignDirection | Initiative), `EntityId`, optional `SnippetText`, and an optional `RelevanceScore`.
 - **New `InitiativeChatContextBuilder` Application service** that, given an InitiativeId and the user's question, assembles a structured context payload from the LivingBrief, linked Captures' `AiExtraction.Summary`, open Commitments linked to the initiative, and active Delegations linked to the initiative.
 - **CQRS handlers and minimal API endpoints** under `/api/initiatives/{id}/chat/threads` for: starting a thread, listing threads, getting a thread (with all messages), posting a user message (which triggers the AI completion synchronously and returns the assistant message), renaming a thread, and archiving a thread.
 - **EF Core persistence** for `ChatThread` and embedded messages (one new migration).
