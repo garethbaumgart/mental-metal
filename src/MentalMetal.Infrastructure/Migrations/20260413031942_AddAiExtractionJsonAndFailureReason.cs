@@ -10,11 +10,9 @@ namespace MentalMetal.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // Clear any existing non-JSON text values before converting to jsonb
-            migrationBuilder.Sql("""UPDATE "Captures" SET "AiExtraction" = NULL WHERE "AiExtraction" IS NOT NULL""");
-
-            // AlterColumn doesn't generate USING clause; PostgreSQL requires it for text→jsonb cast
-            migrationBuilder.Sql("""ALTER TABLE "Captures" ALTER COLUMN "AiExtraction" TYPE jsonb USING "AiExtraction"::jsonb""");
+            // AlterColumn doesn't generate USING clause; PostgreSQL requires it for text→jsonb cast.
+            // USING NULL::jsonb discards existing text values atomically — no race window with concurrent writes.
+            migrationBuilder.Sql("""ALTER TABLE "Captures" ALTER COLUMN "AiExtraction" TYPE jsonb USING NULL::jsonb""");
 
             migrationBuilder.AddColumn<string>(
                 name: "FailureReason",
