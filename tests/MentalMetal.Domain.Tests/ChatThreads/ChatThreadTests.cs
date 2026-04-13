@@ -244,4 +244,57 @@ public class ChatThreadTests
         Assert.Equal(ContextScopeType.Global, scope.Type);
         Assert.Null(scope.InitiativeId);
     }
+
+    [Fact]
+    public void ContextScope_Global_EqualityAndDistinctFromInitiative()
+    {
+        var a = ContextScope.Global();
+        var b = ContextScope.Global();
+        var i = ContextScope.Initiative(InitiativeId);
+
+        Assert.Equal(a, b);
+        Assert.NotEqual(a, i);
+    }
+
+    [Fact]
+    public void Start_Global_RaisesBothChatThreadStartedAndGlobalChatThreadStarted()
+    {
+        var thread = ChatThread.Start(UserId, ContextScope.Global());
+
+        Assert.Contains(thread.DomainEvents, e => e is ChatThreadStarted s && s.ScopeType == ContextScopeType.Global && s.InitiativeId == null);
+        Assert.Contains(thread.DomainEvents, e => e is GlobalChatThreadStarted g && g.ThreadId == thread.Id && g.UserId == UserId);
+    }
+
+    [Fact]
+    public void Start_Initiative_DoesNotRaiseGlobalChatThreadStarted()
+    {
+        var thread = NewThread();
+        Assert.DoesNotContain(thread.DomainEvents, e => e is GlobalChatThreadStarted);
+    }
+
+    [Fact]
+    public void SourceReference_AcceptsPersonEntityType()
+    {
+        var personId = Guid.NewGuid();
+        var reference = new SourceReference(SourceReferenceEntityType.Person, personId, "Jane Doe");
+        Assert.Equal(SourceReferenceEntityType.Person, reference.EntityType);
+        Assert.Equal(personId, reference.EntityId);
+    }
+
+    [Fact]
+    public void SourceReference_RejectsUnknownEntityType()
+    {
+        var unknown = (SourceReferenceEntityType)9999;
+        Assert.Throws<ArgumentException>(() => new SourceReference(unknown, Guid.NewGuid()));
+    }
+
+    [Fact]
+    public void SourceReference_AcceptsForwardCompatibleEntityTypes()
+    {
+        // These are reserved for people-lens and must validate today even though no records exist.
+        var id = Guid.NewGuid();
+        Assert.Equal(SourceReferenceEntityType.Observation, new SourceReference(SourceReferenceEntityType.Observation, id).EntityType);
+        Assert.Equal(SourceReferenceEntityType.Goal, new SourceReference(SourceReferenceEntityType.Goal, id).EntityType);
+        Assert.Equal(SourceReferenceEntityType.OneOnOne, new SourceReference(SourceReferenceEntityType.OneOnOne, id).EntityType);
+    }
 }

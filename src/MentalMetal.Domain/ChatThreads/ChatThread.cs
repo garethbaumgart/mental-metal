@@ -43,6 +43,8 @@ public sealed class ChatThread : AggregateRoot, IUserScoped
         };
 
         thread.RaiseDomainEvent(new ChatThreadStarted(thread.Id, userId, scope.Type, scope.InitiativeId));
+        if (scope.Type == ContextScopeType.Global)
+            thread.RaiseDomainEvent(new GlobalChatThreadStarted(thread.Id, userId));
         return thread;
     }
 

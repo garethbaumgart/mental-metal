@@ -10,5 +10,10 @@ public interface IChatThreadRepository
         ChatThreadStatus? statusFilter,
         CancellationToken cancellationToken);
 
+    Task<IReadOnlyList<ChatThread>> ListGlobalAsync(
+        Guid userId,
+        ChatThreadStatus? statusFilter,
+        CancellationToken cancellationToken);
+
     Task AddAsync(ChatThread thread, CancellationToken cancellationToken);
 }

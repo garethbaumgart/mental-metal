@@ -9,5 +9,11 @@ public enum SourceReferenceEntityType
     LivingBriefRisk,
     LivingBriefRequirements,
     LivingBriefDesignDirection,
-    Initiative
+    Initiative,
+    Person,
+    // Forward-compatible reservations for the people-lens capability. Persisted as their string
+    // names; safe to add now since they widen the enum without affecting existing rows.
+    Observation,
+    Goal,
+    OneOnOne
 }
