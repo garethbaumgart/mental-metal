@@ -62,6 +62,30 @@ module "secrets" {
   accessor_service_account = google_service_account.cloud_run.email
 }
 
+# --- DataProtection Keys Bucket ---
+# Persists ASP.NET Core DataProtection keys outside the Cloud Run container so
+# OAuth state cookies issued by one container instance can be validated by
+# another after a cold start (#75 Bug 4).
+
+resource "google_storage_bucket" "data_protection_keys" {
+  project                     = var.project_id
+  name                        = "${var.project_id}-mental-metal-staging-dp-keys"
+  location                    = var.region
+  force_destroy               = false
+  uniform_bucket_level_access = true
+  public_access_prevention    = "enforced"
+
+  versioning {
+    enabled = true
+  }
+}
+
+resource "google_storage_bucket_iam_member" "data_protection_keys_writer" {
+  bucket = google_storage_bucket.data_protection_keys.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.cloud_run.email}"
+}
+
 # --- Cloud Run ---
 
 module "cloud_run" {
@@ -74,6 +98,9 @@ module "cloud_run" {
   secret_ids              = {
     "DATABASE_URL" = "STAGING_DATABASE_URL"
     "Jwt__Secret"  = "STAGING_JWT_SECRET"
+  }
+  env_vars = {
+    "DataProtection__BucketName" = google_storage_bucket.data_protection_keys.name
   }
   runtime_service_account = google_service_account.cloud_run.email
   allow_public_access     = true

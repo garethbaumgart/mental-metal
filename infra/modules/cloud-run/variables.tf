@@ -29,6 +29,12 @@ variable "secret_ids" {
   default     = {}
 }
 
+variable "env_vars" {
+  description = "Map of plain (non-secret) environment variables to set on the container"
+  type        = map(string)
+  default     = {}
+}
+
 variable "allow_public_access" {
   description = "Whether to allow unauthenticated access to the service"
   type        = bool
