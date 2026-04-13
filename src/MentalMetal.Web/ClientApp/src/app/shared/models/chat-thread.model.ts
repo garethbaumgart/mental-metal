@@ -9,7 +9,13 @@ export type SourceReferenceEntityType =
   | 'LivingBriefRisk'
   | 'LivingBriefRequirements'
   | 'LivingBriefDesignDirection'
-  | 'Initiative';
+  | 'Initiative'
+  | 'Person'
+  // Reserved for the people-lens capability. Wire shape is forward-compatible so chips and
+  // navigation can be wired today without breaking once those records exist.
+  | 'Observation'
+  | 'Goal'
+  | 'OneOnOne';
 
 export interface SourceReference {
   entityType: SourceReferenceEntityType;

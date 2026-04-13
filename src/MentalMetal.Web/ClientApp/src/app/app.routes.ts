@@ -16,6 +16,7 @@ export const routes: Routes = [
   { path: 'delegations', loadComponent: () => import('./pages/delegations/delegations-list/delegations-list.component').then(m => m.DelegationsListComponent), canActivate: [authGuard], data: { title: 'Delegations' } },
   { path: 'delegations/:id', loadComponent: () => import('./pages/delegations/delegation-detail/delegation-detail.component').then(m => m.DelegationDetailComponent), canActivate: [authGuard], data: { title: 'Delegation Detail' } },
   { path: 'queue', loadComponent: () => import('./pages/placeholder.page').then(m => m.PlaceholderPage), canActivate: [authGuard], data: { title: 'My Queue' } },
+  { path: 'chat', loadComponent: () => import('./pages/global-chat/global-chat.page').then(m => m.GlobalChatPageComponent), canActivate: [authGuard], data: { title: 'Chat' } },
   { path: 'settings', loadComponent: () => import('./pages/settings/settings.page').then(m => m.SettingsPage), canActivate: [authGuard], data: { title: 'Settings' } },
   { path: '**', redirectTo: 'dashboard' },
 ];

@@ -29,7 +29,12 @@ import { SourceReference, SourceReferenceEntityType } from '../../../shared/mode
 })
 export class SourceReferenceChipComponent {
   readonly reference = input.required<SourceReference>();
-  readonly initiativeId = input.required<string>();
+  // Optional: when the chip is rendered inside an initiative-chat context, LivingBrief
+  // chips need the initiative id to route correctly. In the global chat we route to the
+  // initiative-detail Living Brief tab using the reference's own EntityId (which is the
+  // initiative's id when the source was Initiative-typed) — but for nested LivingBrief*
+  // refs we still need the explicit context. When omitted, LivingBrief* chips no-op.
+  readonly initiativeId = input<string | null>(null);
 
   private readonly router = inject(Router);
 
@@ -56,14 +61,26 @@ export class SourceReferenceChipComponent {
       case 'Initiative':
         this.router.navigate(['/initiatives', r.entityId]);
         break;
+      case 'Person':
+        this.router.navigate(['/people', r.entityId]);
+        break;
       case 'LivingBriefDecision':
       case 'LivingBriefRisk':
       case 'LivingBriefRequirements':
       case 'LivingBriefDesignDirection':
-        // Route to the initiative's Living Brief tab with an anchor hint.
-        this.router.navigate(['/initiatives', initiativeId], {
-          fragment: `${r.entityType}-${r.entityId}`,
-        });
+        // Route to the initiative's Living Brief tab with an anchor hint. In the global-
+        // chat surface, initiativeId may be null — degrade to a no-op rather than breaking.
+        if (initiativeId) {
+          this.router.navigate(['/initiatives', initiativeId], {
+            fragment: `${r.entityType}-${r.entityId}`,
+          });
+        }
+        break;
+      case 'Observation':
+      case 'Goal':
+      case 'OneOnOne':
+        // Forward-compatible reservations for the people-lens capability. Today these chips
+        // would never be emitted by the backend; future work routes them to person detail.
         break;
     }
   }
@@ -78,6 +95,10 @@ export class SourceReferenceChipComponent {
       case 'Commitment': return 'C';
       case 'Delegation': return 'Del';
       case 'Initiative': return 'I';
+      case 'Person': return 'P';
+      case 'Observation': return 'O';
+      case 'Goal': return 'G';
+      case 'OneOnOne': return '1:1';
     }
   }
 

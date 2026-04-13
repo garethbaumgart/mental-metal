@@ -7,6 +7,7 @@ using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.Delegations;
 using MentalMetal.Application.Initiatives;
 using MentalMetal.Application.Initiatives.Brief;
+using MentalMetal.Application.Chat.Global;
 using MentalMetal.Application.Initiatives.Chat;
 using MentalMetal.Application.People;
 using MentalMetal.Application.Users;
@@ -1448,6 +1449,77 @@ app.MapPost("/api/initiatives/{id:guid}/chat/threads/{threadId:guid}/unarchive",
     try
     {
         var thread = await handler.HandleAsync(id, threadId, ct);
+        return thread is null ? Results.NotFound() : Results.Ok(thread);
+    }
+    catch (InvalidOperationException ex) { return Results.Conflict(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+// ---- Global Chat endpoints --------------------------------------------------
+
+app.MapPost("/api/chat/threads", async (
+    StartGlobalChatThreadHandler handler, CancellationToken ct) =>
+{
+    var thread = await handler.HandleAsync(ct);
+    return Results.Created($"/api/chat/threads/{thread.Id}", thread);
+}).RequireAuthorization();
+
+app.MapGet("/api/chat/threads", async (
+    ChatThreadStatus? status, ListGlobalChatThreadsHandler handler, CancellationToken ct) =>
+{
+    var list = await handler.HandleAsync(status, ct);
+    return Results.Ok(list);
+}).RequireAuthorization();
+
+app.MapGet("/api/chat/threads/{threadId:guid}", async (
+    Guid threadId, GetGlobalChatThreadHandler handler, CancellationToken ct) =>
+{
+    var thread = await handler.HandleAsync(threadId, ct);
+    return thread is null ? Results.NotFound() : Results.Ok(thread);
+}).RequireAuthorization();
+
+app.MapPut("/api/chat/threads/{threadId:guid}", async (
+    Guid threadId, RenameChatThreadRequest request, RenameGlobalChatThreadHandler handler, CancellationToken ct) =>
+{
+    try
+    {
+        var thread = await handler.HandleAsync(threadId, request, ct);
+        return thread is null ? Results.NotFound() : Results.Ok(thread);
+    }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/chat/threads/{threadId:guid}/messages", async (
+    Guid threadId, PostChatMessageRequest request, PostGlobalChatMessageHandler handler, CancellationToken ct) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(threadId, request, ct);
+        return response is null ? Results.NotFound() : Results.Ok(response);
+    }
+    catch (PostGlobalChatMessageHandler.ArchivedThreadException ex)
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/chat/threads/{threadId:guid}/archive", async (
+    Guid threadId, ArchiveGlobalChatThreadHandler handler, CancellationToken ct) =>
+{
+    try
+    {
+        var thread = await handler.HandleAsync(threadId, ct);
+        return thread is null ? Results.NotFound() : Results.Ok(thread);
+    }
+    catch (InvalidOperationException ex) { return Results.Conflict(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/chat/threads/{threadId:guid}/unarchive", async (
+    Guid threadId, UnarchiveGlobalChatThreadHandler handler, CancellationToken ct) =>
+{
+    try
+    {
+        var thread = await handler.HandleAsync(threadId, ct);
         return thread is null ? Results.NotFound() : Results.Ok(thread);
     }
     catch (InvalidOperationException ex) { return Results.Conflict(new { error = ex.Message }); }
