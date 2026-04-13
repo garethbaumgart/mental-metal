@@ -76,7 +76,7 @@ public class ChatThreadTests
 
         thread.AppendUserMessage(longMsg);
 
-        Assert.Equal(81, thread.Title.Length); // 80 chars + ellipsis
+        Assert.Equal(ChatThread.AutoTitleMaxLength, thread.Title.Length); // 79 chars + ellipsis
         Assert.EndsWith("…", thread.Title);
     }
 

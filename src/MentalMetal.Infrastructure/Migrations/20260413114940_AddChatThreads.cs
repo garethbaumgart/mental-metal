@@ -35,11 +35,21 @@ namespace MentalMetal.Infrastructure.Migrations
                 name: "IX_ChatThreads_UserId_Status",
                 table: "ChatThreads",
                 columns: new[] { "UserId", "Status" });
+
+            // Supports ListForInitiativeAsync: WHERE UserId=@u AND ContextScopeType=@t AND ContextInitiativeId=@i.
+            // Declared via raw SQL because the index spans a parent column (UserId) and owned-type
+            // columns (ContextScopeType, ContextInitiativeId), which the snapshot cannot represent.
+            migrationBuilder.Sql(
+                "CREATE INDEX \"IX_ChatThreads_UserId_ContextScopeType_ContextInitiativeId\" " +
+                "ON \"ChatThreads\" (\"UserId\", \"ContextScopeType\", \"ContextInitiativeId\");");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.Sql(
+                "DROP INDEX IF EXISTS \"IX_ChatThreads_UserId_ContextScopeType_ContextInitiativeId\";");
+
             migrationBuilder.DropTable(
                 name: "ChatThreads");
         }

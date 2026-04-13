@@ -72,13 +72,11 @@ public sealed class InitiativeChatContextBuilder(
             .Distinct()
             .ToList();
 
-        var personLookup = new Dictionary<Guid, string>();
-        foreach (var pid in personIds)
-        {
-            var p = await people.GetByIdAsync(pid, cancellationToken);
-            if (p is not null && p.UserId == userId)
-                personLookup[pid] = p.Name;
-        }
+        // Batch person lookup to avoid N+1 queries. Repository already filters to userId.
+        var personLookup = personIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : (await people.GetByIdsAsync(userId, personIds, cancellationToken))
+                .ToDictionary(p => p.Id, p => p.Name);
 
         var recentDecisions = brief.KeyDecisions
             .OrderByDescending(d => d.LoggedAt)

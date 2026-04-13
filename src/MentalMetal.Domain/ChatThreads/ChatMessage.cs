@@ -42,7 +42,6 @@ public sealed class ChatMessage
             Content = content,
             CreatedAt = createdAt,
             TokenUsage = tokenUsage,
-            _sourceReferences = { },
         }.WithReferences(refs);
     }
 

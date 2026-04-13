@@ -71,9 +71,11 @@ public class InitiativeChatContextBuilderTests
         for (var i = 0; i < InitiativeChatContextBuilder.DecisionCap + 5; i++)
             initiative.RecordDecision($"d{i}", null, BriefSource.Manual, []);
 
-        var personId = Guid.NewGuid();
         var person = Person.Create(_userId, "Alice", PersonType.Stakeholder);
+        var personId = person.Id;
         _people.GetByIdAsync(personId, Arg.Any<CancellationToken>()).Returns(person);
+        _people.GetByIdsAsync(_userId, Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+            .Returns(new List<Person> { person });
 
         var many = Enumerable.Range(0, InitiativeChatContextBuilder.CommitmentCap + 20)
             .Select(i => Commitment.Create(_userId, $"c{i}", CommitmentDirection.MineToThem, personId, initiativeId: initiative.Id))

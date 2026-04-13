@@ -9,7 +9,6 @@ import {
   viewChild,
   ElementRef,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -32,7 +31,6 @@ import { SourceReferenceChipComponent } from './source-reference-chip.component'
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    FormsModule,
     DatePipe,
     ButtonModule,
     InputTextModule,
@@ -131,7 +129,8 @@ import { SourceReferenceChipComponent } from './source-reference-chip.component'
             @if (renaming()) {
               <input
                 pInputText
-                [(ngModel)]="renameDraft"
+                [value]="renameDraft()"
+                (input)="renameDraft.set($any($event.target).value)"
                 class="flex-1"
                 (keyup.enter)="commitRename()"
               />
@@ -189,7 +188,8 @@ import { SourceReferenceChipComponent } from './source-reference-chip.component'
           <div class="flex gap-2">
             <textarea
               pTextarea
-              [(ngModel)]="composerText"
+              [value]="composerText()"
+              (input)="composerText.set($any($event.target).value)"
               rows="2"
               class="flex-1"
               [disabled]="awaitingReply() || activeThread()!.status !== 'Active'"
@@ -199,7 +199,7 @@ import { SourceReferenceChipComponent } from './source-reference-chip.component'
             <p-button
               label="Send"
               icon="pi pi-send"
-              [disabled]="!composerText.trim() || activeThread()!.status !== 'Active'"
+              [disabled]="!composerText().trim() || activeThread()!.status !== 'Active'"
               [loading]="awaitingReply()"
               (onClick)="sendMessage()"
             />
@@ -252,8 +252,12 @@ export class InitiativeChatTabComponent {
   protected readonly renaming = signal(false);
   protected readonly savingRename = signal(false);
 
-  protected renameDraft = '';
-  protected composerText = '';
+  // Form state held in signals so zoneless change detection reliably re-renders disabled states etc.
+  protected readonly renameDraft = signal('');
+  protected readonly composerText = signal('');
+
+  // Monotonic token to discard stale selectThread() responses when the user clicks rapidly.
+  private selectThreadRequestToken = 0;
 
   protected readonly activeThreads = computed(() =>
     [...this.threadSummaries()].sort((a, b) => this.sortByRecency(a, b))
@@ -292,18 +296,28 @@ export class InitiativeChatTabComponent {
   }
 
   protected selectThread(threadId: string): void {
+    // Guard against stale responses when the user clicks between threads rapidly: tag each
+    // request with a monotonic token and only apply the response if it still matches.
+    const requestToken = ++this.selectThreadRequestToken;
     this.chatService.get(this.initiativeId(), threadId).subscribe({
-      next: (t) => this.activeThread.set(t),
-      error: () => this.messageService.add({ severity: 'error', summary: 'Failed to load thread' }),
+      next: (t) => {
+        if (requestToken !== this.selectThreadRequestToken) return;
+        this.activeThread.set(t);
+      },
+      error: () => {
+        if (requestToken !== this.selectThreadRequestToken) return;
+        this.messageService.add({ severity: 'error', summary: 'Failed to load thread' });
+      },
     });
   }
 
   protected sendMessage(): void {
     const thread = this.activeThread();
-    if (!thread || !this.composerText.trim()) return;
+    const draft = this.composerText().trim();
+    if (!thread || !draft) return;
 
-    const content = this.composerText.trim();
-    this.composerText = '';
+    const content = draft;
+    this.composerText.set('');
     this.awaitingReply.set(true);
 
     // Optimistically append the user message so the UI is responsive while the request is in flight.
@@ -357,7 +371,7 @@ export class InitiativeChatTabComponent {
   }
 
   protected beginRename(): void {
-    this.renameDraft = this.activeThread()?.title || '';
+    this.renameDraft.set(this.activeThread()?.title ?? '');
     this.renaming.set(true);
   }
 
@@ -367,9 +381,10 @@ export class InitiativeChatTabComponent {
 
   protected commitRename(): void {
     const thread = this.activeThread();
-    if (!thread || !this.renameDraft.trim()) return;
+    const draft = this.renameDraft().trim();
+    if (!thread || !draft) return;
     this.savingRename.set(true);
-    this.chatService.rename(this.initiativeId(), thread.id, { title: this.renameDraft.trim() }).subscribe({
+    this.chatService.rename(this.initiativeId(), thread.id, { title: draft }).subscribe({
       next: (t) => {
         this.savingRename.set(false);
         this.renaming.set(false);

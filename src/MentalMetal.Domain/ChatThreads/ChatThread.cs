@@ -75,7 +75,7 @@ public sealed class ChatThread : AggregateRoot, IUserScoped
         IReadOnlyList<SourceReference>? sourceReferences = null,
         TokenUsage? tokenUsage = null)
     {
-        ArgumentNullException.ThrowIfNull(content);
+        ArgumentException.ThrowIfNullOrWhiteSpace(content, nameof(content));
         EnsureActive();
 
         var now = DateTimeOffset.UtcNow;
@@ -91,7 +91,7 @@ public sealed class ChatThread : AggregateRoot, IUserScoped
 
     public ChatMessage AppendSystemMessage(string content)
     {
-        ArgumentNullException.ThrowIfNull(content);
+        ArgumentException.ThrowIfNullOrWhiteSpace(content, nameof(content));
         // System messages can be appended to archived threads too? Design: error/limit notices fit
         // into the conversation as it stands; still require Active to avoid surprise writes on archived rows.
         EnsureActive();
@@ -145,6 +145,7 @@ public sealed class ChatThread : AggregateRoot, IUserScoped
         var source = firstUserMessage.Trim();
         if (source.Length <= AutoTitleMaxLength)
             return source;
-        return source[..AutoTitleMaxLength] + "…";
+        // Reserve one character for the ellipsis so the final length equals AutoTitleMaxLength.
+        return source[..(AutoTitleMaxLength - 1)] + "…";
     }
 }

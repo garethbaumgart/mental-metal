@@ -9,6 +9,19 @@ public sealed class PersonRepository(MentalMetalDbContext dbContext) : IPersonRe
     public async Task<Person?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
         await dbContext.People.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
+    public async Task<IReadOnlyList<Person>> GetByIdsAsync(
+        Guid userId, IEnumerable<Guid> ids, CancellationToken cancellationToken)
+    {
+        // Use List<T>.Contains (translatable by EF) rather than HashSet.Contains.
+        var idList = ids.Distinct().ToList();
+        if (idList.Count == 0)
+            return [];
+
+        return await dbContext.People
+            .Where(p => p.UserId == userId && idList.Contains(p.Id))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Person>> GetAllAsync(
         Guid userId, PersonType? typeFilter, bool includeArchived, CancellationToken cancellationToken)
     {
