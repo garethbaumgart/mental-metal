@@ -6,6 +6,11 @@ public class CaptureTests
 {
     private static readonly Guid UserId = Guid.NewGuid();
 
+    private static AiExtraction CreateTestExtraction(string summary = "Test summary") => new()
+    {
+        Summary = summary,
+    };
+
     // 2.1 Test Capture creation with valid inputs and domain event
     [Fact]
     public void Create_ValidInputs_CreatesCaptureWithCorrectState()
@@ -73,10 +78,11 @@ public class CaptureTests
         capture.BeginProcessing();
         capture.ClearDomainEvents();
 
-        capture.CompleteProcessing("extracted data");
+        var extraction = CreateTestExtraction("extracted data");
+        capture.CompleteProcessing(extraction);
 
         Assert.Equal(ProcessingStatus.Processed, capture.ProcessingStatus);
-        Assert.Equal("extracted data", capture.AiExtraction);
+        Assert.Equal(extraction, capture.AiExtraction);
         Assert.NotNull(capture.ProcessedAt);
         var domainEvent = Assert.Single(capture.DomainEvents);
         Assert.IsType<CaptureProcessed>(domainEvent);
@@ -127,7 +133,7 @@ public class CaptureTests
     {
         var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
         capture.BeginProcessing();
-        capture.CompleteProcessing();
+        capture.CompleteProcessing(CreateTestExtraction());
 
         Assert.Throws<InvalidOperationException>(() => capture.BeginProcessing());
     }
@@ -137,7 +143,7 @@ public class CaptureTests
     {
         var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
 
-        Assert.Throws<InvalidOperationException>(() => capture.CompleteProcessing());
+        Assert.Throws<InvalidOperationException>(() => capture.CompleteProcessing(CreateTestExtraction()));
     }
 
     [Fact]
