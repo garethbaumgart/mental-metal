@@ -53,7 +53,10 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString));
 
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
-        services.Configure<MyQueueOptions>(configuration.GetSection(MyQueueOptions.SectionName));
+        services.AddOptions<MyQueueOptions>()
+            .Bind(configuration.GetSection(MyQueueOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
         services.AddOptions<AiProviderSettings>()
             .Bind(configuration.GetSection(AiProviderSettings.SectionName))
             .Validate(s => !string.IsNullOrWhiteSpace(s.EncryptionKey),

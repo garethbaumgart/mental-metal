@@ -16,8 +16,12 @@ public sealed class QueuePrioritizationService
 
         var score = 0;
         var today = DateOnly.FromDateTime(now.UtcDateTime);
+        var isOverdue =
+            commitment.Status == CommitmentStatus.Open
+            && commitment.DueDate is not null
+            && commitment.DueDate < today;
 
-        if (commitment.IsOverdue)
+        if (isOverdue)
         {
             var daysOverdue = today.DayNumber - commitment.DueDate!.Value.DayNumber;
             score += 100 + Math.Min(daysOverdue * 5, 100);

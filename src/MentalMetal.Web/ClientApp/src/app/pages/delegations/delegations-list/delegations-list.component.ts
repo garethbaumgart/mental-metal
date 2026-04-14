@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -154,6 +154,18 @@ export class DelegationsListComponent implements OnInit {
 
   readonly selectedStatus = signal<DelegationStatus | null>(null);
   readonly selectedPriority = signal<DelegationPriority | null>(null);
+
+  constructor() {
+    // Clear one-shot prefill values once the create dialog closes so later manual
+    // opens of the dialog don't retain stale query-param values.
+    effect(() => {
+      if (!this.showCreateDialog()) {
+        this.prefillDescription.set(null);
+        this.prefillPersonId.set(null);
+        this.prefillInitiativeId.set(null);
+      }
+    });
+  }
 
   protected readonly statusFilterOptions = [
     { label: 'Assigned', value: 'Assigned' as DelegationStatus },

@@ -156,9 +156,18 @@ export class DelegationDialogComponent implements OnInit {
       }
     });
 
-    // Apply prefill values when the dialog becomes visible for a new delegation.
+    // Reset all form fields and then apply prefill when the dialog becomes visible for
+    // a new delegation. Resetting every create-open prevents stale values (priority,
+    // dueDate, notes, etc.) from a previous dialog usage leaking into the submit.
     effect(() => {
       if (this.visible() && !this.editDelegation()) {
+        this.description = '';
+        this.selectedPersonId = null;
+        this.selectedPriority = null;
+        this.selectedInitiativeId = null;
+        this.dueDate = null;
+        this.notes = '';
+
         const desc = this.prefillDescription();
         const personId = this.prefillPersonId();
         const initiativeId = this.prefillInitiativeId();
