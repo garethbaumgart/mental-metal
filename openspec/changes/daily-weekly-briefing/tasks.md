@@ -7,7 +7,7 @@
 
 ## 2. Application
 
-- [ ] 2.1 Create `src/MentalMetal.Application/Briefings/BriefingOptions.cs` with `[Range]` attrs (`MorningBriefingHour` 0..23 default 5; `WeeklyBriefingStaleHours` 1..72 default 12; `OneOnOnePrepStaleHours` 1..72 default 12; `MaxBriefingTokens` 200..4000 default 1500; `TopItemsPerSection` 1..20 default 5).
+- [ ] 2.1 Create `src/MentalMetal.Application/Briefings/BriefingOptions.cs` with `[Range]` attrs (`MorningBriefingHour` 0..23 default 5; `MorningBriefingStaleHours` 1..72 default 12; `WeeklyBriefingStaleHours` 1..72 default 12; `OneOnOnePrepStaleHours` 1..72 default 12; `MaxBriefingTokens` 200..4000 default 1500; `TopItemsPerSection` 1..20 default 5).
 - [ ] 2.2 Create `src/MentalMetal.Application/Briefings/Facts/*Facts.cs` record types: `MorningBriefingFacts`, `WeeklyBriefingFacts`, `OneOnOnePrepFacts`, and their nested item records (e.g., `FactCommitment`, `FactDelegation`, `FactPerson`, `FactOneOnOne`, `FactMilestone`, `FactObservation`, `FactGoal`, `FactCapture`).
 - [ ] 2.3 Create `src/MentalMetal.Application/Briefings/BriefingFactsAssembler.cs` — injects the required repos + `TimeProvider` + options + `IUserContext`; exposes `BuildMorningAsync`, `BuildWeeklyAsync`, `BuildOneOnOnePrepAsync(personId)`. Use `userLocalDate(now)` helper; apply `MorningBriefingHour` rollback rule. Uses `.ToLower()` (not `ToLowerInvariant`) and `List<T>.Contains()` if filtering with collections.
 - [ ] 2.4 Create `src/MentalMetal.Application/Briefings/BriefingPromptBuilder.cs` — produces `(systemPrompt, userPrompt)` per briefing type from the facts JSON; prompt forbids invention; 1:1-prep requests 3–5 talking points.
@@ -21,7 +21,7 @@
 
 ## 3. Infrastructure
 
-- [ ] 3.1 Create `src/MentalMetal.Infrastructure/Persistence/Configurations/BriefingConfiguration.cs` — map columns, jsonb for `PromptFactsJson`, unique/composite index `(UserId, Type, ScopeKey, GeneratedAtUtc DESC)`.
+- [ ] 3.1 Create `src/MentalMetal.Infrastructure/Persistence/Configurations/BriefingConfiguration.cs` — map columns, jsonb for `PromptFactsJson`, **unique** composite index on `(UserId, Type, ScopeKey, GeneratedAtUtc)`.
 - [ ] 3.2 Add `DbSet<Briefing> Briefings` to `MentalMetalDbContext`.
 - [ ] 3.3 Create `src/MentalMetal.Infrastructure/Repositories/BriefingRepository.cs` implementing `IBriefingRepository`; uses `.ToLower()`, `List<T>.Contains()` where applicable.
 - [ ] 3.4 Register `IBriefingRepository → BriefingRepository` in `Infrastructure/DependencyInjection.cs`.

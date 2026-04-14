@@ -50,11 +50,11 @@ All data sources already exist via existing repositories. This change adds one r
 ### 2. ScopeKey scheme
 
 **Decision:** `ScopeKey` is a deterministic string per (type, date-or-person):
-- Morning: `morning:{yyyy-MM-dd}` in the user's local date (derived from `User.Preferences.TimeZone`, or UTC if unset).
+- Morning: `morning:{yyyy-MM-dd}` in the user's local date (derived from `User.Preferences.TimeZone`, or UTC if unset). The local *hour* in the same time zone is also used to apply the `MorningBriefingHour` rollback.
 - Weekly: `weekly:{ISO-year}-W{ISO-week}` (e.g., `weekly:2026-W16`).
 - 1:1 prep: `oneonone:{personId:N}` — one current prep per person; regenerating replaces the row semantically by appending a new row with the same scopeKey but newer `GeneratedAtUtc`; the "current" prep is simply max-generatedAt per scopeKey.
 
-**Rationale:** Lets us look up "today's morning briefing" cheaply with `WHERE UserId=X AND Type=Morning AND ScopeKey='morning:2026-04-14'` and return it if recent (< `WeeklyBriefingStaleHours`) without hitting the LLM.
+**Rationale:** Lets us look up "today's morning briefing" cheaply with `WHERE UserId=X AND Type=Morning AND ScopeKey='morning:2026-04-14'` and return it if recent (< the per-type staleness option, e.g. `MorningBriefingStaleHours`) without hitting the LLM.
 
 ### 3. Facts assembly is deterministic and LLM-free
 
@@ -75,16 +75,17 @@ The stored `PromptFacts` column retains the exact facts JSON so we can re-run or
 ### 5. Cache-or-regenerate logic
 
 **Decision:** `POST /api/briefings/morning` semantics:
-- If a Briefing with `(UserId, Morning, morning:{today})` exists AND `GeneratedAtUtc` is within the last `WeeklyBriefingStaleHours` (default 12h), return 200 with that one.
+- If a Briefing with `(UserId, Morning, morning:{today})` exists AND `GeneratedAtUtc` is within the last `MorningBriefingStaleHours` (default 12h), return 200 with that one.
 - Otherwise, generate a new one, persist it, return 201.
 - `?force=true` always regenerates.
 
-Same pattern for weekly and 1:1 prep (1:1 prep default staleness: 12h; override via `OneOnOnePrepStaleHours` option).
+Same pattern for weekly (`WeeklyBriefingStaleHours`, default 12h) and 1:1 prep (`OneOnOnePrepStaleHours`, default 12h).
 
 ### 6. Options + `TimeProvider`
 
 **Decision:** New `BriefingOptions` record with `[Range]` attributes:
-- `MorningBriefingHour` (0–23, default 5) — hour before which "today's" briefing is still considered yesterday's.
+- `MorningBriefingHour` (0–23, default 5) — hour before which "today's" briefing is still considered yesterday's (in the user's local time zone).
+- `MorningBriefingStaleHours` (1–72, default 12).
 - `WeeklyBriefingStaleHours` (1–72, default 12).
 - `OneOnOnePrepStaleHours` (1–72, default 12).
 - `MaxBriefingTokens` (200–4000, default 1500).

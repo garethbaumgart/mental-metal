@@ -8,14 +8,14 @@ The response body SHALL be a `BriefingResponse` DTO containing `id`, `type` (`Mo
 
 Caching and staleness rules:
 
-- `scopeKey` SHALL equal `morning:{yyyy-MM-dd}` computed from the user's local date (derived from `User.Preferences.TimeZone`; fallback UTC). If the server's current local hour is less than `BriefingOptions.MorningBriefingHour`, the previous calendar date SHALL be used.
-- When `force = false` and a persisted briefing exists with the same `(UserId, Type=Morning, ScopeKey)` whose `GeneratedAtUtc` is within `BriefingOptions.WeeklyBriefingStaleHours` of now, the system SHALL return HTTP 200 with that persisted briefing.
+- `scopeKey` SHALL equal `morning:{yyyy-MM-dd}` computed from the user's local date (derived from `User.Preferences.TimeZone`; fallback UTC). If the user's current local hour (in the same time zone) is less than `BriefingOptions.MorningBriefingHour`, the previous calendar date SHALL be used.
+- When `force = false` and a persisted briefing exists with the same `(UserId, Type=Morning, ScopeKey)` whose `GeneratedAtUtc` is within `BriefingOptions.MorningBriefingStaleHours` of now, the system SHALL return HTTP 200 with that persisted briefing.
 - Otherwise the system SHALL generate a new briefing, persist it, and return HTTP 201.
 
 Facts assembly: the system SHALL assemble `MorningBriefingFacts` deterministically from the user's own data, scoped to UserId:
 
 - `topCommitmentsDueToday` — up to `BriefingOptions.TopItemsPerSection` open commitments with `DueDate` equal to the user-local today OR `IsOverdue = true`, sorted by (overdue desc, dueDate asc, id asc).
-- `onOnOnesToday` — every OneOnOne with `OccurredOnUtc` (or scheduled date equivalent) whose local calendar date equals today.
+- `oneOnOnesToday` — every OneOnOne with `OccurredOnUtc` (or scheduled date equivalent) whose local calendar date equals today.
 - `overdueDelegations` — up to `TopItemsPerSection` delegations with `IsOverdue = true`, sorted by daysOverdue desc.
 - `recentCaptures` — up to `TopItemsPerSection` captures `CapturedAtUtc >= now - 24h`, sorted by CapturedAtUtc desc.
 - `peopleNeedingAttention` — up to `TopItemsPerSection` people whose last OneOnOne was more than 14 days ago (or never) and who have at least one open commitment or delegation.
@@ -60,7 +60,7 @@ Provider precondition: if the user has no `AiProviderConfig` set, the system SHA
 
 The system SHALL expose `POST /api/briefings/weekly` that returns the authenticated user's briefing for the current ISO week. The endpoint SHALL accept an optional `force` query parameter.
 
-`scopeKey` SHALL equal `weekly:{ISO-year}-W{ISO-week:D2}` computed from the user's local date. Caching follows the same `WeeklyBriefingStaleHours` rule as morning briefings.
+`scopeKey` SHALL equal `weekly:{ISO-year}-W{ISO-week:D2}` computed from the user's local date. Caching follows the same cache-or-regenerate pattern as morning briefings using `BriefingOptions.WeeklyBriefingStaleHours`.
 
 Facts assembly `WeeklyBriefingFacts`:
 
@@ -123,7 +123,7 @@ Synthesis SHALL produce a markdown document with sections (Context, Open Items, 
 
 ### Requirement: Get recent briefings
 
-The system SHALL expose `GET /api/briefings/recent` returning up to 20 most-recent briefings for the authenticated user, sorted by `GeneratedAtUtc` descending.
+The system SHALL expose `GET /api/briefings/recent` returning the most-recent briefings for the authenticated user, sorted by `GeneratedAtUtc` descending. The number of items returned SHALL be capped by the `limit` query parameter (default 20, max 50).
 
 Supported query parameters:
 
@@ -174,7 +174,7 @@ A factory method `Briefing.Create(userId, type, scopeKey, generatedAtUtc, markdo
 
 The repository `IBriefingRepository` SHALL expose `AddAsync`, `GetByIdAsync(userId, id)`, `GetLatestAsync(userId, type, scopeKey)`, and `ListRecentAsync(userId, type?, limit)`.
 
-The EF configuration SHALL create an index on `(UserId, Type, ScopeKey, GeneratedAtUtc DESC)`.
+The EF configuration SHALL create a unique index on `(UserId, Type, ScopeKey, GeneratedAtUtc)` to support efficient `GetLatestAsync` lookups and to defend against duplicate-row races on identical timestamps.
 
 #### Scenario: Scope key non-empty invariant
 
@@ -197,7 +197,7 @@ The system SHALL inject `TimeProvider` into `BriefingService` and read all curre
 
 ### Requirement: Options validation
 
-The system SHALL register `BriefingOptions` via `AddOptions<BriefingOptions>().Bind(...).ValidateDataAnnotations().ValidateOnStart()`. The options class SHALL carry `[Range]` attributes: `MorningBriefingHour` (0..23, default 5), `WeeklyBriefingStaleHours` (1..72, default 12), `OneOnOnePrepStaleHours` (1..72, default 12), `MaxBriefingTokens` (200..4000, default 1500), `TopItemsPerSection` (1..20, default 5).
+The system SHALL register `BriefingOptions` via `AddOptions<BriefingOptions>().Bind(...).ValidateDataAnnotations().ValidateOnStart()`. The options class SHALL carry `[Range]` attributes: `MorningBriefingHour` (0..23, default 5), `MorningBriefingStaleHours` (1..72, default 12), `WeeklyBriefingStaleHours` (1..72, default 12), `OneOnOnePrepStaleHours` (1..72, default 12), `MaxBriefingTokens` (200..4000, default 1500), `TopItemsPerSection` (1..20, default 5).
 
 #### Scenario: Out-of-range option rejected at startup
 
@@ -207,7 +207,7 @@ The system SHALL register `BriefingOptions` via `AddOptions<BriefingOptions>().B
 #### Scenario: Defaults apply when unconfigured
 
 - **WHEN** the application starts with no `Briefing` configuration section
-- **THEN** `MorningBriefingHour = 5`, `WeeklyBriefingStaleHours = 12`, `MaxBriefingTokens = 1500`, `TopItemsPerSection = 5`
+- **THEN** `MorningBriefingHour = 5`, `MorningBriefingStaleHours = 12`, `WeeklyBriefingStaleHours = 12`, `OneOnOnePrepStaleHours = 12`, `MaxBriefingTokens = 1500`, `TopItemsPerSection = 5`
 
 ### Requirement: Morning briefing dashboard widget
 
