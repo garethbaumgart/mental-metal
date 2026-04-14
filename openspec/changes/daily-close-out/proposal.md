@@ -6,7 +6,7 @@ Engineering managers accumulate captures throughout the day (quick notes, transc
 
 - New backend endpoints under `/api/daily-close-out/`:
   - `GET /api/daily-close-out/queue` — returns the user's current close-out queue: captures with status `Raw`, `Processing`, `Failed`, or `Processed-but-not-confirmed-or-discarded`, plus aggregate counts.
-  - `POST /api/daily-close-out/captures/{id}/quick-discard` — soft-discard a capture entirely (no spawn, marks the capture as triaged/discarded).
+  - `POST /api/daily-close-out/captures/{id}/quick-discard` — remove a capture from the queue without processing its extraction. Implemented by marking the capture `Triaged = true` (the same flag set by any confirm/discard action); the "discard" in the name refers to the user intent ("skip this one") and the domain event (`CaptureQuickDiscarded`), not a separate storage state.
   - `POST /api/daily-close-out/captures/{id}/reassign` — reassign linked people/initiatives on a capture as part of triage (delegates to existing link/unlink methods on the Capture aggregate).
   - `POST /api/daily-close-out/close` — record that the user closed out today; returns a summary (confirmed/discarded/remaining counts).
   - `GET /api/daily-close-out/log` — list recent close-out log entries (most-recent-first, paginated/limited).

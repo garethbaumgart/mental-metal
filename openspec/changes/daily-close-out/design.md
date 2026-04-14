@@ -70,7 +70,7 @@ A capture is in the queue when **all** of:
 ## Risks / Trade-offs
 
 - **[Risk] `ExtractionResolved` flag duplicates state already implicit in domain events** → Mitigation: it's a derived-but-cached flag on the aggregate; cheap to keep in sync because the only writers are `ConfirmExtraction` and `DiscardExtraction`. Worth the cost vs. event-replay queries.
-- **[Risk] User close-out date timezone confusion** → Mitigation: API takes an optional `date` query param (ISO date) and defaults to "today in UTC". Frontend passes the user's local date so what the user sees as "today" matches what gets logged. Storing `Date` as a `DateOnly` keeps it timezone-stable.
+- **[Risk] User close-out date timezone confusion** → Mitigation: API takes an optional `date` field in the JSON request body (ISO date) and defaults to "today in UTC". Frontend passes the user's local date so what the user sees as "today" matches what gets logged. Storing `Date` as a `DateOnly` keeps it timezone-stable.
 - **[Risk] Quick-discard hides content the user later wants** → Mitigation: triaged captures are still retrievable via `GET /api/captures/{id}`; only the default list view filters them out. Existing `?triaged=true` filter could be added later if needed; out of scope here.
 - **[Risk] Owned-collection EF gotcha** → Mitigation: copy the exact configuration used for `AiProviderConfig` (snapshot change tracker, property access mode field) and add an integration test that adds two close-out logs and reloads.
 
