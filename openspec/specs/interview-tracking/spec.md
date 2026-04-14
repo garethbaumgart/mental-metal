@@ -1,7 +1,9 @@
-# interview-tracking Specification
+# interview-tracking
 
 ## Purpose
-TBD - created by archiving change interview-tracking. Update Purpose after archive.
+
+Interview tracking capability for engineering managers: a lightweight candidate pipeline that records interviews (stages, scorecards, decisions, transcripts) against `Person` records of type `Candidate`, and produces AI-assisted analysis (summary, recommended decision, risk signals) from a transcript on demand. User-scoped; uses the shared AI provider abstraction.
+
 ## Requirements
 ### Requirement: Create an interview
 
@@ -35,7 +37,7 @@ The system SHALL allow an authenticated user to create an `Interview` record lin
 #### Scenario: Person is not a candidate
 
 - **WHEN** an authenticated user sends `POST /api/interviews` with a `candidatePersonId` whose Person Type does not include `Candidate`
-- **THEN** the system returns HTTP 400 with error code `candidate_not_found`
+- **THEN** the system returns HTTP 400 with error code `candidate_wrong_type`
 
 #### Scenario: Unauthenticated request rejected
 
@@ -225,6 +227,11 @@ The system SHALL raise `InterviewScorecardAdded`, `InterviewScorecardUpdated`, a
 
 - **WHEN** an authenticated user adds a scorecard to an Interview they do not own
 - **THEN** the system returns HTTP 404
+
+#### Scenario: Update or delete a scorecard that does not exist
+
+- **WHEN** an authenticated user sends `PUT` or `DELETE /api/interviews/{id}/scorecards/{scorecardId}` with a `scorecardId` that is not on the Interview
+- **THEN** the system returns HTTP 404 with error code `scorecard_not_found`
 
 ### Requirement: Set interview transcript
 
