@@ -22,6 +22,7 @@ import { Observation } from '../../../shared/models/observation.model';
 import { Goal, PersonEvidenceSummary } from '../../../shared/models/goal.model';
 import { Commitment } from '../../../shared/models/commitment.model';
 import { Delegation } from '../../../shared/models/delegation.model';
+import { OneOnOnePrepDialogComponent } from '../one-on-one-prep-dialog.component';
 
 @Component({
   selector: 'app-person-detail',
@@ -37,6 +38,7 @@ import { Delegation } from '../../../shared/models/delegation.model';
     TagModule,
     ToastModule,
     ConfirmDialogModule,
+    OneOnOnePrepDialogComponent,
   ],
   providers: [MessageService, ConfirmationService],
   template: `
@@ -50,11 +52,23 @@ import { Delegation } from '../../../shared/models/delegation.model';
     } @else if (person()) {
       <div class="max-w-2xl mx-auto flex flex-col gap-8">
         <!-- Header -->
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-4 flex-wrap">
           <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="goBack()" />
           <h1 class="text-2xl font-bold flex-1">{{ person()!.name }}</h1>
           <p-tag [value]="formatType(person()!.type)" [severity]="typeSeverity(person()!.type)" />
+          <p-button
+            label="Generate 1:1 prep"
+            icon="pi pi-sparkles"
+            severity="secondary"
+            (onClick)="openPrepDialog()"
+          />
         </div>
+
+        <app-one-on-one-prep-dialog
+          [visible]="prepDialogOpen()"
+          [personId]="person()!.id"
+          (visibleChange)="prepDialogOpen.set($event)"
+        />
 
         <!-- Profile Section -->
         <section class="flex flex-col gap-4">
@@ -341,6 +355,8 @@ export class PersonDetailComponent implements OnInit {
   readonly changingType = signal(false);
   readonly advancingPipeline = signal(false);
 
+  readonly prepDialogOpen = signal(false);
+
   readonly recentOneOnOnes = signal<OneOnOne[]>([]);
   readonly observations = signal<Observation[]>([]);
   readonly activeGoals = signal<Goal[]>([]);
@@ -403,6 +419,10 @@ export class PersonDetailComponent implements OnInit {
 
   protected goBack(): void {
     this.router.navigate(['/people']);
+  }
+
+  protected openPrepDialog(): void {
+    this.prepDialogOpen.set(true);
   }
 
   protected saveProfile(): void {

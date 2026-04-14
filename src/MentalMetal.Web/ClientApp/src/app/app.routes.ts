@@ -4,7 +4,8 @@ import { authGuard } from './shared/guards/auth.guard';
 export const routes: Routes = [
   { path: 'login', loadComponent: () => import('./pages/login/login.page').then(m => m.LoginPage) },
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-  { path: 'dashboard', loadComponent: () => import('./pages/placeholder.page').then(m => m.PlaceholderPage), canActivate: [authGuard], data: { title: 'Dashboard' } },
+  { path: 'dashboard', loadComponent: () => import('./pages/dashboard/dashboard.page').then(m => m.DashboardPage), canActivate: [authGuard], data: { title: 'Dashboard' } },
+  { path: 'briefings/weekly', loadComponent: () => import('./pages/briefings/weekly-briefing.page').then(m => m.WeeklyBriefingPage), canActivate: [authGuard], data: { title: 'Weekly Briefing' } },
   { path: 'capture', loadComponent: () => import('./pages/captures/captures-list/captures-list.component').then(m => m.CapturesListComponent), canActivate: [authGuard], data: { title: 'Capture' } },
   { path: 'capture/:id', loadComponent: () => import('./pages/captures/capture-detail/capture-detail.component').then(m => m.CaptureDetailComponent), canActivate: [authGuard], data: { title: 'Capture Detail' } },
   { path: 'people', loadComponent: () => import('./pages/people/people-list/people-list.component').then(m => m.PeopleListComponent), canActivate: [authGuard], data: { title: 'People' } },

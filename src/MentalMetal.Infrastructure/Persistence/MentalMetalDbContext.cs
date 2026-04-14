@@ -1,4 +1,5 @@
 using MentalMetal.Application.Common;
+using MentalMetal.Domain.Briefings;
 using MentalMetal.Domain.Captures;
 using MentalMetal.Domain.ChatThreads;
 using MentalMetal.Domain.Commitments;
@@ -35,6 +36,7 @@ public sealed class MentalMetalDbContext(
     public DbSet<OneOnOne> OneOnOnes => Set<OneOnOne>();
     public DbSet<Observation> Observations => Set<Observation>();
     public DbSet<Goal> Goals => Set<Goal>();
+    public DbSet<Briefing> Briefings => Set<Briefing>();
 
     public void DiscardPendingChanges() => ChangeTracker.Clear();
 
@@ -54,5 +56,6 @@ public sealed class MentalMetalDbContext(
         modelBuilder.Entity<OneOnOne>().HasQueryFilter(o => o.UserId == currentUserService.UserId);
         modelBuilder.Entity<Observation>().HasQueryFilter(o => o.UserId == currentUserService.UserId);
         modelBuilder.Entity<Goal>().HasQueryFilter(g => g.UserId == currentUserService.UserId);
+        modelBuilder.Entity<Briefing>().HasQueryFilter(b => b.UserId == currentUserService.UserId);
     }
 }

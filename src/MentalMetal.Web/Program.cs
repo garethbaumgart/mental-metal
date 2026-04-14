@@ -1963,6 +1963,7 @@ app.MapGet("/api/people/{personId:guid}/evidence-summary", async (
 
 app.MapDailyCloseOutEndpoints();
 app.MapMyQueueEndpoints();
+app.MapBriefingEndpoints();
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
 
