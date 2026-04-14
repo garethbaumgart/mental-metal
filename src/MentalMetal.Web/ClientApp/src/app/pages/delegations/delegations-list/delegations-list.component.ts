@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
@@ -129,6 +129,9 @@ import { DelegationDialogComponent } from '../delegation-dialog/delegation-dialo
 
       <app-delegation-dialog
         [(visible)]="showCreateDialog"
+        [prefillDescription]="prefillDescription()"
+        [prefillPersonId]="prefillPersonId()"
+        [prefillInitiativeId]="prefillInitiativeId()"
         (created)="onDelegationCreated($event)"
       />
     </div>
@@ -139,10 +142,14 @@ export class DelegationsListComponent implements OnInit {
   private readonly peopleService = inject(PeopleService);
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly delegations = signal<Delegation[]>([]);
   readonly loading = signal(true);
   readonly showCreateDialog = signal(false);
+  readonly prefillDescription = signal<string | null>(null);
+  readonly prefillPersonId = signal<string | null>(null);
+  readonly prefillInitiativeId = signal<string | null>(null);
   private readonly peopleMap = signal<Map<string, string>>(new Map());
 
   readonly selectedStatus = signal<DelegationStatus | null>(null);
@@ -165,6 +172,19 @@ export class DelegationsListComponent implements OnInit {
   ngOnInit(): void {
     this.loadPeople();
     this.loadDelegations();
+
+    // If routed here with prefill query params (e.g. from My Queue's "Delegate this"),
+    // open the create dialog with those values.
+    const params = this.route.snapshot.queryParamMap;
+    const description = params.get('description');
+    const personId = params.get('personId');
+    const initiativeId = params.get('initiativeId');
+    if (description || personId || initiativeId) {
+      this.prefillDescription.set(description);
+      this.prefillPersonId.set(personId);
+      this.prefillInitiativeId.set(initiativeId);
+      this.showCreateDialog.set(true);
+    }
   }
 
   protected onFilterChange(): void {

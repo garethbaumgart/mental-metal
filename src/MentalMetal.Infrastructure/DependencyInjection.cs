@@ -10,6 +10,7 @@ using MentalMetal.Application.Common.Auth;
 using MentalMetal.Application.Goals;
 using MentalMetal.Application.Initiatives;
 using MentalMetal.Application.Initiatives.Brief;
+using MentalMetal.Application.MyQueue;
 using MentalMetal.Application.Observations;
 using MentalMetal.Application.OneOnOnes;
 using MentalMetal.Application.People;
@@ -34,6 +35,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace MentalMetal.Infrastructure;
 
@@ -51,6 +53,7 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString));
 
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
+        services.Configure<MyQueueOptions>(configuration.GetSection(MyQueueOptions.SectionName));
         services.AddOptions<AiProviderSettings>()
             .Bind(configuration.GetSection(AiProviderSettings.SectionName))
             .Validate(s => !string.IsNullOrWhiteSpace(s.EncryptionKey),
@@ -59,6 +62,7 @@ public static class DependencyInjection
 
         // Infrastructure services
         services.AddHttpContextAccessor();
+        services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<MentalMetalDbContext>());
         services.AddScoped<CurrentUserService>();
         services.AddScoped<ICurrentUserService>(sp => sp.GetRequiredService<CurrentUserService>());
@@ -242,6 +246,10 @@ public static class DependencyInjection
 
         // People Lens handlers
         services.AddScoped<GetPersonEvidenceSummaryHandler>();
+
+        // My Queue handlers
+        services.AddSingleton<QueuePrioritizationService>();
+        services.AddScoped<GetMyQueueHandler>();
 
         // Daily close-out handlers
         services.AddScoped<GetCloseOutQueueHandler>();
