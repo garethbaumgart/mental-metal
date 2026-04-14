@@ -18,6 +18,9 @@ authTest.describe('Briefings', () => {
     // matching the pattern used by the other auth-aware specs.
     await authenticatedPage.goto('/dashboard');
     const token = await authenticatedPage.evaluate(() => localStorage.getItem('access_token'));
+    // Guard against a null token: without it the request is unauthenticated and
+    // we'd see a 401 instead of the intended error path, masking real regressions.
+    expect(token).toBeTruthy();
     const headers = { Authorization: `Bearer ${token}` };
 
     // E2E users have no AI provider configured. The dev-stack ships with a

@@ -51,7 +51,7 @@ describe('WeeklyBriefingPage', () => {
 
   it('regenerate forces a new request', () => {
     fixture.detectChanges();
-    httpMock.expectOne((r) => r.url === '/api/briefings/weekly').flush(fakeBriefing());
+    httpMock.expectOne((r) => r.url === '/api/briefings/weekly' && r.method === 'POST').flush(fakeBriefing());
     fixture.detectChanges();
 
     fixture.componentInstance.regenerate();
@@ -64,7 +64,7 @@ describe('WeeklyBriefingPage', () => {
 
   it('renders provider-not-configured state on 409', () => {
     fixture.detectChanges();
-    httpMock.expectOne((r) => r.url === '/api/briefings/weekly').flush(
+    httpMock.expectOne((r) => r.url === '/api/briefings/weekly' && r.method === 'POST').flush(
       { error: 'AI provider not configured.', code: 'ai_provider_not_configured' },
       { status: 409, statusText: 'Conflict' },
     );

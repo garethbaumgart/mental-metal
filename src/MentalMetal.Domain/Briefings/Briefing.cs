@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MentalMetal.Domain.Common;
 
 namespace MentalMetal.Domain.Briefings;
@@ -37,8 +38,21 @@ public sealed class Briefing : AggregateRoot, IUserScoped
 
         ArgumentException.ThrowIfNullOrWhiteSpace(scopeKey, nameof(scopeKey));
         ArgumentNullException.ThrowIfNull(markdownBody, nameof(markdownBody));
-        ArgumentNullException.ThrowIfNull(promptFactsJson, nameof(promptFactsJson));
+        ArgumentException.ThrowIfNullOrWhiteSpace(promptFactsJson, nameof(promptFactsJson));
         ArgumentException.ThrowIfNullOrWhiteSpace(model, nameof(model));
+
+        // The column is jsonb - the database will reject malformed JSON late at flush
+        // time. Validate eagerly so callers see the bug at the call site instead of
+        // a DbUpdateException downstream.
+        try
+        {
+            using var _ = JsonDocument.Parse(promptFactsJson);
+        }
+        catch (JsonException ex)
+        {
+            throw new ArgumentException(
+                "PromptFactsJson must be a valid JSON document.", nameof(promptFactsJson), ex);
+        }
 
         if (scopeKey.Length > 128)
             throw new ArgumentException("ScopeKey must be 128 characters or fewer.", nameof(scopeKey));

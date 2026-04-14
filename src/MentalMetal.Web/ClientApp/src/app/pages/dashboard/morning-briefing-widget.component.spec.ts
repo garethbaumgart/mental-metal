@@ -74,7 +74,7 @@ describe('MorningBriefingWidgetComponent', () => {
 
   it('renders the provider-not-configured empty state on 409', () => {
     fixture.detectChanges();
-    const req = httpMock.expectOne((r) => r.url === '/api/briefings/morning');
+    const req = httpMock.expectOne((r) => r.url === '/api/briefings/morning' && r.method === 'POST');
     req.flush(
       { error: 'AI provider is not configured.', code: 'ai_provider_not_configured' },
       { status: 409, statusText: 'Conflict' },
@@ -88,7 +88,7 @@ describe('MorningBriefingWidgetComponent', () => {
 
   it('renders a generic error state on other failures', () => {
     fixture.detectChanges();
-    httpMock.expectOne((r) => r.url === '/api/briefings/morning')
+    httpMock.expectOne((r) => r.url === '/api/briefings/morning' && r.method === 'POST')
       .flush('boom', { status: 500, statusText: 'Server Error' });
     fixture.detectChanges();
 

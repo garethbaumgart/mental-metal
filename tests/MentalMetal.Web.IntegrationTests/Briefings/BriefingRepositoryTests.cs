@@ -127,8 +127,9 @@ public sealed class BriefingRepositoryTests(PostgresFixture postgres) : Integrat
 
         var allRecent = await repo.ListRecentAsync(userId, type: null, limit: 10, CancellationToken.None);
         Assert.Equal(3, allRecent.Count);
-        // Newest first.
-        Assert.Equal("m2", allRecent[0].MarkdownBody);
+        // Newest first - the most recent briefing was the second Morning row.
+        Assert.Equal("morning:2026-04-14", allRecent[0].ScopeKey);
+        Assert.Equal(BriefingType.Morning, allRecent[0].Type);
 
         var morningOnly = await repo.ListRecentAsync(userId, BriefingType.Morning, limit: 10, CancellationToken.None);
         Assert.Equal(2, morningOnly.Count);

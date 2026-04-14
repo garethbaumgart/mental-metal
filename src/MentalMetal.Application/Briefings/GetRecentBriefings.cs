@@ -18,11 +18,23 @@ public sealed class GetRecentBriefingsHandler(
         ArgumentNullException.ThrowIfNull(query);
 
         if (query.Limit < 1 || query.Limit > MaxLimit)
-            throw new ArgumentOutOfRangeException(nameof(query), $"Limit must be between 1 and {MaxLimit}.");
+            throw new ArgumentOutOfRangeException(
+                $"{nameof(query)}.{nameof(GetRecentBriefingsQuery.Limit)}",
+                query.Limit,
+                $"Limit must be between 1 and {MaxLimit}.");
 
         BriefingType? domainType = query.Type is null ? null : (BriefingType)query.Type.Value;
         var rows = await briefingRepository.ListRecentAsync(
             currentUserService.UserId, domainType, query.Limit, cancellationToken);
-        return rows.Select(b => b.ToSummary()).ToList();
+        return rows
+            .Select(r => new BriefingSummary(
+                r.Id,
+                (BriefingTypeDto)r.Type,
+                r.ScopeKey,
+                r.GeneratedAtUtc,
+                r.Model,
+                r.InputTokens,
+                r.OutputTokens))
+            .ToList();
     }
 }

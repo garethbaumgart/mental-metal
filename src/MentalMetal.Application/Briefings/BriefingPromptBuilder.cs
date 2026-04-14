@@ -26,7 +26,7 @@ public sealed class BriefingPromptBuilder
 
     public AiCompletionRequest BuildMorning(object facts, int maxTokens)
     {
-        var json = Serialize(facts);
+        var json = FenceSafe(Serialize(facts));
         var userPrompt =
             "Generate the user's morning briefing as Markdown.\n\n" +
             "Required structure:\n" +
@@ -41,7 +41,7 @@ public sealed class BriefingPromptBuilder
 
     public AiCompletionRequest BuildWeekly(object facts, int maxTokens)
     {
-        var json = Serialize(facts);
+        var json = FenceSafe(Serialize(facts));
         var userPrompt =
             "Generate the user's weekly briefing as Markdown.\n\n" +
             "Required structure:\n" +
@@ -56,14 +56,14 @@ public sealed class BriefingPromptBuilder
 
     public AiCompletionRequest BuildOneOnOnePrep(object facts, int maxTokens)
     {
-        var json = Serialize(facts);
+        var json = FenceSafe(Serialize(facts));
         var userPrompt =
             "Generate a 1:1 prep sheet as Markdown.\n\n" +
             "Required structure:\n" +
             "1. ## Context — 2-3 sentences synthesising `lastOneOnOne`, `openGoals`, and `recentObservations`.\n" +
             "2. ## Open items — bullets referencing `openCommitmentsWithPerson` and `openDelegationsToPerson`.\n" +
             "3. ## Recent observations — bullets from `recentObservations`.\n" +
-            "4. ## Suggested talking points — EXACTLY 3 to 5 bulleted talking points grounded in the facts.\n\n" +
+            "4. ## Suggested talking points — between 3 and 5 bulleted talking points grounded in the facts (no fewer than 3, no more than 5).\n\n" +
             "Facts (JSON):\n```json\n" + json + "\n```";
         return new AiCompletionRequest(SystemPrompt, userPrompt, MaxTokens: maxTokens, Temperature: 0.3f);
     }
@@ -71,4 +71,13 @@ public sealed class BriefingPromptBuilder
     public string SerializeFacts(object facts) => Serialize(facts);
 
     private static string Serialize(object facts) => JsonSerializer.Serialize(facts, JsonOptions);
+
+    /// <summary>
+    /// Returns a JSON string that is safe to embed inside a triple-backtick fence in
+    /// the LLM prompt. JSON escapes \", \\, and control characters but does NOT escape
+    /// the ` character, so a fact body containing literal backticks could close the
+    /// fence and let the remainder of the value act as prompt instructions. Replace
+    /// any backtick with a Unicode-escape sequence (\u0060) so the fence stays sealed.
+    /// </summary>
+    private static string FenceSafe(string json) => json.Replace("`", "\\u0060");
 }

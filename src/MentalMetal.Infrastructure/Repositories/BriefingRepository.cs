@@ -24,7 +24,7 @@ public sealed class BriefingRepository(MentalMetalDbContext dbContext) : IBriefi
             .OrderByDescending(b => b.GeneratedAtUtc)
             .FirstOrDefaultAsync(cancellationToken);
 
-    public async Task<IReadOnlyList<Briefing>> ListRecentAsync(
+    public async Task<IReadOnlyList<BriefingListItem>> ListRecentAsync(
         Guid userId, BriefingType? type, int limit, CancellationToken cancellationToken)
     {
         var query = dbContext.Briefings
@@ -34,9 +34,20 @@ public sealed class BriefingRepository(MentalMetalDbContext dbContext) : IBriefi
         if (type is not null)
             query = query.Where(b => b.Type == type.Value);
 
+        // Project to BriefingListItem in SQL so the heavy MarkdownBody and
+        // PromptFactsJson columns are never read into memory.
         return await query
             .OrderByDescending(b => b.GeneratedAtUtc)
             .Take(limit)
+            .Select(b => new BriefingListItem(
+                b.Id,
+                b.UserId,
+                b.Type,
+                b.ScopeKey,
+                b.GeneratedAtUtc,
+                b.Model,
+                b.InputTokens,
+                b.OutputTokens))
             .ToListAsync(cancellationToken);
     }
 }

@@ -12,7 +12,9 @@ public static class BriefingEndpoints
             GenerateMorningBriefingHandler handler,
             CancellationToken cancellationToken) =>
         {
-            var force = ParseForce(http.Request.Query);
+            bool force;
+            try { force = TryParseForce(http.Request.Query) ?? false; }
+            catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
             try
             {
                 var result = await handler.HandleAsync(new GenerateMorningBriefingCommand(force), cancellationToken);
@@ -32,7 +34,9 @@ public static class BriefingEndpoints
             GenerateWeeklyBriefingHandler handler,
             CancellationToken cancellationToken) =>
         {
-            var force = ParseForce(http.Request.Query);
+            bool force;
+            try { force = TryParseForce(http.Request.Query) ?? false; }
+            catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
             try
             {
                 var result = await handler.HandleAsync(new GenerateWeeklyBriefingCommand(force), cancellationToken);
@@ -53,7 +57,9 @@ public static class BriefingEndpoints
             GenerateOneOnOnePrepHandler handler,
             CancellationToken cancellationToken) =>
         {
-            var force = ParseForce(http.Request.Query);
+            bool force;
+            try { force = TryParseForce(http.Request.Query) ?? false; }
+            catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
             try
             {
                 var result = await handler.HandleAsync(new GenerateOneOnOnePrepCommand(personId, force), cancellationToken);
@@ -81,7 +87,11 @@ public static class BriefingEndpoints
             if (query.TryGetValue("type", out var typeValues) && typeValues.Count > 0
                 && !string.IsNullOrWhiteSpace(typeValues[0]))
             {
-                if (!Enum.TryParse<BriefingTypeDto>(typeValues[0], ignoreCase: true, out var parsed))
+                // Enum.TryParse accepts numeric strings even when they don't map to a
+                // defined enum value (e.g. type=999) - guard with Enum.IsDefined so
+                // bad input is rejected with a 400 instead of silently sneaking through.
+                if (!Enum.TryParse<BriefingTypeDto>(typeValues[0], ignoreCase: true, out var parsed)
+                    || !Enum.IsDefined(parsed))
                     return Results.BadRequest(new { error = $"Unknown briefing type '{typeValues[0]}'." });
                 type = parsed;
             }
@@ -115,11 +125,20 @@ public static class BriefingEndpoints
         return app;
     }
 
-    private static bool ParseForce(IQueryCollection query)
+    /// <summary>
+    /// Parses the optional `force` query parameter. Returns null when the parameter
+    /// is absent (caller treats null as false). Returns a boolean for "true"/"false"
+    /// (case-insensitive). Throws <see cref="ArgumentException"/> for any other value
+    /// so the endpoint can map it to HTTP 400.
+    /// </summary>
+    private static bool? TryParseForce(IQueryCollection query)
     {
-        if (!query.TryGetValue("force", out var values) || values.Count == 0) return false;
+        if (!query.TryGetValue("force", out var values) || values.Count == 0) return null;
         var raw = values[0];
-        return bool.TryParse(raw, out var force) && force;
+        if (string.IsNullOrEmpty(raw)) return null;
+        if (!bool.TryParse(raw, out var force))
+            throw new ArgumentException($"Invalid 'force' value '{raw}'. Expected true|false.");
+        return force;
     }
 
     private static IResult AiProviderNotConfiguredResult(AiProviderNotConfiguredException ex) =>

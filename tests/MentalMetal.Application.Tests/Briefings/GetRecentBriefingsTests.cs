@@ -16,7 +16,7 @@ public class GetRecentBriefingsTests
     {
         _currentUser.UserId.Returns(_userId);
         _briefings.ListRecentAsync(_userId, Arg.Any<BriefingType?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(Array.Empty<Briefing>());
+            .Returns(Array.Empty<BriefingListItem>());
         _handler = new GetRecentBriefingsHandler(_briefings, _currentUser);
     }
 
@@ -47,19 +47,27 @@ public class GetRecentBriefingsTests
     }
 
     [Fact]
-    public async Task Handle_MapsToSummary_NoMarkdownBody()
+    public async Task Handle_MapsListItemToSummary()
     {
-        var briefing = Briefing.Create(_userId, BriefingType.Morning, "morning:2026-04-14",
-            DateTimeOffset.UtcNow, "# big body", "{}", "model", 12, 8);
+        var listItem = new BriefingListItem(
+            Id: Guid.NewGuid(),
+            UserId: _userId,
+            Type: BriefingType.Morning,
+            ScopeKey: "morning:2026-04-14",
+            GeneratedAtUtc: DateTimeOffset.UtcNow,
+            Model: "model",
+            InputTokens: 12,
+            OutputTokens: 8);
         _briefings.ListRecentAsync(_userId, Arg.Any<BriefingType?>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
-            .Returns(new[] { briefing });
+            .Returns(new[] { listItem });
 
         var result = await _handler.HandleAsync(new GetRecentBriefingsQuery(null, 5), default);
 
         var item = Assert.Single(result);
-        Assert.Equal(briefing.Id, item.Id);
+        Assert.Equal(listItem.Id, item.Id);
         Assert.Equal(BriefingTypeDto.Morning, item.Type);
         Assert.Equal("morning:2026-04-14", item.ScopeKey);
         Assert.Equal(12, item.InputTokens);
+        Assert.Equal(8, item.OutputTokens);
     }
 }

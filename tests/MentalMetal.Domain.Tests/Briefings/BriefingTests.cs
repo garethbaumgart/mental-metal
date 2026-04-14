@@ -73,11 +73,25 @@ public class BriefingTests
             Briefing.Create(UserId, BriefingType.Morning, "morning:2026-04-14", Now, null!, "{}", "model", 1, 1));
     }
 
-    [Fact]
-    public void Create_NullPromptFactsJson_Throws()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Create_BlankPromptFactsJson_Throws(string? json)
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            Briefing.Create(UserId, BriefingType.Morning, "morning:2026-04-14", Now, "body", null!, "model", 1, 1));
+        Assert.ThrowsAny<ArgumentException>(() =>
+            Briefing.Create(UserId, BriefingType.Morning, "morning:2026-04-14", Now, "body", json!, "model", 1, 1));
+    }
+
+    [Theory]
+    [InlineData("not-json")]
+    [InlineData("{")]
+    [InlineData("{\"unclosed\":")]
+    public void Create_MalformedPromptFactsJson_Throws(string json)
+    {
+        var ex = Assert.Throws<ArgumentException>(() =>
+            Briefing.Create(UserId, BriefingType.Morning, "morning:2026-04-14", Now, "body", json, "model", 1, 1));
+        Assert.Equal("promptFactsJson", ex.ParamName);
     }
 
     [Fact]
