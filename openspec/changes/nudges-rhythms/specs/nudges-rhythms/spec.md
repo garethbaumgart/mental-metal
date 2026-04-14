@@ -148,21 +148,21 @@ The system SHALL allow an authenticated user to update a nudge's title, notes, a
 
 ### Requirement: Update cadence
 
-The system SHALL allow an authenticated user to change a nudge's cadence via `PATCH /api/nudges/{id}` or a dedicated cadence-update action. When the cadence changes, the system SHALL recompute `NextDueDate` from today using the new cadence. Validation rules from "Create a nudge" SHALL apply. The system SHALL raise a `NudgeCadenceChanged` domain event.
+The system SHALL expose `PATCH /api/nudges/{id}/cadence` for cadence updates (distinct from `PATCH /api/nudges/{id}`, which handles title/notes/links). When the cadence changes, the system SHALL recompute `NextDueDate` from today using the new cadence's `CalculateFirst(today)`. Validation rules from "Create a nudge" SHALL apply. The system SHALL raise a `NudgeCadenceChanged` domain event.
 
 #### Scenario: Change from Weekly to Monthly
 
-- **WHEN** an authenticated user changes a Weekly nudge to Monthly with dayOfMonth 1
+- **WHEN** an authenticated user sends PATCH `/api/nudges/{id}/cadence` changing a Weekly nudge to Monthly with dayOfMonth 1
 - **THEN** the system updates the cadence, recomputes NextDueDate to the next 1st of the month on or after today, and returns HTTP 200
 
 #### Scenario: Invalid new cadence rejected
 
-- **WHEN** an authenticated user changes a nudge to cadence Custom with customIntervalDays 0
+- **WHEN** an authenticated user sends PATCH `/api/nudges/{id}/cadence` with cadence Custom and customIntervalDays 0
 - **THEN** the system returns HTTP 400 with error code `nudge.invalidCadence`
 
 ### Requirement: Mark nudge as nudged
 
-The system SHALL allow an authenticated user to record that they acted on a nudge via `POST /api/nudges/{id}/mark-nudged`. The system SHALL set `LastNudgedAt` to the current UTC timestamp and advance `NextDueDate` to the next occurrence strictly after today based on the cadence. Only active nudges can be marked. The system SHALL raise a `NudgeNudged` domain event.
+The system SHALL allow an authenticated user to record that they acted on a nudge via `POST /api/nudges/{id}/mark-nudged`. The system SHALL set `LastNudgedAt` to the current UTC timestamp and advance `NextDueDate` to the next occurrence strictly after today via `Cadence.CalculateNext(today)`. Only active nudges can be marked. The system SHALL raise a `NudgeNudged` domain event.
 
 #### Scenario: Mark a daily nudge
 

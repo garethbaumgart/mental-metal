@@ -26,7 +26,12 @@ Mental Metal tracks people and initiatives as rich aggregates, and has commitmen
 
 ### D1: `NudgeCadence` as a value object with `CalculateNext(from, anchors)`
 
-A `NudgeCadence` record encapsulates `(Type, CustomIntervalDays?, DayOfWeek?, DayOfMonth?)` and exposes a single pure method `CalculateNext(DateOnly from)` returning the next due `DateOnly` on or after `from`. The `Nudge` aggregate calls this in `Create` and `MarkNudged` to compute `NextDueDate`.
+A `NudgeCadence` record encapsulates `(Type, CustomIntervalDays?, DayOfWeek?, DayOfMonth?)` and exposes two pure methods:
+
+- `CalculateFirst(DateOnly from)` returns the first due `DateOnly` on or after `from`. Called by `Create` and `Resume` to anchor the schedule.
+- `CalculateNext(DateOnly after)` returns the next due `DateOnly` **strictly after** `after`. Called by `MarkNudged(now)` so the schedule always advances past the moment of marking.
+
+Splitting the two forms keeps the semantics explicit and matches the spec ("advances to the next occurrence strictly after today").
 
 **Alternatives considered:**
 - A service `INudgeScheduler`. Rejected -- pure arithmetic belongs on the value object; a service adds indirection with no benefit.
@@ -50,6 +55,7 @@ Cadence math is cheap, but persisting `NextDueDate` makes filters (`dueBefore`, 
 - `nudge.invalidCadence` -- e.g., Custom without positive `CustomIntervalDays`, or Weekly without `DayOfWeek`.
 - `nudge.alreadyPaused` / `nudge.alreadyActive` -- state-transition conflicts on pause/resume.
 - `nudge.validation` -- title/notes length.
+- `nudge.linkedEntityNotFound` -- referenced `Person` or `Initiative` is missing, invalid, or belongs to a different user.
 
 ### D6: Title and Notes length caps in the domain
 
