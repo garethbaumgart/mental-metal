@@ -1,5 +1,5 @@
 import { Pipe, PipeTransform, SecurityContext, inject } from '@angular/core';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { DomSanitizer } from '@angular/platform-browser';
 
 /**
  * Minimal, sanitising Markdown-to-HTML pipe. Handles only the subset our briefings
@@ -14,7 +14,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 export class MarkdownPipe implements PipeTransform {
   private readonly sanitizer = inject(DomSanitizer);
 
-  transform(input: string | null | undefined): SafeHtml {
+  transform(input: string | null | undefined): string {
     if (!input) return '';
     const html = renderMarkdown(input);
     return this.sanitizer.sanitize(SecurityContext.HTML, html) ?? '';

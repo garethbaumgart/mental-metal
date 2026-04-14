@@ -124,7 +124,7 @@ public sealed class BriefingFactsAssembler(
                 .Select(o => MapOneOnOne(o, personById))
                 .ToList(),
             OverdueDelegations: overdueDelegations
-                .Select(d => MapDelegation(d, now, personById, initiativesById))
+                .Select(d => MapDelegation(d, now, today, personById, initiativesById))
                 .ToList(),
             RecentCaptures: recentCaptures
                 .Select(c => MapCapture(c, now))
@@ -229,7 +229,7 @@ public sealed class BriefingFactsAssembler(
                 .Select(c => MapCommitment(c, personById, initiativeNameMap))
                 .ToList(),
             OverdueDelegations: overdueDelegations
-                .Select(d => MapDelegation(d, now, personById, initiativeNameMap))
+                .Select(d => MapDelegation(d, now, today, personById, initiativeNameMap))
                 .ToList(),
             InitiativesNeedingAttention: initiativesNeedingAttention,
             PeopleWithoutRecentOneOnOne: peopleWithoutRecent);
@@ -312,21 +312,8 @@ public sealed class BriefingFactsAssembler(
                 .Select(c => MapCommitment(c, personById, initiativesById))
                 .ToList(),
             OpenDelegationsToPerson: openDelegations
-                .Select(d => MapDelegation(d, now, personById, initiativesById))
+                .Select(d => MapDelegation(d, now, today, personById, initiativesById))
                 .ToList());
-    }
-
-    /// <summary>
-    /// Compute the user's local "today" and the morning rollback flag. The hour comparison
-    /// uses the user's local time zone (not the server's) to avoid scopeKey drift across
-    /// users in different zones near midnight.
-    /// </summary>
-    public (DateOnly Today, int LocalHour, TimeZoneInfo TimeZone) ComputeUserLocalDate(string userTimezoneId)
-    {
-        var tz = ResolveTimeZone(userTimezoneId);
-        var nowLocal = TimeZoneInfo.ConvertTime(timeProvider.GetUtcNow(), tz);
-        var localToday = DateOnly.FromDateTime(nowLocal.DateTime);
-        return (localToday, nowLocal.Hour, tz);
     }
 
     private async Task<(Guid UserId, TimeZoneInfo TimeZone, DateOnly UserLocalToday, int LocalHour)> ResolveUserContextAsync(CancellationToken cancellationToken)
@@ -427,19 +414,23 @@ public sealed class BriefingFactsAssembler(
     private static FactDelegation MapDelegation(
         Delegation d,
         DateTimeOffset now,
+        DateOnly userLocalToday,
         Dictionary<Guid, Person> personById,
         Dictionary<Guid, string> initiativesById)
     {
         var lastTouch = d.LastFollowedUpAt ?? d.CreatedAt;
         var daysSinceLastTouch = (int)Math.Floor((now - lastTouch).TotalDays);
         var personName = personById.TryGetValue(d.DelegatePersonId, out var p) ? p.Name : "(unknown)";
+        // Use the caller's user-local today so overdue determination matches the
+        // selection predicate used to load these delegations - avoids drift near
+        // UTC midnight when the user's local date != the server's UTC date.
         return new FactDelegation(
             d.Id,
             d.Description,
             d.Status.ToString(),
             d.Priority.ToString(),
             d.DueDate,
-            QueueTermsHelper.IsDelegationOverdue(d, DateOnly.FromDateTime(now.UtcDateTime)),
+            QueueTermsHelper.IsDelegationOverdue(d, userLocalToday),
             daysSinceLastTouch,
             d.DelegatePersonId,
             personName,
