@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Audio capture capability: record or upload audio via the browser, transcribe it server-side through `IAudioTranscriptionProvider` into timestamped, speaker-labeled segments, and link speakers to existing `Person` records. On successful transcription the audio blob is discarded (transcript retained) to minimise storage and PII footprint. Transcription runs on a lifecycle independent of AI extraction so the existing capture-ai-extraction pipeline picks up transcribed captures unchanged.
+Audio capture capability: record or upload audio via the browser, transcribe it server-side through `IAudioTranscriptionProvider` into timestamped, speaker-labeled segments, and link speakers to existing `Person` records. On successful transcription the audio blob is discarded (transcript retained) to minimize storage and PII footprint. Transcription runs on a lifecycle independent of AI extraction so the existing capture-ai-extraction pipeline picks up transcribed captures unchanged.
 
 ## Requirements
 
