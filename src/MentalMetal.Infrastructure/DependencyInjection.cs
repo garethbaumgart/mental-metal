@@ -13,6 +13,7 @@ using MentalMetal.Application.Initiatives;
 using MentalMetal.Application.Initiatives.Brief;
 using MentalMetal.Application.Interviews;
 using MentalMetal.Application.MyQueue;
+using MentalMetal.Application.Nudges;
 using MentalMetal.Application.Observations;
 using MentalMetal.Application.OneOnOnes;
 using MentalMetal.Application.People;
@@ -27,6 +28,7 @@ using MentalMetal.Domain.Goals;
 using MentalMetal.Domain.Initiatives;
 using MentalMetal.Domain.Initiatives.LivingBrief;
 using MentalMetal.Domain.Interviews;
+using MentalMetal.Domain.Nudges;
 using MentalMetal.Domain.Observations;
 using MentalMetal.Domain.OneOnOnes;
 using MentalMetal.Domain.People;
@@ -95,6 +97,7 @@ public static class DependencyInjection
         services.AddScoped<IGoalRepository, GoalRepository>();
         services.AddScoped<IBriefingRepository, BriefingRepository>();
         services.AddScoped<IInterviewRepository, InterviewRepository>();
+        services.AddScoped<INudgeRepository, NudgeRepository>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
@@ -292,6 +295,17 @@ public static class DependencyInjection
         services.AddScoped<RemoveInterviewScorecardHandler>();
         services.AddScoped<SetInterviewTranscriptHandler>();
         services.AddScoped<AnalyzeInterviewHandler>();
+
+        // Nudge handlers
+        services.AddScoped<CreateNudgeHandler>();
+        services.AddScoped<GetNudgeHandler>();
+        services.AddScoped<ListNudgesHandler>();
+        services.AddScoped<UpdateNudgeHandler>();
+        services.AddScoped<UpdateNudgeCadenceHandler>();
+        services.AddScoped<MarkNudgeAsNudgedHandler>();
+        services.AddScoped<PauseNudgeHandler>();
+        services.AddScoped<ResumeNudgeHandler>();
+        services.AddScoped<DeleteNudgeHandler>();
 
         // Daily close-out handlers
         services.AddScoped<GetCloseOutQueueHandler>();

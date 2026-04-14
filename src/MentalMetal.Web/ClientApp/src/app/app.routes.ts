@@ -21,6 +21,7 @@ export const routes: Routes = [
   { path: 'goals', loadComponent: () => import('./pages/goals/goals-list/goals-list.component').then(m => m.GoalsListComponent), canActivate: [authGuard], data: { title: 'Goals' } },
   { path: 'interviews', loadComponent: () => import('./pages/interviews/interviews-pipeline/interviews-pipeline.component').then(m => m.InterviewsPipelineComponent), canActivate: [authGuard], data: { title: 'Interviews' } },
   { path: 'interviews/:id', loadComponent: () => import('./pages/interviews/interview-detail/interview-detail.component').then(m => m.InterviewDetailComponent), canActivate: [authGuard], data: { title: 'Interview Detail' } },
+  { path: 'nudges', loadChildren: () => import('./features/nudges/nudges.routes').then(m => m.NUDGES_ROUTES) },
   { path: 'my-queue', loadChildren: () => import('./features/my-queue/my-queue.routes').then(m => m.MY_QUEUE_ROUTES) },
   { path: 'close-out', loadChildren: () => import('./features/daily-close-out/daily-close-out.routes').then(m => m.DAILY_CLOSE_OUT_ROUTES) },
   { path: 'chat', loadComponent: () => import('./pages/global-chat/global-chat.page').then(m => m.GlobalChatPageComponent), canActivate: [authGuard], data: { title: 'Chat' } },
