@@ -61,3 +61,8 @@ public sealed record CaptureExtractionDiscarded(Guid CaptureId) : IDomainEvent
 {
     public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
 }
+
+public sealed record CaptureQuickDiscarded(Guid CaptureId) : IDomainEvent
+{
+    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+}

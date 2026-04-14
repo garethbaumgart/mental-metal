@@ -536,4 +536,66 @@ public class CaptureTests
 
         Assert.Throws<ArgumentException>(() => capture.RecordSpawnedObservation(Guid.Empty));
     }
+
+    // --- Daily close-out / triage ---
+
+    [Fact]
+    public void QuickDiscard_NotTriaged_SetsFlagsAndRaisesEvent()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+        capture.ClearDomainEvents();
+
+        capture.QuickDiscard();
+
+        Assert.True(capture.Triaged);
+        Assert.NotNull(capture.TriagedAtUtc);
+        var evt = Assert.Single(capture.DomainEvents);
+        var discarded = Assert.IsType<CaptureQuickDiscarded>(evt);
+        Assert.Equal(capture.Id, discarded.CaptureId);
+    }
+
+    [Fact]
+    public void QuickDiscard_AlreadyTriaged_IsNoOp()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+        capture.QuickDiscard();
+        var firstTriagedAt = capture.TriagedAtUtc;
+        capture.ClearDomainEvents();
+
+        capture.QuickDiscard();
+
+        Assert.True(capture.Triaged);
+        Assert.Equal(firstTriagedAt, capture.TriagedAtUtc);
+        Assert.Empty(capture.DomainEvents);
+    }
+
+    [Fact]
+    public void ConfirmExtraction_SetsExtractionResolvedAndTriaged()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+        capture.BeginProcessing();
+        capture.CompleteProcessing(CreateTestExtraction());
+        capture.ClearDomainEvents();
+
+        capture.ConfirmExtraction();
+
+        Assert.True(capture.ExtractionResolved);
+        Assert.True(capture.Triaged);
+        Assert.NotNull(capture.TriagedAtUtc);
+    }
+
+    [Fact]
+    public void DiscardExtraction_SetsExtractionResolvedAndTriaged()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+        capture.BeginProcessing();
+        capture.CompleteProcessing(CreateTestExtraction());
+        capture.ClearDomainEvents();
+
+        capture.DiscardExtraction();
+
+        Assert.True(capture.ExtractionResolved);
+        Assert.True(capture.Triaged);
+        Assert.NotNull(capture.TriagedAtUtc);
+    }
 }

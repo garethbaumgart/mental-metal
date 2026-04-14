@@ -2,6 +2,8 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 using MentalMetal.Application.Captures;
+using MentalMetal.Application.DailyCloseOut;
+using MentalMetal.Web;
 using MentalMetal.Application.Commitments;
 using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.Delegations;
@@ -792,10 +794,11 @@ app.MapPost("/api/captures", async (
 app.MapGet("/api/captures", async (
     CaptureType? type,
     ProcessingStatus? status,
+    bool? includeTriaged,
     GetUserCapturesHandler handler,
     CancellationToken cancellationToken) =>
 {
-    var list = await handler.HandleAsync(type, status, cancellationToken);
+    var list = await handler.HandleAsync(type, status, cancellationToken, includeTriaged ?? false);
     return Results.Ok(list);
 }).RequireAuthorization();
 
@@ -1957,6 +1960,8 @@ app.MapGet("/api/people/{personId:guid}/evidence-summary", async (
     var response = await handler.HandleAsync(personId, from.Value, to.Value, ct);
     return Results.Ok(response);
 }).RequireAuthorization();
+
+app.MapDailyCloseOutEndpoints();
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
 

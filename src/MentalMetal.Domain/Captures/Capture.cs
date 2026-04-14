@@ -28,6 +28,20 @@ public sealed class Capture : AggregateRoot, IUserScoped
     public string? Source { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
+    /// <summary>
+    /// True once the user has dealt with this capture as part of daily close-out
+    /// (confirm, discard, or quick-discard). Orthogonal to <see cref="ProcessingStatus"/>.
+    /// </summary>
+    public bool Triaged { get; private set; }
+
+    public DateTimeOffset? TriagedAtUtc { get; private set; }
+
+    /// <summary>
+    /// True once the AI extraction has been explicitly confirmed or discarded by the user.
+    /// Used by the close-out queue to avoid surfacing captures whose extraction has already been resolved.
+    /// </summary>
+    public bool ExtractionResolved { get; private set; }
+
     private Capture() { } // EF Core
 
     public static Capture Create(Guid userId, string rawContent, CaptureType type, string? source = null, string? title = null)
@@ -127,8 +141,15 @@ public sealed class Capture : AggregateRoot, IUserScoped
         if (ExtractionStatus == ExtractionStatus.Confirmed)
             throw new InvalidOperationException("Extraction already confirmed.");
 
+        var now = DateTimeOffset.UtcNow;
         ExtractionStatus = ExtractionStatus.Confirmed;
-        UpdatedAt = DateTimeOffset.UtcNow;
+        ExtractionResolved = true;
+        if (!Triaged)
+        {
+            Triaged = true;
+            TriagedAtUtc = now;
+        }
+        UpdatedAt = now;
 
         RaiseDomainEvent(new CaptureExtractionConfirmed(Id));
     }
@@ -143,10 +164,34 @@ public sealed class Capture : AggregateRoot, IUserScoped
             throw new InvalidOperationException(
                 $"Cannot discard extraction with status '{ExtractionStatus}'. Must be 'Pending'.");
 
+        var now = DateTimeOffset.UtcNow;
         ExtractionStatus = ExtractionStatus.Discarded;
-        UpdatedAt = DateTimeOffset.UtcNow;
+        ExtractionResolved = true;
+        if (!Triaged)
+        {
+            Triaged = true;
+            TriagedAtUtc = now;
+        }
+        UpdatedAt = now;
 
         RaiseDomainEvent(new CaptureExtractionDiscarded(Id));
+    }
+
+    /// <summary>
+    /// Marks the capture as triaged without touching the AI processing pipeline.
+    /// Idempotent — calling twice is a no-op.
+    /// </summary>
+    public void QuickDiscard()
+    {
+        if (Triaged)
+            return;
+
+        var now = DateTimeOffset.UtcNow;
+        Triaged = true;
+        TriagedAtUtc = now;
+        UpdatedAt = now;
+
+        RaiseDomainEvent(new CaptureQuickDiscarded(Id));
     }
 
     public void LinkToPerson(Guid personId)

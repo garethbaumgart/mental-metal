@@ -108,6 +108,12 @@ import { ThemeService } from '../services/theme.service';
         <i class="pi pi-list-check"></i>
         <span>My Queue</span>
       </a>
+      <a routerLink="/close-out" routerLinkActive="font-semibold sidebar-link-active"
+         class="flex items-center gap-3 px-3 py-2 rounded-md text-sm"
+         (click)="navClick.emit()">
+        <i class="pi pi-inbox"></i>
+        <span>Close-out</span>
+      </a>
     </nav>
 
     <div class="p-3 border-t sidebar-border">

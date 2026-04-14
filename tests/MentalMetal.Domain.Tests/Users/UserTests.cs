@@ -332,4 +332,81 @@ public class UserTests
 
         Assert.True(user.LastLoginAt >= originalLogin);
     }
+
+    // --- Daily close-out ---
+
+    [Fact]
+    public void RecordDailyCloseOut_NewDate_AppendsLogAndRaisesEvent()
+    {
+        var user = User.Register("auth-1", "a@b.com", "A", null);
+        user.ClearDomainEvents();
+
+        var result = user.RecordDailyCloseOut(new DateOnly(2026, 4, 14), 3, 1, 2);
+
+        Assert.True(result.IsNew);
+        var log = Assert.Single(user.DailyCloseOutLogs);
+        Assert.Equal(new DateOnly(2026, 4, 14), log.Date);
+        Assert.Equal(3, log.ConfirmedCount);
+        Assert.Equal(1, log.DiscardedCount);
+        Assert.Equal(2, log.RemainingCount);
+        Assert.Same(log, result.Log);
+        var evt = Assert.Single(user.DomainEvents);
+        Assert.IsType<DailyCloseOutRecorded>(evt);
+    }
+
+    [Fact]
+    public void RecordDailyCloseOut_SameDate_OverwritesExistingLog()
+    {
+        var user = User.Register("auth-1", "a@b.com", "A", null);
+        var date = new DateOnly(2026, 4, 14);
+        user.RecordDailyCloseOut(date, 1, 0, 5);
+        var originalId = user.DailyCloseOutLogs[0].Id;
+        user.ClearDomainEvents();
+
+        var result = user.RecordDailyCloseOut(date, 4, 2, 0);
+
+        Assert.False(result.IsNew);
+        var log = Assert.Single(user.DailyCloseOutLogs);
+        Assert.Equal(originalId, log.Id);
+        Assert.Equal(4, log.ConfirmedCount);
+        Assert.Equal(2, log.DiscardedCount);
+        Assert.Equal(0, log.RemainingCount);
+    }
+
+    [Theory]
+    [InlineData(-1, 0, 0)]
+    [InlineData(0, -1, 0)]
+    [InlineData(0, 0, -1)]
+    public void RecordDailyCloseOut_NegativeCount_Throws(int confirmed, int discarded, int remaining)
+    {
+        var user = User.Register("auth-1", "a@b.com", "A", null);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            user.RecordDailyCloseOut(new DateOnly(2026, 4, 14), confirmed, discarded, remaining));
+    }
+
+    [Fact]
+    public void RecordDailyCloseOut_MultiUser_IsolatedPerUser()
+    {
+        var userA = User.Register("auth-a", "a@b.com", "A", null);
+        var userB = User.Register("auth-b", "b@b.com", "B", null);
+
+        userA.RecordDailyCloseOut(new DateOnly(2026, 4, 14), 1, 2, 3);
+        userB.RecordDailyCloseOut(new DateOnly(2026, 4, 14), 9, 8, 7);
+
+        Assert.Single(userA.DailyCloseOutLogs);
+        Assert.Single(userB.DailyCloseOutLogs);
+        Assert.Equal(1, userA.DailyCloseOutLogs[0].ConfirmedCount);
+        Assert.Equal(9, userB.DailyCloseOutLogs[0].ConfirmedCount);
+    }
+
+    [Fact]
+    public void GetCloseOutLog_ReturnsMatchingOrNull()
+    {
+        var user = User.Register("auth-1", "a@b.com", "A", null);
+        user.RecordDailyCloseOut(new DateOnly(2026, 4, 14), 1, 0, 0);
+
+        Assert.NotNull(user.GetCloseOutLog(new DateOnly(2026, 4, 14)));
+        Assert.Null(user.GetCloseOutLog(new DateOnly(2026, 4, 15)));
+    }
 }

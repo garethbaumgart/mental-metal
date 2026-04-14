@@ -26,3 +26,8 @@ public sealed record AiProviderRemoved(Guid UserId) : IDomainEvent
 {
     public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
 }
+
+public sealed record DailyCloseOutRecorded(Guid UserId, DateOnly Date) : IDomainEvent
+{
+    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+}

@@ -77,9 +77,16 @@ public sealed class CaptureConfiguration : IEntityTypeConfiguration<Capture>
         builder.Property(c => c.ProcessedAt);
         builder.Property(c => c.UpdatedAt);
 
+        builder.Property(c => c.Triaged)
+            .HasDefaultValue(false);
+        builder.Property(c => c.TriagedAtUtc);
+        builder.Property(c => c.ExtractionResolved)
+            .HasDefaultValue(false);
+
         builder.Property(c => c.UserId)
             .IsRequired();
 
         builder.HasIndex(c => c.UserId);
+        builder.HasIndex(c => new { c.UserId, c.Triaged });
     }
 }

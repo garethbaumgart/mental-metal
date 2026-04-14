@@ -12,7 +12,8 @@ public sealed record UserProfileResponse(
     bool HasAiProvider,
     bool HasPassword,
     DateTimeOffset CreatedAt,
-    DateTimeOffset LastLoginAt)
+    DateTimeOffset LastLoginAt,
+    DateTimeOffset? LastCloseOutAtUtc)
 {
     public static UserProfileResponse FromDomain(User user) =>
         new(
@@ -29,7 +30,10 @@ public sealed record UserProfileResponse(
             user.AiProviderConfig is not null,
             user.PasswordHash is not null,
             user.CreatedAt,
-            user.LastLoginAt);
+            user.LastLoginAt,
+            user.DailyCloseOutLogs.Count == 0
+                ? null
+                : user.DailyCloseOutLogs.Max(l => l.ClosedAtUtc));
 }
 
 public sealed record UserPreferencesDto(
