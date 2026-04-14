@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using MentalMetal.Application.Captures;
 using MentalMetal.Application.DailyCloseOut;
 using MentalMetal.Web;
+using MentalMetal.Web.Features.Interviews;
 using MentalMetal.Application.Commitments;
 using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.Delegations;
@@ -1964,6 +1965,7 @@ app.MapGet("/api/people/{personId:guid}/evidence-summary", async (
 app.MapDailyCloseOutEndpoints();
 app.MapMyQueueEndpoints();
 app.MapBriefingEndpoints();
+app.MapInterviewEndpoints();
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
 

@@ -102,6 +102,12 @@ import { ThemeService } from '../services/theme.service';
         <i class="pi pi-flag"></i>
         <span>Goals</span>
       </a>
+      <a routerLink="/interviews" routerLinkActive="font-semibold sidebar-link-active"
+         class="flex items-center gap-3 px-3 py-2 rounded-md text-sm"
+         (click)="navClick.emit()">
+        <i class="pi pi-briefcase"></i>
+        <span>Interviews</span>
+      </a>
       <a routerLink="/my-queue" routerLinkActive="font-semibold sidebar-link-active"
          class="flex items-center gap-3 px-3 py-2 rounded-md text-sm"
          (click)="navClick.emit()">
