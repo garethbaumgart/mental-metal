@@ -47,7 +47,7 @@ Cadence math is cheap, but persisting `NextDueDate` makes filters (`dueBefore`, 
 
 ### D4: Pause/Resume semantics
 
-`Pause()` sets `IsActive=false` and leaves `NextDueDate` untouched (so it's hidden from due-queries but we remember the schedule). `Resume(now)` reactivates and sets `NextDueDate = Cadence.CalculateNext(now)` -- the user re-anchors from today, not the stale value.
+`Pause()` sets `IsActive=false` and leaves `NextDueDate` untouched (so it's hidden from due-queries but we remember the schedule). `Resume(today)` reactivates and sets `NextDueDate = Cadence.CalculateFirst(today)` -- the user re-anchors from today (on-or-after), not the stale value.
 
 ### D5: Distinct error codes for distinct failure reasons
 
