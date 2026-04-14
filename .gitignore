@@ -51,3 +51,7 @@ TestResults/
 *.tfvars
 !*.tfvars.example
 crash.log
+
+# Claude Code local state (ephemeral per-session files, not shared)
+.claude/worktrees/
+.claude/scheduled_tasks.lock

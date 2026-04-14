@@ -5,19 +5,26 @@ using MentalMetal.Application.Captures;
 using MentalMetal.Application.Commitments;
 using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.Delegations;
+using MentalMetal.Application.Goals;
 using MentalMetal.Application.Initiatives;
 using MentalMetal.Application.Initiatives.Brief;
 using MentalMetal.Application.Chat.Global;
 using MentalMetal.Application.Initiatives.Chat;
+using MentalMetal.Application.Observations;
+using MentalMetal.Application.OneOnOnes;
 using MentalMetal.Application.People;
+using MentalMetal.Application.PeopleLens;
 using MentalMetal.Application.Users;
 using MentalMetal.Domain.Captures;
 using MentalMetal.Domain.ChatThreads;
 using MentalMetal.Domain.Commitments;
 using MentalMetal.Domain.Common;
 using MentalMetal.Domain.Delegations;
+using MentalMetal.Domain.Goals;
 using MentalMetal.Domain.Initiatives;
 using MentalMetal.Domain.Initiatives.LivingBrief;
+using MentalMetal.Domain.Observations;
+using MentalMetal.Domain.OneOnOnes;
 using MentalMetal.Domain.People;
 using Google.Cloud.Storage.V1;
 using MentalMetal.Infrastructure;
@@ -1620,6 +1627,335 @@ app.MapPost("/api/chat/threads/{threadId:guid}/unarchive", async (
         return thread is null ? Results.NotFound() : Results.Ok(thread);
     }
     catch (InvalidOperationException ex) { return Results.Conflict(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+// --- OneOnOne Endpoints ---
+
+app.MapPost("/api/one-on-ones", async (
+    CreateOneOnOneRequest request,
+    CreateOneOnOneHandler handler,
+    CancellationToken ct) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(request, ct);
+        return Results.Created($"/api/one-on-ones/{response.Id}", response);
+    }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapGet("/api/one-on-ones", async (
+    Guid? personId,
+    GetUserOneOnOnesHandler handler,
+    CancellationToken ct) =>
+{
+    var list = await handler.HandleAsync(personId, ct);
+    return Results.Ok(list);
+}).RequireAuthorization();
+
+app.MapGet("/api/one-on-ones/{id:guid}", async (
+    Guid id,
+    GetOneOnOneByIdHandler handler,
+    CancellationToken ct) =>
+{
+    var response = await handler.HandleAsync(id, ct);
+    return response is not null ? Results.Ok(response) : Results.NotFound();
+}).RequireAuthorization();
+
+app.MapPut("/api/one-on-ones/{id:guid}", async (
+    Guid id,
+    UpdateOneOnOneRequest request,
+    UpdateOneOnOneHandler handler,
+    CancellationToken ct) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, ct);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found")) { return Results.NotFound(); }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/one-on-ones/{id:guid}/action-items", async (
+    Guid id,
+    AddActionItemRequest request,
+    AddActionItemHandler handler,
+    CancellationToken ct) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, ct);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found")) { return Results.NotFound(); }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/one-on-ones/{id:guid}/action-items/{itemId:guid}/complete", async (
+    Guid id,
+    Guid itemId,
+    CompleteActionItemHandler handler,
+    CancellationToken ct) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, itemId, ct);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found")) { return Results.NotFound(); }
+    catch (ArgumentException ex) { return Results.NotFound(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapDelete("/api/one-on-ones/{id:guid}/action-items/{itemId:guid}", async (
+    Guid id,
+    Guid itemId,
+    RemoveActionItemHandler handler,
+    CancellationToken ct) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, itemId, ct);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found")) { return Results.NotFound(); }
+    catch (ArgumentException ex) { return Results.NotFound(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/one-on-ones/{id:guid}/follow-ups", async (
+    Guid id,
+    AddFollowUpRequest request,
+    AddFollowUpHandler handler,
+    CancellationToken ct) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, ct);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found")) { return Results.NotFound(); }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/one-on-ones/{id:guid}/follow-ups/{followUpId:guid}/resolve", async (
+    Guid id,
+    Guid followUpId,
+    ResolveFollowUpHandler handler,
+    CancellationToken ct) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, followUpId, ct);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found")) { return Results.NotFound(); }
+    catch (ArgumentException ex) { return Results.NotFound(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+// --- Observation Endpoints ---
+
+app.MapPost("/api/observations", async (
+    CreateObservationRequest request,
+    CreateObservationHandler handler,
+    CancellationToken ct) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(request, ct);
+        return Results.Created($"/api/observations/{response.Id}", response);
+    }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapGet("/api/observations", async (
+    Guid? personId,
+    ObservationTag? tag,
+    DateOnly? from,
+    DateOnly? to,
+    GetUserObservationsHandler handler,
+    CancellationToken ct) =>
+{
+    var list = await handler.HandleAsync(personId, tag, from, to, ct);
+    return Results.Ok(list);
+}).RequireAuthorization();
+
+app.MapGet("/api/observations/{id:guid}", async (
+    Guid id,
+    GetObservationByIdHandler handler,
+    CancellationToken ct) =>
+{
+    var response = await handler.HandleAsync(id, ct);
+    return response is not null ? Results.Ok(response) : Results.NotFound();
+}).RequireAuthorization();
+
+app.MapPut("/api/observations/{id:guid}", async (
+    Guid id,
+    UpdateObservationRequest request,
+    UpdateObservationHandler handler,
+    CancellationToken ct) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, ct);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found")) { return Results.NotFound(); }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapDelete("/api/observations/{id:guid}", async (
+    Guid id,
+    DeleteObservationHandler handler,
+    CancellationToken ct) =>
+{
+    var deleted = await handler.HandleAsync(id, ct);
+    return deleted ? Results.NoContent() : Results.NotFound();
+}).RequireAuthorization();
+
+// --- Goal Endpoints ---
+
+app.MapPost("/api/goals", async (
+    CreateGoalRequest request,
+    CreateGoalHandler handler,
+    CancellationToken ct) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(request, ct);
+        return Results.Created($"/api/goals/{response.Id}", response);
+    }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapGet("/api/goals", async (
+    Guid? personId,
+    GoalType? goalType,
+    GoalStatus? status,
+    GetUserGoalsHandler handler,
+    CancellationToken ct) =>
+{
+    var list = await handler.HandleAsync(personId, goalType, status, ct);
+    return Results.Ok(list);
+}).RequireAuthorization();
+
+app.MapGet("/api/goals/{id:guid}", async (
+    Guid id,
+    GetGoalByIdHandler handler,
+    CancellationToken ct) =>
+{
+    var response = await handler.HandleAsync(id, ct);
+    return response is not null ? Results.Ok(response) : Results.NotFound();
+}).RequireAuthorization();
+
+app.MapPut("/api/goals/{id:guid}", async (
+    Guid id,
+    UpdateGoalRequest request,
+    UpdateGoalHandler handler,
+    CancellationToken ct) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, ct);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found")) { return Results.NotFound(); }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/goals/{id:guid}/achieve", async (
+    Guid id,
+    AchieveGoalHandler handler,
+    CancellationToken ct) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, ct);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found")) { return Results.NotFound(); }
+    catch (InvalidOperationException ex) { return Results.Conflict(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/goals/{id:guid}/miss", async (
+    Guid id,
+    MissGoalHandler handler,
+    CancellationToken ct) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, ct);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found")) { return Results.NotFound(); }
+    catch (InvalidOperationException ex) { return Results.Conflict(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/goals/{id:guid}/defer", async (
+    Guid id,
+    DeferGoalRequest request,
+    DeferGoalHandler handler,
+    CancellationToken ct) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, ct);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found")) { return Results.NotFound(); }
+    catch (InvalidOperationException ex) { return Results.Conflict(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/goals/{id:guid}/reactivate", async (
+    Guid id,
+    ReactivateGoalHandler handler,
+    CancellationToken ct) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, ct);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found")) { return Results.NotFound(); }
+    catch (InvalidOperationException ex) { return Results.Conflict(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+app.MapPost("/api/goals/{id:guid}/check-ins", async (
+    Guid id,
+    RecordCheckInRequest request,
+    RecordGoalCheckInHandler handler,
+    CancellationToken ct) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, ct);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found")) { return Results.NotFound(); }
+    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+}).RequireAuthorization();
+
+// --- People Lens Summary ---
+
+app.MapGet("/api/people/{personId:guid}/evidence-summary", async (
+    Guid personId,
+    DateOnly? from,
+    DateOnly? to,
+    GetPersonEvidenceSummaryHandler handler,
+    CancellationToken ct) =>
+{
+    var today = DateOnly.FromDateTime(DateTime.UtcNow);
+    // Default to current quarter
+    if (from is null || to is null)
+    {
+        var month = today.Month;
+        var quarterStartMonth = ((month - 1) / 3) * 3 + 1;
+        var quarterStart = new DateOnly(today.Year, quarterStartMonth, 1);
+        var quarterEnd = quarterStart.AddMonths(3).AddDays(-1);
+        from ??= quarterStart;
+        to ??= quarterEnd;
+    }
+    var response = await handler.HandleAsync(personId, from.Value, to.Value, ct);
+    return Results.Ok(response);
 }).RequireAuthorization();
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));

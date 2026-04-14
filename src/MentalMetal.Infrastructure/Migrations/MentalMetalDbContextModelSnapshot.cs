@@ -274,6 +274,64 @@ namespace MentalMetal.Infrastructure.Migrations
                     b.ToTable("Delegations", (string)null);
                 });
 
+            modelBuilder.Entity("MentalMetal.Domain.Goals.Goal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("AchievedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeferralReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateOnly?>("TargetDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PersonId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Goals", (string)null);
+                });
+
             modelBuilder.Entity("MentalMetal.Domain.Initiatives.Initiative", b =>
                 {
                     b.Property<Guid>("Id")
@@ -351,6 +409,93 @@ namespace MentalMetal.Infrastructure.Migrations
                     b.HasIndex("UserId", "InitiativeId", "Status", "CreatedAt");
 
                     b.ToTable("PendingBriefUpdates", (string)null);
+                });
+
+            modelBuilder.Entity("MentalMetal.Domain.Observations.Observation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<DateOnly>("OccurredAt")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SourceCaptureId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Tag")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PersonId");
+
+                    b.HasIndex("Tag");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Observations", (string)null);
+                });
+
+            modelBuilder.Entity("MentalMetal.Domain.OneOnOnes.OneOnOne", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("MoodRating")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<DateOnly>("OccurredAt")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("PersonId")
+                        .HasColumnType("uuid");
+
+                    b.PrimitiveCollection<string[]>("Topics")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("Topics");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PersonId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("OneOnOnes", (string)null);
                 });
 
             modelBuilder.Entity("MentalMetal.Domain.People.Person", b =>
@@ -642,6 +787,41 @@ namespace MentalMetal.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("MentalMetal.Domain.Goals.Goal", b =>
+                {
+                    b.OwnsMany("MentalMetal.Domain.Goals.GoalCheckIn", "CheckIns", b1 =>
+                        {
+                            b1.Property<Guid>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("uuid");
+
+                            b1.Property<Guid>("GoalId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Note")
+                                .IsRequired()
+                                .HasMaxLength(4000)
+                                .HasColumnType("character varying(4000)");
+
+                            b1.Property<int?>("Progress")
+                                .HasColumnType("integer");
+
+                            b1.Property<DateTimeOffset>("RecordedAt")
+                                .HasColumnType("timestamp with time zone");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("GoalId");
+
+                            b1.ToTable("GoalCheckIns", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("GoalId");
+                        });
+
+                    b.Navigation("CheckIns");
+                });
+
             modelBuilder.Entity("MentalMetal.Domain.Initiatives.Initiative", b =>
                 {
                     b.OwnsOne("MentalMetal.Domain.Initiatives.LivingBrief.LivingBrief", "Brief", b1 =>
@@ -755,6 +935,71 @@ namespace MentalMetal.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Milestones");
+                });
+
+            modelBuilder.Entity("MentalMetal.Domain.OneOnOnes.OneOnOne", b =>
+                {
+                    b.OwnsMany("MentalMetal.Domain.OneOnOnes.ActionItem", "ActionItems", b1 =>
+                        {
+                            b1.Property<Guid>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("uuid");
+
+                            b1.Property<bool>("Completed")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("boolean")
+                                .HasDefaultValue(false);
+
+                            b1.Property<string>("Description")
+                                .IsRequired()
+                                .HasMaxLength(2000)
+                                .HasColumnType("character varying(2000)");
+
+                            b1.Property<Guid>("OneOnOneId")
+                                .HasColumnType("uuid");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("OneOnOneId");
+
+                            b1.ToTable("OneOnOneActionItems", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("OneOnOneId");
+                        });
+
+                    b.OwnsMany("MentalMetal.Domain.OneOnOnes.FollowUp", "FollowUps", b1 =>
+                        {
+                            b1.Property<Guid>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Description")
+                                .IsRequired()
+                                .HasMaxLength(2000)
+                                .HasColumnType("character varying(2000)");
+
+                            b1.Property<Guid>("OneOnOneId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<bool>("Resolved")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("boolean")
+                                .HasDefaultValue(false);
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("OneOnOneId");
+
+                            b1.ToTable("OneOnOneFollowUps", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("OneOnOneId");
+                        });
+
+                    b.Navigation("ActionItems");
+
+                    b.Navigation("FollowUps");
                 });
 
             modelBuilder.Entity("MentalMetal.Domain.People.Person", b =>

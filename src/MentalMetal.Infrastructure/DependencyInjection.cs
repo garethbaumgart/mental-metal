@@ -6,16 +6,23 @@ using MentalMetal.Application.Delegations;
 using MentalMetal.Application.Common;
 using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.Common.Auth;
+using MentalMetal.Application.Goals;
 using MentalMetal.Application.Initiatives;
 using MentalMetal.Application.Initiatives.Brief;
+using MentalMetal.Application.Observations;
+using MentalMetal.Application.OneOnOnes;
 using MentalMetal.Application.People;
+using MentalMetal.Application.PeopleLens;
 using MentalMetal.Application.Users;
 using MentalMetal.Domain.Captures;
 using MentalMetal.Domain.ChatThreads;
 using MentalMetal.Domain.Commitments;
 using MentalMetal.Domain.Delegations;
+using MentalMetal.Domain.Goals;
 using MentalMetal.Domain.Initiatives;
 using MentalMetal.Domain.Initiatives.LivingBrief;
+using MentalMetal.Domain.Observations;
+using MentalMetal.Domain.OneOnOnes;
 using MentalMetal.Domain.People;
 using MentalMetal.Domain.Users;
 using MentalMetal.Infrastructure.Ai;
@@ -63,6 +70,9 @@ public static class DependencyInjection
         services.AddScoped<ICommitmentRepository, CommitmentRepository>();
         services.AddScoped<IDelegationRepository, DelegationRepository>();
         services.AddScoped<IChatThreadRepository, ChatThreadRepository>();
+        services.AddScoped<IOneOnOneRepository, OneOnOneRepository>();
+        services.AddScoped<IObservationRepository, ObservationRepository>();
+        services.AddScoped<IGoalRepository, GoalRepository>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
@@ -199,6 +209,38 @@ public static class DependencyInjection
         services.AddScoped<PostGlobalChatMessageHandler>();
         services.AddScoped<ArchiveGlobalChatThreadHandler>();
         services.AddScoped<UnarchiveGlobalChatThreadHandler>();
+
+        // OneOnOne handlers
+        services.AddScoped<CreateOneOnOneHandler>();
+        services.AddScoped<UpdateOneOnOneHandler>();
+        services.AddScoped<GetOneOnOneByIdHandler>();
+        services.AddScoped<GetUserOneOnOnesHandler>();
+        services.AddScoped<AddActionItemHandler>();
+        services.AddScoped<CompleteActionItemHandler>();
+        services.AddScoped<RemoveActionItemHandler>();
+        services.AddScoped<AddFollowUpHandler>();
+        services.AddScoped<ResolveFollowUpHandler>();
+
+        // Observation handlers
+        services.AddScoped<CreateObservationHandler>();
+        services.AddScoped<UpdateObservationHandler>();
+        services.AddScoped<GetObservationByIdHandler>();
+        services.AddScoped<GetUserObservationsHandler>();
+        services.AddScoped<DeleteObservationHandler>();
+
+        // Goal handlers
+        services.AddScoped<CreateGoalHandler>();
+        services.AddScoped<UpdateGoalHandler>();
+        services.AddScoped<GetGoalByIdHandler>();
+        services.AddScoped<GetUserGoalsHandler>();
+        services.AddScoped<AchieveGoalHandler>();
+        services.AddScoped<MissGoalHandler>();
+        services.AddScoped<DeferGoalHandler>();
+        services.AddScoped<ReactivateGoalHandler>();
+        services.AddScoped<RecordGoalCheckInHandler>();
+
+        // People Lens handlers
+        services.AddScoped<GetPersonEvidenceSummaryHandler>();
 
         return services;
     }

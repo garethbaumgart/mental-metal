@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { DatePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
@@ -11,6 +12,16 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { PeopleService } from '../../../shared/services/people.service';
 import { Person, PersonType, PipelineStatus } from '../../../shared/models/person.model';
+import { OneOnOnesService } from '../../../shared/services/one-on-ones.service';
+import { ObservationsService } from '../../../shared/services/observations.service';
+import { GoalsService } from '../../../shared/services/goals.service';
+import { CommitmentsService } from '../../../shared/services/commitments.service';
+import { DelegationsService } from '../../../shared/services/delegations.service';
+import { OneOnOne } from '../../../shared/models/one-on-one.model';
+import { Observation } from '../../../shared/models/observation.model';
+import { Goal, PersonEvidenceSummary } from '../../../shared/models/goal.model';
+import { Commitment } from '../../../shared/models/commitment.model';
+import { Delegation } from '../../../shared/models/delegation.model';
 
 @Component({
   selector: 'app-person-detail',
@@ -18,6 +29,7 @@ import { Person, PersonType, PipelineStatus } from '../../../shared/models/perso
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
+    DatePipe,
     ButtonModule,
     InputTextModule,
     TextareaModule,
@@ -170,6 +182,131 @@ import { Person, PersonType, PipelineStatus } from '../../../shared/models/perso
           </section>
         }
 
+        <!-- People-Lens Sections -->
+        <section class="flex flex-col gap-3 border-t pt-6">
+          <h2 class="text-xl font-semibold">Recent 1:1s</h2>
+          @if (recentOneOnOnes().length === 0) {
+            <p class="text-muted-color text-sm">No one-on-ones recorded.</p>
+          } @else {
+            <ul class="flex flex-col gap-2">
+              @for (o of recentOneOnOnes(); track o.id) {
+                <li class="flex flex-col gap-1 p-3 rounded bg-surface-50">
+                  <div class="flex items-center gap-2">
+                    <span class="font-medium">{{ o.occurredAt | date: 'mediumDate' }}</span>
+                    @if (o.moodRating !== null) {
+                      <p-tag [value]="'mood ' + o.moodRating + '/5'" severity="info" />
+                    }
+                  </div>
+                  @if (o.notes) {
+                    <p class="text-sm">{{ o.notes }}</p>
+                  }
+                  @if (o.actionItems.length > 0 || o.followUps.length > 0) {
+                    <p class="text-xs text-muted-color">
+                      {{ o.actionItems.length }} action items · {{ o.followUps.length }} follow-ups
+                    </p>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
+        <section class="flex flex-col gap-3">
+          <h2 class="text-xl font-semibold">Observations</h2>
+          @if (observations().length === 0) {
+            <p class="text-muted-color text-sm">No observations recorded.</p>
+          } @else {
+            <ul class="flex flex-col gap-2">
+              @for (obs of observations(); track obs.id) {
+                <li class="flex items-start gap-2 p-3 rounded bg-surface-50">
+                  <p-tag [value]="obs.tag" [severity]="observationSeverity(obs.tag)" />
+                  <div class="flex flex-col gap-1 flex-1">
+                    <p class="text-sm">{{ obs.description }}</p>
+                    <span class="text-xs text-muted-color">{{ obs.occurredAt | date: 'mediumDate' }}</span>
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
+        <section class="flex flex-col gap-3">
+          <h2 class="text-xl font-semibold">Active Goals</h2>
+          @if (activeGoals().length === 0) {
+            <p class="text-muted-color text-sm">No active goals.</p>
+          } @else {
+            <ul class="flex flex-col gap-2">
+              @for (g of activeGoals(); track g.id) {
+                <li class="flex flex-col gap-1 p-3 rounded bg-surface-50">
+                  <div class="flex items-center gap-2">
+                    <span class="font-medium">{{ g.title }}</span>
+                    <p-tag [value]="g.goalType" severity="info" />
+                  </div>
+                  @if (g.targetDate) {
+                    <span class="text-xs text-muted-color">Target {{ g.targetDate | date: 'mediumDate' }}</span>
+                  }
+                  @if (g.checkIns.length > 0 && g.checkIns[0].progress !== null) {
+                    <span class="text-xs text-muted-color">Latest progress: {{ g.checkIns[0].progress }}%</span>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
+        <section class="flex flex-col gap-3">
+          <h2 class="text-xl font-semibold">Open Commitments</h2>
+          @if (openCommitments().length === 0) {
+            <p class="text-muted-color text-sm">No open commitments.</p>
+          } @else {
+            <ul class="flex flex-col gap-2">
+              @for (c of openCommitments(); track c.id) {
+                <li class="flex items-center gap-2 p-3 rounded bg-surface-50">
+                  <p-tag [value]="c.direction === 'MineToThem' ? 'Mine → Them' : 'Theirs → Me'" severity="secondary" />
+                  <span class="flex-1 text-sm">{{ c.description }}</span>
+                  @if (c.dueDate) {
+                    <span class="text-xs text-muted-color">Due {{ c.dueDate | date: 'mediumDate' }}</span>
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
+        <section class="flex flex-col gap-3">
+          <h2 class="text-xl font-semibold">Active Delegations</h2>
+          @if (activeDelegations().length === 0) {
+            <p class="text-muted-color text-sm">No active delegations.</p>
+          } @else {
+            <ul class="flex flex-col gap-2">
+              @for (d of activeDelegations(); track d.id) {
+                <li class="flex items-center gap-2 p-3 rounded bg-surface-50">
+                  <p-tag [value]="d.status" severity="info" />
+                  <span class="flex-1 text-sm">{{ d.description }}</span>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
+        <section class="flex flex-col gap-3">
+          <h2 class="text-xl font-semibold">Performance Evidence (current quarter)</h2>
+          @if (evidence()?.hasAny) {
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+              <div class="p-3 rounded bg-surface-50"><div class="text-xs text-muted-color">Wins</div><div class="text-lg font-semibold">{{ evidence()!.observationsWin }}</div></div>
+              <div class="p-3 rounded bg-surface-50"><div class="text-xs text-muted-color">Concerns</div><div class="text-lg font-semibold">{{ evidence()!.observationsConcern }}</div></div>
+              <div class="p-3 rounded bg-surface-50"><div class="text-xs text-muted-color">Goals Achieved</div><div class="text-lg font-semibold">{{ evidence()!.goalsAchieved }}</div></div>
+              <div class="p-3 rounded bg-surface-50"><div class="text-xs text-muted-color">Goals Missed</div><div class="text-lg font-semibold">{{ evidence()!.goalsMissed }}</div></div>
+              <div class="p-3 rounded bg-surface-50"><div class="text-xs text-muted-color">Commitments (on time)</div><div class="text-lg font-semibold">{{ evidence()!.commitmentsCompletedOnTime }}</div></div>
+              <div class="p-3 rounded bg-surface-50"><div class="text-xs text-muted-color">Commitments (late)</div><div class="text-lg font-semibold">{{ evidence()!.commitmentsCompletedLate }}</div></div>
+              <div class="p-3 rounded bg-surface-50"><div class="text-xs text-muted-color">Delegations complete</div><div class="text-lg font-semibold">{{ evidence()!.delegationsCompleted }}</div></div>
+              <div class="p-3 rounded bg-surface-50"><div class="text-xs text-muted-color">Delegations active</div><div class="text-lg font-semibold">{{ evidence()!.delegationsInProgress }}</div></div>
+            </div>
+          } @else {
+            <p class="text-muted-color text-sm">No evidence recorded in this period.</p>
+          }
+        </section>
+
         <!-- Archive -->
         <section class="flex flex-col gap-4 border-t pt-6">
           <p-button
@@ -190,6 +327,11 @@ export class PersonDetailComponent implements OnInit {
   private readonly peopleService = inject(PeopleService);
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly oneOnOnesService = inject(OneOnOnesService);
+  private readonly observationsService = inject(ObservationsService);
+  private readonly goalsService = inject(GoalsService);
+  private readonly commitmentsService = inject(CommitmentsService);
+  private readonly delegationsService = inject(DelegationsService);
 
   readonly person = signal<Person | null>(null);
   readonly loading = signal(true);
@@ -198,6 +340,23 @@ export class PersonDetailComponent implements OnInit {
   readonly savingCandidate = signal(false);
   readonly changingType = signal(false);
   readonly advancingPipeline = signal(false);
+
+  readonly recentOneOnOnes = signal<OneOnOne[]>([]);
+  readonly observations = signal<Observation[]>([]);
+  readonly activeGoals = signal<Goal[]>([]);
+  readonly openCommitments = signal<Commitment[]>([]);
+  readonly activeDelegations = signal<Delegation[]>([]);
+  readonly evidence = signal<PersonEvidenceSummary | null>(null);
+
+  protected observationSeverity(tag: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
+    switch (tag) {
+      case 'Win': return 'success';
+      case 'Growth': return 'info';
+      case 'FeedbackGiven': return 'secondary';
+      case 'Concern': return 'danger';
+      default: return 'secondary';
+    }
+  }
 
   // Profile fields
   protected name = '';
@@ -412,11 +571,33 @@ export class PersonDetailComponent implements OnInit {
         this.person.set(person);
         this.populateFields(person);
         this.loading.set(false);
+        this.loadLensData(id);
       },
       error: () => {
         this.loading.set(false);
         this.router.navigate(['/people']);
       },
+    });
+  }
+
+  private loadLensData(personId: string): void {
+    this.oneOnOnesService.list(personId).subscribe({
+      next: (list) => this.recentOneOnOnes.set(list.slice(0, 5)),
+    });
+    this.observationsService.list(personId).subscribe({
+      next: (list) => this.observations.set(list.slice(0, 10)),
+    });
+    this.goalsService.list(personId, undefined, 'Active').subscribe({
+      next: (list) => this.activeGoals.set(list),
+    });
+    this.commitmentsService.list(undefined, 'Open', personId).subscribe({
+      next: (list) => this.openCommitments.set(list),
+    });
+    this.delegationsService.list(undefined, undefined, personId).subscribe({
+      next: (list) => this.activeDelegations.set(list.filter((d) => d.status !== 'Completed')),
+    });
+    this.goalsService.getPersonEvidenceSummary(personId).subscribe({
+      next: (s) => this.evidence.set(s),
     });
   }
 
