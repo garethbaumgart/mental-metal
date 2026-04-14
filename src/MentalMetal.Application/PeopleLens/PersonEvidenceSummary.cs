@@ -37,8 +37,8 @@ public sealed class GetPersonEvidenceSummaryHandler(
         Guid personId, DateOnly from, DateOnly to, CancellationToken cancellationToken)
     {
         var userId = currentUserService.UserId;
-        var fromTs = from.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var toTs = to.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
+        var fromTs = new DateTimeOffset(from.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+        var toTs = new DateTimeOffset(to.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc));
 
         var observations = await observationRepository.GetAllAsync(
             userId, personId, null, from, to, cancellationToken);

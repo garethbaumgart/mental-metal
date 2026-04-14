@@ -1,7 +1,6 @@
 using MentalMetal.Domain.OneOnOnes;
 using MentalMetal.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace MentalMetal.Infrastructure.Repositories;
 

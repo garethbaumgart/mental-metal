@@ -2,7 +2,7 @@ using MentalMetal.Domain.Common;
 
 namespace MentalMetal.Domain.OneOnOnes;
 
-public sealed record OneOnOneCreated(Guid OneOnOneId, Guid UserId, Guid PersonId, DateOnly OccurredOn) : IDomainEvent
+public sealed record OneOnOneCreated(Guid OneOnOneId, Guid UserId, Guid PersonId, DateOnly OccurredOnDate) : IDomainEvent
 {
     public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
 }

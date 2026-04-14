@@ -35,10 +35,16 @@ public sealed class GoalRepository(MentalMetalDbContext dbContext) : IGoalReposi
             query = query.Where(g => g.Status == statusFilter.Value);
 
         if (fromDate is not null)
-            query = query.Where(g => g.CreatedAt >= fromDate.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+        {
+            var fromTs = new DateTimeOffset(fromDate.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+            query = query.Where(g => g.CreatedAt >= fromTs);
+        }
 
         if (toDate is not null)
-            query = query.Where(g => g.CreatedAt <= toDate.Value.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc));
+        {
+            var toTs = new DateTimeOffset(toDate.Value.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc));
+            query = query.Where(g => g.CreatedAt <= toTs);
+        }
 
         return await query
             // Active goals first (enum value 0), then by CreatedAt desc
