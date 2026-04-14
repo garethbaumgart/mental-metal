@@ -145,7 +145,7 @@ The system SHALL provide an endpoint to retrieve the authenticated user's profil
 #### Scenario: Get current user
 
 - **WHEN** an authenticated user requests their profile via `/api/users/me`
-- **THEN** the system returns the user's Id, Email, Name, AvatarUrl, Timezone, Preferences, HasAiProvider, HasPassword, CreatedAt, and LastLoginAt
+- **THEN** the system returns the user's `id`, `email`, `name`, `avatarUrl`, `timezone`, `preferences`, `hasAiProvider`, `hasPassword`, `createdAt`, and `lastLoginAt`
 
 #### Scenario: HasPassword reflects password state
 
