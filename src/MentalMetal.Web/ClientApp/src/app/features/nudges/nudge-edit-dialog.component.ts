@@ -223,7 +223,6 @@ export class NudgeEditDialogComponent implements OnInit {
     } else {
       const request: CreateNudgeRequest = {
         title: this.title.trim(),
-        cadenceType: this.cadenceType,
         ...this.buildCadenceRequest(),
         ...(this.startDate && { startDate: this.formatDate(this.startDate) }),
         personId: this.selectedPersonId,
