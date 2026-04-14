@@ -22,6 +22,7 @@ using MentalMetal.Infrastructure.Ai;
 using MentalMetal.Infrastructure.Auth;
 using MentalMetal.Infrastructure.Persistence;
 using MentalMetal.Infrastructure.Repositories;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -63,6 +64,7 @@ public static class DependencyInjection
         services.AddScoped<IDelegationRepository, DelegationRepository>();
         services.AddScoped<IChatThreadRepository, ChatThreadRepository>();
         services.AddScoped<ITokenService, TokenService>();
+        services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
         // AI provider services
         services.AddHttpClient("GoogleAi");
@@ -78,6 +80,9 @@ public static class DependencyInjection
 
         // Application handlers
         services.AddScoped<RegisterOrLoginUserHandler>();
+        services.AddScoped<RegisterWithPasswordHandler>();
+        services.AddScoped<LoginWithPasswordHandler>();
+        services.AddScoped<SetPasswordHandler>();
         services.AddScoped<GetCurrentUserHandler>();
         services.AddScoped<UpdateUserProfileHandler>();
         services.AddScoped<UpdateUserPreferencesHandler>();

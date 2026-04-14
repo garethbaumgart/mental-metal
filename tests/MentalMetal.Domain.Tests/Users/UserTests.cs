@@ -1,9 +1,12 @@
 using MentalMetal.Domain.Users;
+using Microsoft.AspNetCore.Identity;
 
 namespace MentalMetal.Domain.Tests.Users;
 
 public class UserTests
 {
+    private static readonly IPasswordHasher<User> Hasher = new PasswordHasher<User>();
+
     [Fact]
     public void Register_ValidInput_CreatesUserWithCorrectState()
     {
@@ -213,6 +216,107 @@ public class UserTests
 
         Assert.Null(user.AiProviderConfig);
         Assert.Empty(user.DomainEvents);
+    }
+
+    [Fact]
+    public void RegisterWithPassword_SetsStateCorrectly()
+    {
+        var password = Password.Create("secret-pw", Hasher);
+
+        var user = User.RegisterWithPassword("new@example.com", "New User", password, null);
+
+        Assert.NotEqual(Guid.Empty, user.Id);
+        Assert.Null(user.ExternalAuthId);
+        Assert.Equal("new@example.com", user.Email.Value);
+        Assert.Equal("New User", user.Name);
+        Assert.Null(user.AvatarUrl);
+        Assert.NotNull(user.PasswordHash);
+        Assert.Equal(password, user.PasswordHash);
+        Assert.Equal("UTC", user.Timezone);
+        Assert.NotNull(user.Preferences);
+    }
+
+    [Fact]
+    public void RegisterWithPassword_UsesProvidedTimezone()
+    {
+        var password = Password.Create("secret-pw", Hasher);
+
+        var user = User.RegisterWithPassword("x@y.com", "N", password, "Australia/Sydney");
+
+        Assert.Equal("Australia/Sydney", user.Timezone);
+    }
+
+    [Fact]
+    public void RegisterWithPassword_RaisesUserRegisteredEvent()
+    {
+        var password = Password.Create("secret-pw", Hasher);
+
+        var user = User.RegisterWithPassword("n@example.com", "N", password, null);
+
+        var ev = Assert.Single(user.DomainEvents);
+        var registered = Assert.IsType<UserRegistered>(ev);
+        Assert.Equal(user.Id, registered.UserId);
+        Assert.Equal("n@example.com", registered.Email);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void RegisterWithPassword_EmptyName_Throws(string? name)
+    {
+        var password = Password.Create("secret-pw", Hasher);
+
+        Assert.ThrowsAny<ArgumentException>(() =>
+            User.RegisterWithPassword("a@b.com", name!, password, null));
+    }
+
+    [Fact]
+    public void SetPassword_OnGoogleUser_SetsHash()
+    {
+        var user = User.Register("auth-123", "test@example.com", "Name", null);
+
+        user.SetPassword("new-password", Hasher);
+
+        Assert.NotNull(user.PasswordHash);
+        Assert.True(user.VerifyPassword("new-password", Hasher));
+    }
+
+    [Fact]
+    public void SetPassword_ReplacesExistingHash()
+    {
+        var password = Password.Create("first-pw", Hasher);
+        var user = User.RegisterWithPassword("a@b.com", "N", password, null);
+
+        user.SetPassword("second-pw", Hasher);
+
+        Assert.True(user.VerifyPassword("second-pw", Hasher));
+        Assert.False(user.VerifyPassword("first-pw", Hasher));
+    }
+
+    [Fact]
+    public void SetPassword_ShortPassword_Throws()
+    {
+        var user = User.Register("auth-123", "test@example.com", "Name", null);
+
+        Assert.ThrowsAny<ArgumentException>(() => user.SetPassword("short", Hasher));
+    }
+
+    [Fact]
+    public void VerifyPassword_WhenHashIsNull_ReturnsFalse()
+    {
+        var user = User.Register("auth-123", "test@example.com", "Name", null);
+
+        Assert.False(user.VerifyPassword("anything", Hasher));
+    }
+
+    [Fact]
+    public void VerifyPassword_WrongPassword_ReturnsFalse()
+    {
+        var password = Password.Create("correct-pw", Hasher);
+        var user = User.RegisterWithPassword("a@b.com", "N", password, null);
+
+        Assert.False(user.VerifyPassword("wrong-pw", Hasher));
     }
 
     [Fact]

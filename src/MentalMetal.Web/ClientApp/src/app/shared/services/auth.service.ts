@@ -2,7 +2,14 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { AuthTokenResponse, UserProfile } from '../models/user.model';
+import {
+  AuthTokenResponse,
+  LoginWithPasswordRequest,
+  PasswordAuthResponse,
+  RegisterWithPasswordRequest,
+  SetPasswordRequest,
+  UserProfile,
+} from '../models/user.model';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -22,6 +29,41 @@ export class AuthService {
 
   login(): void {
     window.location.href = '/api/auth/login?returnUrl=/';
+  }
+
+  async loginWithPassword(email: string, password: string): Promise<void> {
+    const body: LoginWithPasswordRequest = { email, password };
+    const response = await firstValueFrom(
+      this.http.post<PasswordAuthResponse>('/api/auth/login', body),
+    );
+    this.handlePasswordAuthSuccess(response);
+  }
+
+  async registerWithPassword(
+    email: string,
+    password: string,
+    name: string,
+  ): Promise<void> {
+    const body: RegisterWithPasswordRequest = { email, password, name };
+    const response = await firstValueFrom(
+      this.http.post<PasswordAuthResponse>('/api/auth/register', body),
+    );
+    this.handlePasswordAuthSuccess(response);
+  }
+
+  async setPassword(newPassword: string): Promise<void> {
+    const body: SetPasswordRequest = { newPassword };
+    await firstValueFrom(this.http.post('/api/auth/password', body));
+    const current = this.currentUser();
+    if (current) {
+      this.currentUser.set({ ...current, hasPassword: true });
+    }
+  }
+
+  private handlePasswordAuthSuccess(response: PasswordAuthResponse): void {
+    this.accessToken.set(response.accessToken);
+    this.storeToken(response.accessToken);
+    this.currentUser.set(response.user);
   }
 
   async logout(): Promise<void> {

@@ -1,3 +1,5 @@
+using MentalMetal.Domain.Users;
+
 namespace MentalMetal.Application.Users;
 
 public sealed record UserProfileResponse(
@@ -8,8 +10,27 @@ public sealed record UserProfileResponse(
     string Timezone,
     UserPreferencesDto Preferences,
     bool HasAiProvider,
+    bool HasPassword,
     DateTimeOffset CreatedAt,
-    DateTimeOffset LastLoginAt);
+    DateTimeOffset LastLoginAt)
+{
+    public static UserProfileResponse FromDomain(User user) =>
+        new(
+            user.Id,
+            user.Email.Value,
+            user.Name,
+            user.AvatarUrl,
+            user.Timezone,
+            new UserPreferencesDto(
+                user.Preferences.Theme.ToString(),
+                user.Preferences.NotificationsEnabled,
+                user.Preferences.BriefingTime,
+                user.Preferences.LivingBriefAutoApply),
+            user.AiProviderConfig is not null,
+            user.PasswordHash is not null,
+            user.CreatedAt,
+            user.LastLoginAt);
+}
 
 public sealed record UserPreferencesDto(
     string Theme,
@@ -29,3 +50,9 @@ public sealed record UpdatePreferencesRequest(
     bool LivingBriefAutoApply = false);
 
 public sealed record AuthTokenResponse(string AccessToken, string? RefreshToken = null);
+
+public sealed record RegisterWithPasswordRequest(string Email, string Password, string Name);
+
+public sealed record LoginWithPasswordRequest(string Email, string Password);
+
+public sealed record SetPasswordRequest(string NewPassword);
