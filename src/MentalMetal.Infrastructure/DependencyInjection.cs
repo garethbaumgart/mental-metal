@@ -1,4 +1,5 @@
 using MentalMetal.Application.Captures;
+using MentalMetal.Application.DailyCloseOut;
 using MentalMetal.Application.Chat.Global;
 using MentalMetal.Application.Initiatives.Chat;
 using MentalMetal.Application.Commitments;
@@ -241,6 +242,13 @@ public static class DependencyInjection
 
         // People Lens handlers
         services.AddScoped<GetPersonEvidenceSummaryHandler>();
+
+        // Daily close-out handlers
+        services.AddScoped<GetCloseOutQueueHandler>();
+        services.AddScoped<QuickDiscardCaptureHandler>();
+        services.AddScoped<ReassignCaptureHandler>();
+        services.AddScoped<CloseOutDayHandler>();
+        services.AddScoped<GetCloseOutLogHandler>();
 
         return services;
     }

@@ -8,10 +8,13 @@ public sealed class GetUserCapturesHandler(
     ICurrentUserService currentUserService)
 {
     public async Task<List<CaptureResponse>> HandleAsync(
-        CaptureType? typeFilter, ProcessingStatus? statusFilter, CancellationToken cancellationToken)
+        CaptureType? typeFilter,
+        ProcessingStatus? statusFilter,
+        CancellationToken cancellationToken,
+        bool includeTriaged = false)
     {
         var captures = await captureRepository.GetAllAsync(
-            currentUserService.UserId, typeFilter, statusFilter, cancellationToken);
+            currentUserService.UserId, typeFilter, statusFilter, cancellationToken, includeTriaged);
 
         return captures.Select(CaptureResponse.From).ToList();
     }

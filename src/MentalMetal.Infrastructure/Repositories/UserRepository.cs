@@ -7,7 +7,9 @@ namespace MentalMetal.Infrastructure.Repositories;
 public sealed class UserRepository(MentalMetalDbContext dbContext) : IUserRepository
 {
     public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
-        await dbContext.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+        await dbContext.Users
+            .Include(u => u.DailyCloseOutLogs)
+            .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
 
     public async Task<User?> GetByExternalAuthIdAsync(string externalAuthId, CancellationToken cancellationToken) =>
         await dbContext.Users.FirstOrDefaultAsync(u => u.ExternalAuthId == externalAuthId, cancellationToken);
@@ -20,4 +22,10 @@ public sealed class UserRepository(MentalMetalDbContext dbContext) : IUserReposi
 
     public async Task AddAsync(User user, CancellationToken cancellationToken) =>
         await dbContext.Users.AddAsync(user, cancellationToken);
+
+    public void MarkOwnedAdded(object ownedEntity) =>
+        dbContext.Entry(ownedEntity).State = EntityState.Added;
+
+    public void MarkOwnedRemoved(object ownedEntity) =>
+        dbContext.Entry(ownedEntity).State = EntityState.Deleted;
 }

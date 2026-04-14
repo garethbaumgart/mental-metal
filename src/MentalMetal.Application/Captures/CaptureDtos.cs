@@ -58,7 +58,10 @@ public sealed record CaptureResponse(
     DateTimeOffset CapturedAt,
     DateTimeOffset? ProcessedAt,
     string? Source,
-    DateTimeOffset UpdatedAt)
+    DateTimeOffset UpdatedAt,
+    bool Triaged,
+    DateTimeOffset? TriagedAtUtc,
+    bool ExtractionResolved)
 {
     public static CaptureResponse From(Capture capture) => new(
         capture.Id,
@@ -78,5 +81,8 @@ public sealed record CaptureResponse(
         capture.CapturedAt,
         capture.ProcessedAt,
         capture.Source,
-        capture.UpdatedAt);
+        capture.UpdatedAt,
+        capture.Triaged,
+        capture.TriagedAtUtc,
+        capture.ExtractionResolved);
 }
