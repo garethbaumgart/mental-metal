@@ -12,8 +12,11 @@ public sealed class UserRepository(MentalMetalDbContext dbContext) : IUserReposi
     public async Task<User?> GetByExternalAuthIdAsync(string externalAuthId, CancellationToken cancellationToken) =>
         await dbContext.Users.FirstOrDefaultAsync(u => u.ExternalAuthId == externalAuthId, cancellationToken);
 
-    public async Task<bool> ExistsByEmailAsync(string email, CancellationToken cancellationToken) =>
-        await dbContext.Users.AnyAsync(u => u.Email.Value == email.Trim().ToLower(), cancellationToken);
+    public async Task<User?> GetByEmailAsync(Email email, CancellationToken cancellationToken) =>
+        await dbContext.Users.FirstOrDefaultAsync(u => u.Email.Value == email.Value, cancellationToken);
+
+    public async Task<bool> ExistsByEmailAsync(Email email, CancellationToken cancellationToken) =>
+        await dbContext.Users.AnyAsync(u => u.Email.Value == email.Value, cancellationToken);
 
     public async Task AddAsync(User user, CancellationToken cancellationToken) =>
         await dbContext.Users.AddAsync(user, cancellationToken);

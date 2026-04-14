@@ -13,7 +13,6 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasKey(u => u.Id);
 
         builder.Property(u => u.ExternalAuthId)
-            .IsRequired()
             .HasMaxLength(256);
 
         builder.HasIndex(u => u.ExternalAuthId)
@@ -36,6 +35,13 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(u => u.AvatarUrl)
             .HasMaxLength(2048);
+
+        builder.OwnsOne(u => u.PasswordHash, pw =>
+        {
+            pw.Property(p => p.HashValue)
+                .HasColumnName("PasswordHash")
+                .HasMaxLength(1024);
+        });
 
         builder.OwnsOne(u => u.Preferences, prefs =>
         {

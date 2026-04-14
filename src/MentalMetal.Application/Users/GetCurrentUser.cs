@@ -12,19 +12,6 @@ public sealed class GetCurrentUserHandler(
             currentUserService.UserId, cancellationToken)
             ?? throw new InvalidOperationException("Authenticated user not found.");
 
-        return new UserProfileResponse(
-            user.Id,
-            user.Email.Value,
-            user.Name,
-            user.AvatarUrl,
-            user.Timezone,
-            new UserPreferencesDto(
-                user.Preferences.Theme.ToString(),
-                user.Preferences.NotificationsEnabled,
-                user.Preferences.BriefingTime,
-                user.Preferences.LivingBriefAutoApply),
-            user.AiProviderConfig is not null,
-            user.CreatedAt,
-            user.LastLoginAt);
+        return UserProfileResponse.FromDomain(user);
     }
 }

@@ -250,6 +250,66 @@ app.MapPost("/api/auth/refresh", async (
     return Results.Ok(new { result.AccessToken });
 });
 
+app.MapPost("/api/auth/register", async (
+    HttpContext httpContext,
+    RegisterWithPasswordRequest body,
+    RegisterWithPasswordHandler handler) =>
+{
+    try
+    {
+        var result = await handler.HandleAsync(
+            new RegisterWithPasswordCommand(body.Email, body.Password, body.Name),
+            httpContext.RequestAborted);
+
+        httpContext.Response.Cookies.Append("refresh_token", result.RefreshToken, RefreshTokenCookieOptions());
+        return Results.Ok(new { result.AccessToken, User = result.User });
+    }
+    catch (EmailAlreadyInUseException)
+    {
+        return Results.Conflict(new { error = "Email already in use." });
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
+app.MapPost("/api/auth/login", async (
+    HttpContext httpContext,
+    LoginWithPasswordRequest body,
+    LoginWithPasswordHandler handler) =>
+{
+    try
+    {
+        var result = await handler.HandleAsync(
+            new LoginWithPasswordCommand(body.Email, body.Password),
+            httpContext.RequestAborted);
+
+        httpContext.Response.Cookies.Append("refresh_token", result.RefreshToken, RefreshTokenCookieOptions());
+        return Results.Ok(new { result.AccessToken, User = result.User });
+    }
+    catch (InvalidCredentialsException)
+    {
+        return Results.Unauthorized();
+    }
+});
+
+app.MapPost("/api/auth/password", async (
+    SetPasswordRequest body,
+    SetPasswordHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        await handler.HandleAsync(new SetPasswordCommand(body.NewPassword), cancellationToken);
+        return Results.NoContent();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
 app.MapPost("/api/auth/logout", async (
     HttpContext httpContext,
     LogoutUserHandler handler) =>
@@ -1572,3 +1632,6 @@ app.MapFallbackToFile("index.html");
 app.Run();
 
 internal sealed record TestLoginRequest(string Email, string Name);
+
+// Expose the top-level-statements Program class to WebApplicationFactory<Program> in integration tests.
+public partial class Program { }

@@ -10,6 +10,7 @@ import { AuthService } from '../../shared/services/auth.service';
 import { UserService } from '../../shared/services/user.service';
 import { ThemeService } from '../../shared/services/theme.service';
 import { AiProviderSettingsComponent } from './ai-provider-settings.component';
+import { PasswordSettingsComponent } from './password-settings.component';
 
 @Component({
   selector: 'app-settings',
@@ -23,6 +24,7 @@ import { AiProviderSettingsComponent } from './ai-provider-settings.component';
     ToggleSwitchModule,
     ToastModule,
     AiProviderSettingsComponent,
+    PasswordSettingsComponent,
   ],
   providers: [MessageService],
   template: `
@@ -98,6 +100,9 @@ import { AiProviderSettingsComponent } from './ai-provider-settings.component';
           [loading]="savingPreferences()"
         />
       </section>
+
+      <!-- Password Section -->
+      <app-password-settings />
 
       <!-- AI Provider Section -->
       <app-ai-provider-settings />

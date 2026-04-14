@@ -5,6 +5,8 @@ export interface UserProfile {
   avatarUrl: string | null;
   timezone: string;
   preferences: UserPreferences;
+  hasAiProvider: boolean;
+  hasPassword: boolean;
   createdAt: string;
   lastLoginAt: string;
 }
@@ -33,4 +35,24 @@ export interface UpdatePreferencesRequest {
 
 export interface AuthTokenResponse {
   accessToken: string;
+}
+
+export interface PasswordAuthResponse {
+  accessToken: string;
+  user: UserProfile;
+}
+
+export interface LoginWithPasswordRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterWithPasswordRequest {
+  email: string;
+  password: string;
+  name: string;
+}
+
+export interface SetPasswordRequest {
+  newPassword: string;
 }
