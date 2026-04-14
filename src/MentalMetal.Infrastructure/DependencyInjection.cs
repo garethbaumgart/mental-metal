@@ -11,6 +11,7 @@ using MentalMetal.Application.Common.Auth;
 using MentalMetal.Application.Goals;
 using MentalMetal.Application.Initiatives;
 using MentalMetal.Application.Initiatives.Brief;
+using MentalMetal.Application.Interviews;
 using MentalMetal.Application.MyQueue;
 using MentalMetal.Application.Observations;
 using MentalMetal.Application.OneOnOnes;
@@ -25,6 +26,7 @@ using MentalMetal.Domain.Delegations;
 using MentalMetal.Domain.Goals;
 using MentalMetal.Domain.Initiatives;
 using MentalMetal.Domain.Initiatives.LivingBrief;
+using MentalMetal.Domain.Interviews;
 using MentalMetal.Domain.Observations;
 using MentalMetal.Domain.OneOnOnes;
 using MentalMetal.Domain.People;
@@ -63,6 +65,10 @@ public static class DependencyInjection
             .Bind(configuration.GetSection(BriefingOptions.SectionName))
             .ValidateDataAnnotations()
             .ValidateOnStart();
+        services.AddOptions<InterviewAnalysisOptions>()
+            .Bind(configuration.GetSection(InterviewAnalysisOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
         services.AddOptions<AiProviderSettings>()
             .Bind(configuration.GetSection(AiProviderSettings.SectionName))
             .Validate(s => !string.IsNullOrWhiteSpace(s.EncryptionKey),
@@ -88,6 +94,7 @@ public static class DependencyInjection
         services.AddScoped<IObservationRepository, ObservationRepository>();
         services.AddScoped<IGoalRepository, GoalRepository>();
         services.AddScoped<IBriefingRepository, BriefingRepository>();
+        services.AddScoped<IInterviewRepository, InterviewRepository>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
@@ -270,6 +277,21 @@ public static class DependencyInjection
         services.AddScoped<GenerateOneOnOnePrepHandler>();
         services.AddScoped<GetRecentBriefingsHandler>();
         services.AddScoped<GetBriefingHandler>();
+
+        // Interview services and handlers
+        services.AddScoped<IInterviewAnalysisService, InterviewAnalysisService>();
+        services.AddScoped<CreateInterviewHandler>();
+        services.AddScoped<UpdateInterviewHandler>();
+        services.AddScoped<AdvanceInterviewStageHandler>();
+        services.AddScoped<RecordInterviewDecisionHandler>();
+        services.AddScoped<DeleteInterviewHandler>();
+        services.AddScoped<GetInterviewByIdHandler>();
+        services.AddScoped<GetUserInterviewsHandler>();
+        services.AddScoped<AddInterviewScorecardHandler>();
+        services.AddScoped<UpdateInterviewScorecardHandler>();
+        services.AddScoped<RemoveInterviewScorecardHandler>();
+        services.AddScoped<SetInterviewTranscriptHandler>();
+        services.AddScoped<AnalyzeInterviewHandler>();
 
         // Daily close-out handlers
         services.AddScoped<GetCloseOutQueueHandler>();

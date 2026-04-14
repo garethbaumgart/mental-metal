@@ -8,6 +8,7 @@ using MentalMetal.Domain.Delegations;
 using MentalMetal.Domain.Goals;
 using MentalMetal.Domain.Initiatives;
 using MentalMetal.Domain.Initiatives.LivingBrief;
+using MentalMetal.Domain.Interviews;
 using MentalMetal.Domain.Observations;
 using MentalMetal.Domain.OneOnOnes;
 using MentalMetal.Domain.People;
@@ -37,6 +38,7 @@ public sealed class MentalMetalDbContext(
     public DbSet<Observation> Observations => Set<Observation>();
     public DbSet<Goal> Goals => Set<Goal>();
     public DbSet<Briefing> Briefings => Set<Briefing>();
+    public DbSet<Interview> Interviews => Set<Interview>();
 
     public void DiscardPendingChanges() => ChangeTracker.Clear();
 
@@ -57,5 +59,6 @@ public sealed class MentalMetalDbContext(
         modelBuilder.Entity<Observation>().HasQueryFilter(o => o.UserId == currentUserService.UserId);
         modelBuilder.Entity<Goal>().HasQueryFilter(g => g.UserId == currentUserService.UserId);
         modelBuilder.Entity<Briefing>().HasQueryFilter(b => b.UserId == currentUserService.UserId);
+        modelBuilder.Entity<Interview>().HasQueryFilter(i => i.UserId == currentUserService.UserId);
     }
 }
