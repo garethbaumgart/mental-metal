@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, effect, inject, model, OnInit, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, input, model, OnInit, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
@@ -119,6 +119,11 @@ export class DelegationDialogComponent implements OnInit {
 
   readonly visible = model(false);
   readonly editDelegation = model<Delegation | null>(null);
+  // Optional prefill inputs (used by the My Queue "Delegate this" flow). Applied once
+  // when the dialog opens for create. Null/undefined values are ignored.
+  readonly prefillDescription = input<string | null>(null);
+  readonly prefillPersonId = input<string | null>(null);
+  readonly prefillInitiativeId = input<string | null>(null);
   readonly created = output<Delegation>();
   readonly updated = output<Delegation>();
 
@@ -148,6 +153,27 @@ export class DelegationDialogComponent implements OnInit {
         this.notes = edit.notes ?? '';
         this.dueDate = edit.dueDate ? new Date(edit.dueDate + 'T00:00:00') : null;
         this.selectedInitiativeId = edit.initiativeId;
+      }
+    });
+
+    // Reset all form fields and then apply prefill when the dialog becomes visible for
+    // a new delegation. Resetting every create-open prevents stale values (priority,
+    // dueDate, notes, etc.) from a previous dialog usage leaking into the submit.
+    effect(() => {
+      if (this.visible() && !this.editDelegation()) {
+        this.description = '';
+        this.selectedPersonId = null;
+        this.selectedPriority = null;
+        this.selectedInitiativeId = null;
+        this.dueDate = null;
+        this.notes = '';
+
+        const desc = this.prefillDescription();
+        const personId = this.prefillPersonId();
+        const initiativeId = this.prefillInitiativeId();
+        if (desc) this.description = desc;
+        if (personId) this.selectedPersonId = personId;
+        if (initiativeId) this.selectedInitiativeId = initiativeId;
       }
     });
   }

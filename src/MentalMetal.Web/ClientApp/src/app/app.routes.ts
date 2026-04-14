@@ -18,7 +18,7 @@ export const routes: Routes = [
   { path: 'one-on-ones', loadComponent: () => import('./pages/one-on-ones/one-on-ones-list/one-on-ones-list.component').then(m => m.OneOnOnesListComponent), canActivate: [authGuard], data: { title: 'One-on-Ones' } },
   { path: 'observations', loadComponent: () => import('./pages/observations/observations-list/observations-list.component').then(m => m.ObservationsListComponent), canActivate: [authGuard], data: { title: 'Observations' } },
   { path: 'goals', loadComponent: () => import('./pages/goals/goals-list/goals-list.component').then(m => m.GoalsListComponent), canActivate: [authGuard], data: { title: 'Goals' } },
-  { path: 'queue', loadComponent: () => import('./pages/placeholder.page').then(m => m.PlaceholderPage), canActivate: [authGuard], data: { title: 'My Queue' } },
+  { path: 'my-queue', loadChildren: () => import('./features/my-queue/my-queue.routes').then(m => m.MY_QUEUE_ROUTES) },
   { path: 'close-out', loadChildren: () => import('./features/daily-close-out/daily-close-out.routes').then(m => m.DAILY_CLOSE_OUT_ROUTES) },
   { path: 'chat', loadComponent: () => import('./pages/global-chat/global-chat.page').then(m => m.GlobalChatPageComponent), canActivate: [authGuard], data: { title: 'Chat' } },
   { path: 'settings', loadComponent: () => import('./pages/settings/settings.page').then(m => m.SettingsPage), canActivate: [authGuard], data: { title: 'Settings' } },
