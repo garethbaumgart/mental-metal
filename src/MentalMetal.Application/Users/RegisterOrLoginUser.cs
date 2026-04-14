@@ -35,9 +35,10 @@ public sealed class RegisterOrLoginUserHandler(
         }
 
         // Check for email collision with a different auth provider
-        if (await userRepository.ExistsByEmailAsync(command.Email, cancellationToken))
+        var email = Email.Create(command.Email);
+        if (await userRepository.ExistsByEmailAsync(email, cancellationToken))
             throw new InvalidOperationException(
-                $"A user with email '{command.Email}' already exists.");
+                $"A user with email '{email.Value}' already exists.");
 
         var user = User.Register(
             command.ExternalAuthId,

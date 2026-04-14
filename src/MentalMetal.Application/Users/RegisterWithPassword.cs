@@ -39,7 +39,7 @@ public sealed class RegisterWithPasswordHandler(
         // Email.Create validates format
         var email = Email.Create(command.Email);
 
-        if (await userRepository.ExistsByEmailAsync(email.Value, cancellationToken))
+        if (await userRepository.ExistsByEmailAsync(email, cancellationToken))
             throw new EmailAlreadyInUseException(email.Value);
 
         var password = Domain.Users.Password.Create(command.Password, passwordHasher);

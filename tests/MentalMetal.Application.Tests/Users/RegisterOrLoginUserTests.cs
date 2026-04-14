@@ -25,7 +25,7 @@ public class RegisterOrLoginUserTests
 
         _userRepository.GetByExternalAuthIdAsync("auth-123", Arg.Any<CancellationToken>())
             .Returns((User?)null);
-        _userRepository.ExistsByEmailAsync("new@example.com", Arg.Any<CancellationToken>())
+        _userRepository.ExistsByEmailAsync(Arg.Is<Email>(e => e.Value == "new@example.com"), Arg.Any<CancellationToken>())
             .Returns(false);
         _tokenService.GenerateTokens(Arg.Any<User>())
             .Returns(new TokenResult("access-token", "refresh-token"));
@@ -66,7 +66,7 @@ public class RegisterOrLoginUserTests
 
         _userRepository.GetByExternalAuthIdAsync("auth-new", Arg.Any<CancellationToken>())
             .Returns((User?)null);
-        _userRepository.ExistsByEmailAsync("taken@example.com", Arg.Any<CancellationToken>())
+        _userRepository.ExistsByEmailAsync(Arg.Is<Email>(e => e.Value == "taken@example.com"), Arg.Any<CancellationToken>())
             .Returns(true);
 
         await Assert.ThrowsAsync<InvalidOperationException>(

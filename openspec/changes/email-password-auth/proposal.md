@@ -37,7 +37,7 @@ _None._
 - Settings page — new "Password" section (set/change).
 
 **Dependencies**
-- New NuGet: `Microsoft.AspNetCore.Identity` (used only for `PasswordHasher<T>`; no Identity schema or middleware).
+- New NuGet: `Microsoft.Extensions.Identity.Core` (used only for `PasswordHasher<T>`; no Identity schema or middleware).
 
 **Non-goals (explicit out of scope for v1)**
 - Email verification on register

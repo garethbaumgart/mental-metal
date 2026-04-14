@@ -8,8 +8,11 @@ namespace MentalMetal.Web.IntegrationTests.Infrastructure;
 
 /// <summary>
 /// WebApplicationFactory that swaps the Postgres connection string for the one
-/// exposed by the shared Testcontainers Postgres, applies migrations once at
-/// startup, and injects minimum valid config for JWT + AI-provider startup checks.
+/// exposed by the shared Testcontainers Postgres, and injects minimum valid config
+/// for JWT + AI-provider startup checks. A single instance is created per test
+/// collection in <see cref="PostgresFixture"/> and shared across every test class.
+/// Migrations run once in the fixture's <see cref="PostgresFixture.InitializeAsync"/>;
+/// per-test isolation is handled via <see cref="ResetDatabaseAsync"/>.
 /// </summary>
 public sealed class MentalMetalWebApplicationFactory : WebApplicationFactory<Program>
 {
@@ -22,8 +25,6 @@ public sealed class MentalMetalWebApplicationFactory : WebApplicationFactory<Pro
     internal const string IntegrationJwtSecret = "integration-test-secret-key-minimum-32-chars-long!";
     internal const string IntegrationJwtIssuer = "MentalMetal.IntegrationTests";
     internal const string IntegrationJwtAudience = "MentalMetal.IntegrationTests";
-
-    private bool _schemaInitialised;
 
     public MentalMetalWebApplicationFactory(string connectionString)
     {
@@ -51,16 +52,6 @@ public sealed class MentalMetalWebApplicationFactory : WebApplicationFactory<Pro
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
-    }
-
-    public async Task EnsureSchemaAsync()
-    {
-        if (_schemaInitialised) return;
-
-        using var scope = Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MentalMetalDbContext>();
-        await db.Database.MigrateAsync();
-        _schemaInitialised = true;
     }
 
     public async Task ResetDatabaseAsync()

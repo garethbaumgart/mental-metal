@@ -78,10 +78,10 @@ describe('PasswordSettingsComponent', () => {
     fixture.detectChanges();
 
     const component = fixture.componentInstance as unknown as {
-      newPassword: string;
+      newPassword: { set: (v: string) => void };
       submit: () => Promise<void>;
     };
-    component.newPassword = 'brand-new-pw';
+    component.newPassword.set('brand-new-pw');
 
     const pending = component.submit();
 

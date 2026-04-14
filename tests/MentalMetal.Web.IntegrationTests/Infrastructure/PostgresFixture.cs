@@ -1,10 +1,15 @@
+using MentalMetal.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
 
 namespace MentalMetal.Web.IntegrationTests.Infrastructure;
 
 /// <summary>
-/// Boots a disposable Postgres container once per xUnit collection. The container is
-/// shared by every test class in the collection; per-test isolation is provided by
+/// Boots a disposable Postgres container once per xUnit collection and creates a
+/// single <see cref="MentalMetalWebApplicationFactory"/> shared across every test
+/// class in the collection. Migrations therefore run exactly once per test run,
+/// not per test. Per-test isolation is provided by
 /// <see cref="IntegrationTestBase.InitializeAsync"/> which truncates user/token tables.
 /// </summary>
 public sealed class PostgresFixture : IAsyncLifetime
@@ -18,9 +23,27 @@ public sealed class PostgresFixture : IAsyncLifetime
 
     public string ConnectionString => Container.GetConnectionString();
 
-    public Task InitializeAsync() => Container.StartAsync();
+    public MentalMetalWebApplicationFactory Factory { get; private set; } = null!;
 
-    public Task DisposeAsync() => Container.DisposeAsync().AsTask();
+    public async Task InitializeAsync()
+    {
+        await Container.StartAsync();
+        Factory = new MentalMetalWebApplicationFactory(ConnectionString);
+
+        // Run migrations once, up-front, against the shared container.
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MentalMetalDbContext>();
+        await db.Database.MigrateAsync();
+    }
+
+    public async Task DisposeAsync()
+    {
+        if (Factory is not null)
+        {
+            await Factory.DisposeAsync();
+        }
+        await Container.DisposeAsync();
+    }
 }
 
 [CollectionDefinition(Name)]

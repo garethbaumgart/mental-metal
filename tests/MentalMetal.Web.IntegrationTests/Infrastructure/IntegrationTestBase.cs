@@ -22,20 +22,15 @@ public abstract class IntegrationTestBase : IAsyncLifetime
 
     protected IntegrationTestBase(PostgresFixture postgres)
     {
-        Factory = new MentalMetalWebApplicationFactory(postgres.ConnectionString);
+        // Factory + schema are owned by the collection fixture — a single factory
+        // instance is shared across every test class so migrations run once, not
+        // per test. Per-test isolation is provided by ResetDatabaseAsync() below.
+        Factory = postgres.Factory;
     }
 
-    public async Task InitializeAsync()
-    {
-        await Factory.EnsureSchemaAsync();
-        await Factory.ResetDatabaseAsync();
-    }
+    public Task InitializeAsync() => Factory.ResetDatabaseAsync();
 
-    public Task DisposeAsync()
-    {
-        Factory.Dispose();
-        return Task.CompletedTask;
-    }
+    public Task DisposeAsync() => Task.CompletedTask;
 
     protected HttpClient CreateClient() => Factory.CreateClient();
 
@@ -82,7 +77,7 @@ public abstract class IntegrationTestBase : IAsyncLifetime
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MentalMetalDbContext>();
-        var normalised = email.Trim().ToLower();
+        var normalised = email.Trim().ToLowerInvariant();
         return await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync(
             db.Users,
             u => u.Email.Value == normalised);

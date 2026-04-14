@@ -56,7 +56,8 @@ async function submitLogin(
  * visible logout button.
  */
 async function logout(page: Page): Promise<void> {
-  await page.request.post(`${API_BASE}/api/auth/logout`);
+  const response = await page.request.post(`${API_BASE}/api/auth/logout`);
+  expect(response.ok()).toBeTruthy();
   await page.evaluate(() => {
     localStorage.removeItem('access_token');
   });

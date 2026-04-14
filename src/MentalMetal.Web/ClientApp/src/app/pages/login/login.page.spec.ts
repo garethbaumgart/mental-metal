@@ -66,12 +66,12 @@ describe('LoginPage', () => {
     fixture.detectChanges();
 
     const component = fixture.componentInstance as unknown as {
-      email: string;
-      password: string;
+      email: { set: (v: string) => void };
+      password: { set: (v: string) => void };
       submit: () => Promise<void>;
     };
-    component.email = 'user@example.com';
-    component.password = 'secret-pw';
+    component.email.set('user@example.com');
+    component.password.set('secret-pw');
 
     const pending = component.submit();
 
@@ -108,12 +108,12 @@ describe('LoginPage', () => {
     fixture.detectChanges();
 
     const component = fixture.componentInstance as unknown as {
-      email: string;
-      password: string;
+      email: { set: (v: string) => void };
+      password: { set: (v: string) => void };
       submit: () => Promise<void>;
     };
-    component.email = 'user@example.com';
-    component.password = 'wrong-pw';
+    component.email.set('user@example.com');
+    component.password.set('wrong-pw');
 
     const pending = component.submit();
 
@@ -131,17 +131,17 @@ describe('LoginPage', () => {
     fixture.detectChanges();
 
     const component = fixture.componentInstance as unknown as {
-      email: string;
-      password: string;
-      name: string;
+      email: { set: (v: string) => void };
+      password: { set: (v: string) => void };
+      name: { set: (v: string) => void };
       mode: () => string;
       toggleMode: () => void;
       submit: () => Promise<void>;
     };
     component.toggleMode();
-    component.email = 'taken@example.com';
-    component.password = 'secret-pw';
-    component.name = 'New User';
+    component.email.set('taken@example.com');
+    component.password.set('secret-pw');
+    component.name.set('New User');
 
     const pending = component.submit();
 

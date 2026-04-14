@@ -29,7 +29,8 @@ import { Password } from '../../shared/models/password.constants';
         <p-password
           id="newPassword"
           name="newPassword"
-          [(ngModel)]="newPassword"
+          [ngModel]="newPassword()"
+          (ngModelChange)="newPassword.set($event)"
           [feedback]="true"
           [toggleMask]="true"
           styleClass="w-full"
@@ -70,17 +71,16 @@ export class PasswordSettingsComponent {
     this.hasPassword() ? 'Change password' : 'Set a password',
   );
 
-  protected newPassword = '';
+  protected readonly newPassword = signal<string>('');
 
-  canSubmit(): boolean {
-    return (
+  protected readonly canSubmit = computed(
+    () =>
       !this.submitting() &&
-      this.newPassword.length >= Password.MinimumLength
-    );
-  }
+      this.newPassword().length >= Password.MinimumLength,
+  );
 
   async submit(): Promise<void> {
-    if (this.newPassword.length < Password.MinimumLength) {
+    if (this.newPassword().length < Password.MinimumLength) {
       this.validationMessage.set(
         `Password must be at least ${Password.MinimumLength} characters.`,
       );
@@ -90,12 +90,16 @@ export class PasswordSettingsComponent {
     this.submitting.set(true);
     this.validationMessage.set(null);
 
+    // Capture BEFORE the async call — hasPassword() will flip to true after the
+    // server succeeds, so reading it later would always show 'Password updated'.
+    const hadPassword = this.hasPassword();
+
     try {
-      await this.authService.setPassword(this.newPassword);
-      this.newPassword = '';
+      await this.authService.setPassword(this.newPassword());
+      this.newPassword.set('');
       this.messageService.add({
         severity: 'success',
-        summary: this.hasPassword() ? 'Password updated' : 'Password set',
+        summary: hadPassword ? 'Password updated' : 'Password set',
       });
     } catch {
       this.messageService.add({

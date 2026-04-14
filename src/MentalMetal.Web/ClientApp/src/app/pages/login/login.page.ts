@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -60,7 +60,8 @@ type Mode = 'login' | 'register';
                 id="name"
                 name="name"
                 type="text"
-                [(ngModel)]="name"
+                [ngModel]="name()"
+                (ngModelChange)="name.set($event)"
                 required
                 autocomplete="name"
               />
@@ -74,7 +75,8 @@ type Mode = 'login' | 'register';
               id="email"
               name="email"
               type="email"
-              [(ngModel)]="email"
+              [ngModel]="email()"
+              (ngModelChange)="email.set($event)"
               required
               autocomplete="email"
             />
@@ -85,7 +87,8 @@ type Mode = 'login' | 'register';
             <p-password
               id="password"
               name="password"
-              [(ngModel)]="password"
+              [ngModel]="password()"
+              (ngModelChange)="password.set($event)"
               [feedback]="mode() === 'register'"
               [toggleMask]="true"
               styleClass="w-full"
@@ -137,23 +140,23 @@ export class LoginPage {
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly minPasswordLength = Password.MinimumLength;
 
-  protected email = '';
-  protected password = '';
-  protected name = '';
+  protected readonly email = signal<string>('');
+  protected readonly password = signal<string>('');
+  protected readonly name = signal<string>('');
+
+  protected readonly canSubmit = computed(() => {
+    if (this.submitting()) return false;
+    if (!this.email().trim() || !this.password()) return false;
+    if (this.mode() === 'register') {
+      if (!this.name().trim()) return false;
+      if (this.password().length < Password.MinimumLength) return false;
+    }
+    return true;
+  });
 
   toggleMode(): void {
     this.mode.update((m) => (m === 'login' ? 'register' : 'login'));
     this.errorMessage.set(null);
-  }
-
-  canSubmit(): boolean {
-    if (this.submitting()) return false;
-    if (!this.email.trim() || !this.password) return false;
-    if (this.mode() === 'register') {
-      if (!this.name.trim()) return false;
-      if (this.password.length < Password.MinimumLength) return false;
-    }
-    return true;
   }
 
   async submit(): Promise<void> {
@@ -164,12 +167,12 @@ export class LoginPage {
 
     try {
       if (this.mode() === 'login') {
-        await this.authService.loginWithPassword(this.email.trim(), this.password);
+        await this.authService.loginWithPassword(this.email().trim(), this.password());
       } else {
         await this.authService.registerWithPassword(
-          this.email.trim(),
-          this.password,
-          this.name.trim(),
+          this.email().trim(),
+          this.password(),
+          this.name().trim(),
         );
       }
       await this.router.navigate(['/']);

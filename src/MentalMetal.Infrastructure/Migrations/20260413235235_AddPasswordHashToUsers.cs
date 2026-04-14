@@ -31,21 +31,10 @@ namespace MentalMetal.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            // Down() intentionally leaves ExternalAuthId nullable — rolling back a data-containing deployment with password-only users cannot safely re-impose NOT NULL.
             migrationBuilder.DropColumn(
                 name: "PasswordHash",
                 table: "Users");
-
-            migrationBuilder.AlterColumn<string>(
-                name: "ExternalAuthId",
-                table: "Users",
-                type: "character varying(256)",
-                maxLength: 256,
-                nullable: false,
-                defaultValue: "",
-                oldClrType: typeof(string),
-                oldType: "character varying(256)",
-                oldMaxLength: 256,
-                oldNullable: true);
         }
     }
 }

@@ -51,14 +51,15 @@ public class SetPasswordTests
     }
 
     [Theory]
+    [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
     [InlineData("short")]
     [InlineData("1234567")]
-    public async Task ShortPassword_Throws(string password)
+    public async Task ShortPassword_Throws(string? password)
     {
         await Assert.ThrowsAnyAsync<ArgumentException>(
-            () => _handler.HandleAsync(new SetPasswordCommand(password), CancellationToken.None));
+            () => _handler.HandleAsync(new SetPasswordCommand(password!), CancellationToken.None));
     }
 
     [Fact]
