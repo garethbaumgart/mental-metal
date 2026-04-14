@@ -2,18 +2,19 @@
 
 - [ ] 1.1 Extend `CaptureType` enum with `AudioRecording`
 - [ ] 1.2 Add audio fields to `Capture` aggregate: `AudioBlobRef`, `AudioMimeType`, `AudioDurationSeconds`, `AudioDiscardedAt`
-- [ ] 1.3 Add `TranscriptSegment` owned entity with `StartSeconds`, `EndSeconds`, `SpeakerLabel`, `Text`, `LinkedPersonId`; enforce invariants in `Create`
-- [ ] 1.4 Add `TranscriptSegments` owned collection to `Capture` with `ReplaceTranscript(...)` and `IdentifySpeakers(mapping)` methods
-- [ ] 1.5 Add `Capture.CreateAudio(...)`, `Capture.AttachTranscript(...)`, `Capture.MarkAudioDiscarded(now)` methods
-- [ ] 1.6 Add domain events: `CaptureAudioUploaded`, `CaptureTranscribed`, `CaptureAudioDiscarded`, `CaptureSpeakerIdentified`
-- [ ] 1.7 Unit tests covering audio-capture creation, transcript attachment, speaker mapping, and segment invariants
+- [ ] 1.3 Add `TranscriptionStatus` enum (`NotApplicable`, `Pending`, `InProgress`, `Transcribed`, `Failed`) and property on `Capture`, independent of `ProcessingStatus`; existing (text) captures default to `NotApplicable`
+- [ ] 1.4 Add `TranscriptSegment` owned entity with `StartSeconds`, `EndSeconds`, `SpeakerLabel`, `Text`, `LinkedPersonId`; enforce invariants in `Create`
+- [ ] 1.5 Add `TranscriptSegments` owned collection to `Capture` with `ReplaceTranscript(...)` and `IdentifySpeakers(mapping)` methods
+- [ ] 1.6 Add `Capture.CreateAudio(...)`, `Capture.AttachTranscript(...)`, `Capture.MarkTranscriptionFailed(reason)`, `Capture.MarkAudioDiscarded(now)` methods with explicit `TranscriptionStatus` transitions
+- [ ] 1.7 Add domain events: `CaptureAudioUploaded`, `CaptureTranscribed`, `CaptureTranscriptionFailed`, `CaptureAudioDiscarded`, `CaptureSpeakerIdentified`
+- [ ] 1.8 Unit tests covering audio-capture creation, transcript attachment, speaker mapping, `TranscriptionStatus` transitions (Pending→InProgress→Transcribed / Pending→InProgress→Failed), and segment invariants
 
 ## 2. Application
 
 - [ ] 2.1 Define `IAudioBlobStore` interface in Application abstractions
 - [ ] 2.2 Define `IAudioTranscriptionProvider` interface returning text + segments
-- [ ] 2.3 Implement `UploadAudioCapture` handler (create capture, save blob, transcribe inline, discard blob, commit)
-- [ ] 2.4 Implement `TranscribeCapture` handler for retry flow
+- [ ] 2.3 Implement `UploadAudioCapture` handler (create capture with `TranscriptionStatus=Pending`, save blob, transition to `InProgress`, transcribe inline, split any provider segment whose `Text` exceeds 2000 chars into adjacent 2000-char segments with proportional `StartSeconds`/`EndSeconds`, on success mark `Transcribed` + discard blob, on failure mark `Failed` + raise `CaptureTranscriptionFailed` + retain blob, commit)
+- [ ] 2.4 Implement `TranscribeCapture` handler for retry flow (allow only when `TranscriptionStatus=Failed` and `AudioBlobRef` is present; reject retry on a capture whose audio was already discarded with error code `transcription.audioDiscarded`)
 - [ ] 2.5 Implement `GetCaptureTranscript` query handler
 - [ ] 2.6 Implement `UpdateCaptureSpeakers` handler (verify person existence, invoke aggregate method)
 - [ ] 2.7 Application-level unit tests for each handler (success, failure, not-found, invalid input)
@@ -23,7 +24,7 @@
 - [ ] 3.1 EF Core configuration for new `Capture` audio fields and owned `TranscriptSegments` collection (HasMaxLength 2000, 64)
 - [ ] 3.2 Repository helpers `MarkOwnedAdded/MarkOwnedRemoved` for transcript segments
 - [ ] 3.3 `FileSystemAudioBlobStore` implementation with `AudioBlobStoreOptions` (Range/Required, ValidateOnStart)
-- [ ] 3.4 `StubAudioTranscriptionProvider` for dev/test environments (deterministic output)
+- [ ] 3.4 `StubAudioTranscriptionProvider` (dev/test only — named to make clear it must never be registered in production; deterministic output, fixed speaker labels)
 - [ ] 3.5 EF migration `AddCaptureAudioFields`
 - [ ] 3.6 DI registration of new services in `Program.cs` / composition root
 
@@ -35,7 +36,7 @@
 - [ ] 4.4 `PATCH /api/captures/{id}/speakers` endpoint
 - [ ] 4.5 DTOs for transcript segments, speaker-mapping request, and audio-upload response
 - [ ] 4.6 `AudioUploadOptions` (MaxSizeBytes, AllowedMimeTypes) with `ValidateDataAnnotations().ValidateOnStart()`
-- [ ] 4.7 Error-code constants (`audio.invalidFormat`, `audio.tooLarge`, `transcription.failed`, `capture.notFound`, `speaker.personNotFound`, `speaker.labelNotFound`)
+- [ ] 4.7 Error-code constants — canonical set, identical to the proposal and spec: `audio.invalidFormat`, `audio.tooLarge`, `audio.uploadFailed`, `transcription.audioDiscarded`, `transcription.failed`, `transcription.providerUnavailable`, `capture.notFound`, `speaker.personNotFound`, `speaker.labelNotFound`
 - [ ] 4.8 Integration tests for each endpoint (happy path + key failure modes)
 
 ## 5. Frontend

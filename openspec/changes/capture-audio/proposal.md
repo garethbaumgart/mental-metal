@@ -11,12 +11,13 @@ Engineering managers spend many hours in 1:1s, leadership syncs, and interviews.
 - New storage abstraction `IAudioBlobStore` with a filesystem-backed default implementation (configurable root path). Cloud providers deferred as future work.
 - Retention policy: on successful transcription, the audio blob is deleted from storage and `AudioDiscardedAt` is set. Duration and MIME type remain for UX context.
 - New endpoints:
-  - `POST /api/captures/audio` (multipart upload; creates capture + queues/kicks transcription synchronously for MVP).
+  - `POST /api/captures/audio` (multipart upload; creates capture and runs transcription synchronously during upload for MVP — background queueing is out of scope).
   - `POST /api/captures/{id}/transcribe` (re-trigger transcription on a failed capture).
   - `GET /api/captures/{id}/transcript` (returns transcript segments).
   - `PATCH /api/captures/{id}/speakers` (bulk mapping from speaker label → PersonId).
+- Introduce a dedicated `Capture.TranscriptionStatus` lifecycle (`NotApplicable`, `Pending`, `InProgress`, `Transcribed`, `Failed`) that is independent of the existing `ProcessingStatus` (which governs AI extraction). After successful transcription the flow sets `TranscriptionStatus=Transcribed` and leaves `ProcessingStatus=Raw` so `capture-ai-extraction` runs unchanged.
 - Frontend: standalone recorder component using the browser `MediaRecorder` API (signals-driven), a transcript viewer grouping segments by speaker, and a speaker-identification picker with Person autocomplete.
-- Error codes: `audio.invalidFormat`, `audio.tooLarge`, `audio.uploadFailed`, `transcription.failed`, `transcription.providerUnavailable`, `capture.notFound`, `speaker.personNotFound`, `speaker.labelNotFound`.
+- Error codes (canonical list, reconciled across proposal/tasks/spec): `audio.invalidFormat`, `audio.tooLarge`, `audio.uploadFailed`, `transcription.audioDiscarded`, `transcription.failed`, `transcription.providerUnavailable`, `capture.notFound`, `speaker.personNotFound`, `speaker.labelNotFound`.
 
 ## Capabilities
 
@@ -30,7 +31,7 @@ Engineering managers spend many hours in 1:1s, leadership syncs, and interviews.
 
 ## Impact
 
-- **Domain**: `Capture` aggregate gains audio fields and an owned `TranscriptSegment` collection; new domain events `CaptureAudioUploaded`, `CaptureTranscribed`, `CaptureAudioDiscarded`, `CaptureSpeakerIdentified`.
+- **Domain**: `Capture` aggregate gains audio fields, a dedicated `TranscriptionStatus` lifecycle (independent of `ProcessingStatus`), and an owned `TranscriptSegment` collection; new domain events `CaptureAudioUploaded`, `CaptureTranscribed`, `CaptureTranscriptionFailed`, `CaptureAudioDiscarded`, `CaptureSpeakerIdentified`.
 - **Application**: New vertical slices — `UploadAudioCapture`, `TranscribeCapture`, `GetCaptureTranscript`, `UpdateCaptureSpeakers`.
 - **Infrastructure**: `IAudioBlobStore` (filesystem default), `IAudioTranscriptionProvider` (stub dev provider; real provider wiring out of scope); EF configuration for owned `TranscriptSegments` collection; new migration.
 - **Web/API**: New endpoints and DTOs listed above; request-size limits enforced via options.

@@ -26,27 +26,31 @@ The system SHALL allow an authenticated user to upload an audio recording via mu
 
 ### Requirement: Transcribe an audio capture
 
-The system SHALL transcribe an `AudioRecording` capture using `IAudioTranscriptionProvider`, populate `Capture.RawContent` with the full transcript text, populate the owned `TranscriptSegments` collection with per-segment start/end seconds, speaker label, and text, and raise a `CaptureTranscribed` domain event. Transcription SHALL run synchronously on upload. If transcription fails, the capture's processing status SHALL transition to `Failed` with an error reason, and the response SHALL include error code `transcription.failed`. The endpoint `POST /api/captures/{id}/transcribe` SHALL allow retrying a failed transcription.
+The system SHALL transcribe an `AudioRecording` capture using `IAudioTranscriptionProvider`, populate `Capture.RawContent` with the full transcript text, populate the owned `TranscriptSegments` collection with per-segment start/end seconds, speaker label, and text, transition `Capture.TranscriptionStatus` from `Pending` → `InProgress` → `Transcribed`, and raise a `CaptureTranscribed` domain event. Transcription SHALL run synchronously during upload (background queueing is out of scope for MVP).
+
+`TranscriptionStatus` is a lifecycle independent of `ProcessingStatus` (which governs AI extraction). On successful transcription `ProcessingStatus` SHALL remain `Raw` so the existing `capture-ai-extraction` pipeline picks up the capture unchanged; transcription completion is represented exclusively by `TranscriptionStatus = Transcribed`.
+
+If transcription fails the system SHALL transition `TranscriptionStatus` to `Failed`, raise a `CaptureTranscriptionFailed` domain event (distinct from `CaptureProcessingFailed`, which is reserved for AI-extraction failure), leave `ProcessingStatus` untouched, and return error code `transcription.failed` (or `transcription.providerUnavailable` when the provider was unreachable). The endpoint `POST /api/captures/{id}/transcribe` SHALL allow retrying a transcription when `TranscriptionStatus = Failed` and the audio blob is still present.
 
 #### Scenario: Successful transcription populates transcript
 
 - **WHEN** an audio capture is uploaded and the transcription provider returns text and segments
-- **THEN** `Capture.RawContent` contains the full transcript text, `TranscriptSegments` contains one segment per provider segment, and a `CaptureTranscribed` event is raised
+- **THEN** `Capture.RawContent` contains the full transcript text, `TranscriptSegments` contains one segment per provider segment, `Capture.TranscriptionStatus` is `Transcribed`, `Capture.ProcessingStatus` remains `Raw`, and a `CaptureTranscribed` event is raised
 
 #### Scenario: Transcription failure
 
-- **WHEN** the transcription provider throws or returns an error
-- **THEN** the capture's processing status becomes `Failed`, a `CaptureProcessingFailed` event is raised, and the upload response returns error code `transcription.failed`
+- **WHEN** the transcription provider throws or returns an error during upload
+- **THEN** `Capture.TranscriptionStatus` becomes `Failed`, `Capture.ProcessingStatus` is unchanged, a `CaptureTranscriptionFailed` event is raised, and the upload response returns error code `transcription.failed`
 
 #### Scenario: Retry transcription on failed capture
 
-- **WHEN** an authenticated user POSTs to `/api/captures/{id}/transcribe` for a capture in status `Failed` with the audio still present
-- **THEN** the system re-runs transcription and returns HTTP 200 with the updated capture
+- **WHEN** an authenticated user POSTs to `/api/captures/{id}/transcribe` for a capture with `TranscriptionStatus = Failed` and the audio still present
+- **THEN** the system re-runs transcription and returns HTTP 200 with the updated capture (`TranscriptionStatus = Transcribed` on success)
 
 #### Scenario: Retry on capture with discarded audio
 
 - **WHEN** an authenticated user POSTs to `/api/captures/{id}/transcribe` for a capture where `AudioDiscardedAt` is set
-- **THEN** the system returns HTTP 400 with error code `audio.uploadFailed` (no audio available)
+- **THEN** the system returns HTTP 400 with error code `transcription.audioDiscarded` (the upload previously succeeded; the audio was intentionally discarded after a successful transcription and cannot be retried)
 
 ### Requirement: Discard audio after successful transcription
 
@@ -123,6 +127,15 @@ The `TranscriptSegment` value SHALL enforce the following invariants at creation
 
 - **WHEN** a `TranscriptSegment` is created with `Text` longer than 2000 characters
 - **THEN** the domain throws an invariant-violation exception
+
+### Requirement: Split over-length provider segments
+
+When `IAudioTranscriptionProvider` returns a segment whose `Text` exceeds 2000 characters, the transcription handler SHALL split that segment into adjacent `TranscriptSegment` instances each ≤ 2000 characters, preserving the original `SpeakerLabel` and allocating `StartSeconds`/`EndSeconds` proportionally to each chunk's character length so the concatenated chunks span the original segment's time range without gaps or overlaps. No content from the provider SHALL be dropped.
+
+#### Scenario: Provider segment longer than 2000 characters is split
+
+- **WHEN** the provider returns a single segment with 4500 characters spanning 60.0s–120.0s labeled "Speaker A"
+- **THEN** the resulting `TranscriptSegments` contain three adjacent segments each ≤ 2000 characters, all labeled "Speaker A", whose `StartSeconds`/`EndSeconds` divide the 60.0s–120.0s range proportionally to character counts and whose concatenated `Text` matches the provider's original text
 
 ### Requirement: Audio capture frontend recorder
 

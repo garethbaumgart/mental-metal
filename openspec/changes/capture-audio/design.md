@@ -31,9 +31,24 @@ Adding optional audio fields + an owned `TranscriptSegments` collection keeps do
 
 Segments are only meaningful in the context of their parent `Capture` and never queried independently. An owned collection keeps aggregate invariants (user-scoping, lifecycle) intact. Infrastructure uses the repo's existing `MarkOwnedAdded`/`MarkOwnedRemoved` helpers. Domain enforces segment text length (≤ 2000 chars) and `StartSeconds ≤ EndSeconds` in a `TranscriptSegment.Create(...)` factory so EF column limits match domain invariants.
 
-### D3: Synchronous transcription for MVP
+### D3: Synchronous transcription for MVP with a dedicated `TranscriptionStatus`
 
-On `POST /api/captures/audio`, the handler persists the capture (status `Raw`), stores the blob, then calls `IAudioTranscriptionProvider.TranscribeAsync` inline, sets segments + `RawContent`, discards the blob, and marks status `Processed` (transcription-level, not extraction-level — the capture-ai-extraction pipeline still runs separately). We chose synchronous over a background job queue because we do not yet have a background worker in the system. `POST /api/captures/{id}/transcribe` exists so a user can retry after a provider failure without re-uploading.
+Transcription is run synchronously during the upload request (no background queue — background queueing is explicitly out of scope for MVP). Because the existing `Capture.ProcessingStatus` (`Raw`/`Processing`/`Processed`/`Failed`) is already owned by the AI-extraction pipeline (where `Processed` means extraction finished and `AiExtraction` is populated, and `CaptureProcessingFailed` means extraction failed), we introduce a separate lifecycle on the aggregate:
+
+```
+TranscriptionStatus: NotApplicable | Pending | InProgress | Transcribed | Failed
+```
+
+- Text captures keep `TranscriptionStatus = NotApplicable`.
+- `POST /api/captures/audio` creates the capture with `ProcessingStatus = Raw` and `TranscriptionStatus = Pending`, stores the blob, flips to `InProgress`, calls `IAudioTranscriptionProvider.TranscribeAsync` inline, on success sets segments + `RawContent`, transitions `TranscriptionStatus = Transcribed`, discards the blob, and raises `CaptureTranscribed` + `CaptureAudioDiscarded`. `ProcessingStatus` stays `Raw` so the extraction pipeline picks the capture up exactly as it does for a text capture.
+- On provider failure (exception or error response) the aggregate transitions `TranscriptionStatus = Failed`, raises `CaptureTranscriptionFailed`, and leaves `ProcessingStatus = Raw` (the extraction pipeline's lifecycle is untouched). The HTTP response returns `transcription.failed` (or `transcription.providerUnavailable` when the provider was unreachable).
+- `POST /api/captures/{id}/transcribe` re-runs transcription for captures in `TranscriptionStatus = Failed` whose audio blob is still present.
+
+This separation keeps the two concerns — transcription and AI extraction — cleanly addressable and prevents the audio flow from ever synthesising a `Processed` state that downstream consumers would read as "extraction complete".
+
+### D3.1: Over-length transcript segments
+
+`TranscriptSegment.Text` is bounded at 2000 characters to match the EF column and the domain invariant. When `IAudioTranscriptionProvider` returns a segment whose `Text` exceeds 2000 characters, the `UploadAudioCapture`/`TranscribeCapture` handler SHALL split the segment into adjacent segments of ≤ 2000 characters, preserving `SpeakerLabel` and allocating `StartSeconds`/`EndSeconds` proportionally to each chunk's character count. Splitting rather than truncating was chosen so no content is lost — transcripts feed downstream extraction where truncation would silently drop context.
 
 ### D4: Audio discard after successful transcription
 
