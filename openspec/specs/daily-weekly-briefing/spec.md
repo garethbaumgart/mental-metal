@@ -1,7 +1,9 @@
-# daily-weekly-briefing Specification
+# Daily / Weekly Briefing
 
 ## Purpose
-TBD - created by archiving change daily-weekly-briefing. Update Purpose after archive.
+
+Generate AI-powered briefings that assemble already-captured operational state (open commitments, in-flight delegations, today's 1:1s, recent observations, living-brief status, milestones, recently-touched captures) into short, scannable markdown narratives. Three briefing shapes are supported: the **morning** briefing summarising today's focus, the **weekly** briefing covering the current ISO week, and the **1:1 prep** sheet for an individual person. Facts are assembled deterministically from repository state and the user's clock; the LLM only narrates the supplied facts and is forbidden from inventing names, dates, or counts. Each generated briefing is persisted as a read-model row keyed by `(UserId, Type, ScopeKey)` with cache-or-regenerate semantics so refreshes don't burn LLM budget.
+
 ## Requirements
 ### Requirement: Generate morning briefing
 
@@ -25,7 +27,7 @@ Facts assembly: the system SHALL assemble `MorningBriefingFacts` deterministical
 
 Synthesis: the system SHALL call `IAiCompletionService` with a system prompt forbidding invention, a user prompt containing the facts JSON, `Temperature = 0.3`, and `MaxTokens = BriefingOptions.MaxBriefingTokens`. The returned markdown SHALL be stored as `MarkdownBody`.
 
-Authorisation: the endpoint SHALL require authentication; unauthenticated requests SHALL return HTTP 401.
+Authorization: the endpoint SHALL require authentication; unauthenticated requests SHALL return HTTP 401.
 
 Provider precondition: if the user has no `AiProviderConfig` set, the system SHALL return HTTP 409 with an error code `ai_provider_not_configured`.
 
