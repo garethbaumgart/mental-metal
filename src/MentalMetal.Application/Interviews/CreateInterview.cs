@@ -22,7 +22,8 @@ public sealed class CreateInterviewHandler(
             throw new CandidateNotFoundException($"Candidate person '{request.CandidatePersonId}' not found.");
 
         if (person.Type != PersonType.Candidate)
-            throw new ArgumentException("Person is not a candidate.", nameof(request.CandidatePersonId));
+            throw new CandidateWrongTypeException(
+                $"Person '{request.CandidatePersonId}' is not a Candidate (Type={person.Type}).");
 
         var now = timeProvider.GetUtcNow();
         var interview = Interview.Create(

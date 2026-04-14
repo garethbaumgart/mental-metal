@@ -71,7 +71,7 @@ import { Person } from '../../../shared/models/person.model';
                   <h2 class="text-lg font-semibold">Advance stage</h2>
                   <div class="flex gap-3 items-center flex-wrap">
                     <p-select [options]="stageOptions" [(ngModel)]="targetStage" placeholder="Next stage" class="w-64" />
-                    <p-button label="Advance" (onClick)="advance()" [disabled]="!targetStage" />
+                    <p-button label="Advance" (onClick)="advance()" [disabled]="!targetStage()" />
                   </div>
                 </section>
 
@@ -79,7 +79,7 @@ import { Person } from '../../../shared/models/person.model';
                   <h2 class="text-lg font-semibold">Record decision</h2>
                   <div class="flex gap-3 items-center flex-wrap">
                     <p-select [options]="decisionOptions" [(ngModel)]="decisionDraft" placeholder="Decision" class="w-64" />
-                    <p-button label="Record" (onClick)="recordDecision()" [disabled]="!decisionDraft" />
+                    <p-button label="Record" (onClick)="recordDecision()" [disabled]="!decisionDraft()" />
                   </div>
                 </section>
 
@@ -130,7 +130,7 @@ import { Person } from '../../../shared/models/person.model';
                     <label for="notes" class="text-sm font-medium text-muted-color">Notes (optional)</label>
                     <textarea pTextarea id="notes" [(ngModel)]="newNotes" [rows]="2" class="w-full"></textarea>
                   </div>
-                  <p-button label="Add" (onClick)="addScorecard()" [disabled]="!newCompetency.trim() || !newRating" />
+                  <p-button label="Add" (onClick)="addScorecard()" [disabled]="!newCompetency().trim() || !newRating()" />
                 </div>
               </div>
             </p-tabpanel>
@@ -140,7 +140,7 @@ import { Person } from '../../../shared/models/person.model';
                 <label for="tx" class="text-sm font-medium text-muted-color">Raw transcript</label>
                 <textarea pTextarea id="tx" [(ngModel)]="transcriptDraft" [rows]="12" class="w-full"></textarea>
                 <div>
-                  <p-button label="Save transcript" (onClick)="saveTranscript()" [disabled]="!transcriptDraft.trim()" />
+                  <p-button label="Save transcript" (onClick)="saveTranscript()" [disabled]="!transcriptDraft().trim()" />
                 </div>
               </div>
             </p-tabpanel>
@@ -205,12 +205,15 @@ export class InterviewDetailComponent implements OnInit {
   protected readonly decisionOptions = INTERVIEW_DECISIONS.map((d) => ({ label: d, value: d }));
   protected readonly ratingOptions = [1, 2, 3, 4, 5].map((r) => ({ label: r.toString(), value: r }));
 
-  protected targetStage: InterviewStage | null = null;
-  protected decisionDraft: InterviewDecision | null = null;
-  protected transcriptDraft = '';
-  protected newCompetency = '';
-  protected newRating: number | null = null;
-  protected newNotes = '';
+  // Signals rather than plain fields: Angular is running zoneless here, so mutating a
+  // plain property does not trigger OnPush change detection. ngModel two-way binding
+  // against writable signals works natively in Angular 21.
+  protected readonly targetStage = signal<InterviewStage | null>(null);
+  protected readonly decisionDraft = signal<InterviewDecision | null>(null);
+  protected readonly transcriptDraft = signal('');
+  protected readonly newCompetency = signal('');
+  protected readonly newRating = signal<number | null>(null);
+  protected readonly newNotes = signal('');
 
   protected readonly id = computed(() => this.route.snapshot.paramMap.get('id') ?? '');
 
@@ -234,7 +237,7 @@ export class InterviewDetailComponent implements OnInit {
     this.service.get(id).subscribe({
       next: (iv) => {
         this.interview.set(iv);
-        this.transcriptDraft = iv.transcript?.rawText ?? '';
+        this.transcriptDraft.set(iv.transcript?.rawText ?? '');
         this.loading.set(false);
       },
       error: () => {
@@ -245,11 +248,12 @@ export class InterviewDetailComponent implements OnInit {
   }
 
   advance(): void {
-    if (!this.targetStage) return;
-    this.service.advance(this.id(), { targetStage: this.targetStage }).subscribe({
+    const target = this.targetStage();
+    if (!target) return;
+    this.service.advance(this.id(), { targetStage: target }).subscribe({
       next: (iv) => {
         this.interview.set(iv);
-        this.targetStage = null;
+        this.targetStage.set(null);
         this.messageService.add({ severity: 'success', summary: 'Stage advanced' });
       },
       error: (err) =>
@@ -261,11 +265,12 @@ export class InterviewDetailComponent implements OnInit {
   }
 
   recordDecision(): void {
-    if (!this.decisionDraft) return;
-    this.service.recordDecision(this.id(), { decision: this.decisionDraft }).subscribe({
+    const decision = this.decisionDraft();
+    if (!decision) return;
+    this.service.recordDecision(this.id(), { decision }).subscribe({
       next: (iv) => {
         this.interview.set(iv);
-        this.decisionDraft = null;
+        this.decisionDraft.set(null);
         this.messageService.add({ severity: 'success', summary: 'Decision recorded' });
       },
       error: (err) =>
@@ -277,18 +282,20 @@ export class InterviewDetailComponent implements OnInit {
   }
 
   addScorecard(): void {
-    if (!this.newCompetency.trim() || !this.newRating) return;
+    const competency = this.newCompetency().trim();
+    const rating = this.newRating();
+    if (!competency || !rating) return;
     this.service
       .addScorecard(this.id(), {
-        competency: this.newCompetency.trim(),
-        rating: this.newRating,
-        notes: this.newNotes.trim() || null,
+        competency,
+        rating,
+        notes: this.newNotes().trim() || null,
       })
       .subscribe({
         next: () => {
-          this.newCompetency = '';
-          this.newRating = null;
-          this.newNotes = '';
+          this.newCompetency.set('');
+          this.newRating.set(null);
+          this.newNotes.set('');
           this.load();
           this.messageService.add({ severity: 'success', summary: 'Scorecard added' });
         },
@@ -309,8 +316,9 @@ export class InterviewDetailComponent implements OnInit {
   }
 
   saveTranscript(): void {
-    if (!this.transcriptDraft.trim()) return;
-    this.service.setTranscript(this.id(), { rawText: this.transcriptDraft }).subscribe({
+    const draft = this.transcriptDraft();
+    if (!draft.trim()) return;
+    this.service.setTranscript(this.id(), { rawText: draft }).subscribe({
       next: (iv) => {
         this.interview.set(iv);
         this.messageService.add({ severity: 'success', summary: 'Transcript saved' });
@@ -326,10 +334,22 @@ export class InterviewDetailComponent implements OnInit {
   analyze(): void {
     this.analyzing.set(true);
     this.service.analyze(this.id()).subscribe({
-      next: () => {
+      next: (result) => {
         this.analyzing.set(false);
+        // Surface any non-fatal model-output issue (e.g. unrecognised recommendedDecision)
+        // before reloading the interview. The warning is informational — the analysis was
+        // still persisted.
+        if (result?.warning) {
+          this.messageService.add({
+            severity: 'warn',
+            summary: 'Analysis completed with warning',
+            detail: result.warning,
+            life: 8000,
+          });
+        } else {
+          this.messageService.add({ severity: 'success', summary: 'Analysis complete' });
+        }
         this.load();
-        this.messageService.add({ severity: 'success', summary: 'Analysis complete' });
       },
       error: (err) => {
         this.analyzing.set(false);

@@ -70,10 +70,27 @@ public class InterviewAnalysisServiceTests
         // The transcript backticks must not reach the prompt verbatim. We don't care about the
         // exact escape sequence (JSON may upper-case / lower-case unicode escapes, and some
         // encoders translate `\u0060` into `\u0060` vs `` ` `` differently) - what matters is
-        // that the word "backtick" survives but no backtick character is adjacent to it.
+        // that the word "backtick" survives but no backtick character is adjacent to it on
+        // either side (leading or trailing).
         var idx = captured.UserPrompt.IndexOf("backtick", StringComparison.Ordinal);
         Assert.True(idx > 0, "transcript text should still be present");
         Assert.NotEqual('`', captured.UserPrompt[idx - 1]);
+        var trailingIdx = idx + "backtick".Length;
+        Assert.True(trailingIdx < captured.UserPrompt.Length, "transcript should have content after 'backtick'");
+        Assert.NotEqual('`', captured.UserPrompt[trailingIdx]);
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_RecommendedDecisionLiteralNull_NoWarning()
+    {
+        var interview = MakeInterview();
+        _ai.CompleteAsync(Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Completion("{\"summary\":\"ok\",\"recommendedDecision\":\"null\",\"riskSignals\":[]}"));
+
+        var result = await _service.AnalyzeAsync(interview, CancellationToken.None);
+
+        Assert.Null(result.RecommendedDecision);
+        Assert.Null(result.Warning);
     }
 
     [Fact]

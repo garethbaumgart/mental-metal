@@ -195,6 +195,34 @@ public class InterviewTests
     }
 
     [Fact]
+    public void AddScorecard_CompetencyExceedsMaxLength_Throws()
+    {
+        var interview = CreateApplied();
+        var tooLong = new string('x', InterviewScorecard.MaxCompetencyLength + 1);
+        Assert.Throws<ArgumentException>(() =>
+            interview.AddScorecard(tooLong, 3, null, Now));
+    }
+
+    [Fact]
+    public void AddScorecard_NotesExceedsMaxLength_Throws()
+    {
+        var interview = CreateApplied();
+        var tooLong = new string('x', InterviewScorecard.MaxNotesLength + 1);
+        Assert.Throws<ArgumentException>(() =>
+            interview.AddScorecard("Competency", 3, tooLong, Now));
+    }
+
+    [Fact]
+    public void UpdateScorecard_CompetencyExceedsMaxLength_Throws()
+    {
+        var interview = CreateApplied();
+        var card = interview.AddScorecard("System Design", 4, null, Now);
+        var tooLong = new string('x', InterviewScorecard.MaxCompetencyLength + 1);
+        Assert.Throws<ArgumentException>(() =>
+            interview.UpdateScorecard(card.Id, tooLong, 4, null, Now));
+    }
+
+    [Fact]
     public void SetTranscript_WithBackticks_AcceptedAsIs()
     {
         var interview = CreateApplied();

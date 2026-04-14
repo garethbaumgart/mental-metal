@@ -2,10 +2,24 @@ namespace MentalMetal.Application.Interviews;
 
 /// <summary>
 /// Thrown when the supplied candidate person id does not resolve to a Person owned by
-/// the current user, or when that Person's Type is not <c>Candidate</c>. Web layer maps
-/// this to HTTP 404 / 400 with error code <c>candidate_not_found</c>.
+/// the current user (i.e. the record does not exist or belongs to another user).
+/// Web layer maps this to HTTP 404 with error code <c>candidate_not_found</c>.
 /// </summary>
 public sealed class CandidateNotFoundException(string message) : InvalidOperationException(message);
+
+/// <summary>
+/// Thrown when the supplied candidate person id resolves to a Person owned by the
+/// current user but whose <c>Type</c> is not <c>Candidate</c>. Web layer maps this to
+/// HTTP 400 with error code <c>candidate_wrong_type</c>.
+/// </summary>
+public sealed class CandidateWrongTypeException(string message) : InvalidOperationException(message);
+
+/// <summary>
+/// Thrown when a scorecard id supplied to an update/remove operation does not exist
+/// on the interview aggregate. Web layer maps this to HTTP 404 with error code
+/// <c>scorecard_not_found</c>.
+/// </summary>
+public sealed class ScorecardNotFoundException(string message) : InvalidOperationException(message);
 
 /// <summary>
 /// Thrown when the transcript exceeds the configured max prompt characters. Web layer

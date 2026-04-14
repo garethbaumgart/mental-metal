@@ -25,9 +25,13 @@ public static class InterviewEndpoints
             {
                 return Results.NotFound(new { error = ex.Message, code = "candidate_not_found" });
             }
+            catch (CandidateWrongTypeException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message, code = "candidate_wrong_type" });
+            }
             catch (ArgumentException ex)
             {
-                return Results.BadRequest(new { error = ex.Message, code = "candidate_not_found" });
+                return Results.BadRequest(new { error = ex.Message, code = "validation_failed" });
             }
         });
 
@@ -120,7 +124,7 @@ public static class InterviewEndpoints
                 return Results.Created($"/api/interviews/{id}/scorecards/{response.Id}", response);
             }
             catch (NotFoundException) { return Results.NotFound(); }
-            catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+            catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message, code = "validation_failed" }); }
         });
 
         group.MapPut("/{id:guid}/scorecards/{scorecardId:guid}", async (
@@ -136,7 +140,11 @@ public static class InterviewEndpoints
                 return Results.Ok(response);
             }
             catch (NotFoundException) { return Results.NotFound(); }
-            catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+            catch (ScorecardNotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message, code = "scorecard_not_found" });
+            }
+            catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message, code = "validation_failed" }); }
         });
 
         group.MapDelete("/{id:guid}/scorecards/{scorecardId:guid}", async (
@@ -151,7 +159,10 @@ public static class InterviewEndpoints
                 return Results.NoContent();
             }
             catch (NotFoundException) { return Results.NotFound(); }
-            catch (ArgumentException) { return Results.NotFound(); }
+            catch (ScorecardNotFoundException ex)
+            {
+                return Results.NotFound(new { error = ex.Message, code = "scorecard_not_found" });
+            }
         });
 
         group.MapPut("/{id:guid}/transcript", async (

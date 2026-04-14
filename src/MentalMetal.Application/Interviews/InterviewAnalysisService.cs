@@ -149,7 +149,10 @@ public sealed class InterviewAnalysisService(
 
         InterviewDecision? decision = null;
         string? warning = null;
-        if (!string.IsNullOrWhiteSpace(payload.RecommendedDecision))
+        if (!string.IsNullOrWhiteSpace(payload.RecommendedDecision)
+            // Treat the literal string "null" (which LLMs sometimes emit as a string rather
+            // than a JSON null) as "no recommendation" rather than an invalid enum value.
+            && !string.Equals(payload.RecommendedDecision.Trim(), "null", StringComparison.OrdinalIgnoreCase))
         {
             if (Enum.TryParse<InterviewDecision>(payload.RecommendedDecision, ignoreCase: true, out var parsed)
                 && Enum.IsDefined(parsed))

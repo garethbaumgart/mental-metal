@@ -85,7 +85,8 @@ import { Person } from '../../../shared/models/person.model';
       }
 
       <p-dialog
-        [(visible)]="showCreate"
+        [visible]="showCreate()"
+        (visibleChange)="showCreate.set($event)"
         header="New Interview"
         [modal]="true"
         [style]="{ width: '480px' }"
@@ -105,7 +106,7 @@ import { Person } from '../../../shared/models/person.model';
           <p-button
             label="Create"
             (onClick)="submit()"
-            [disabled]="!draftPersonId || !draftRole.trim()"
+            [disabled]="!draftPersonId() || !draftRole().trim()"
           />
         </ng-template>
       </p-dialog>
@@ -130,8 +131,10 @@ export class InterviewsPipelineComponent implements OnInit {
     return map;
   });
 
-  protected draftPersonId: string | null = null;
-  protected draftRole = '';
+  // Signals are required here (not plain fields) because this app runs with Angular's
+  // zoneless change detection — mutations to plain class fields would not trigger re-render.
+  protected readonly draftPersonId = signal<string | null>(null);
+  protected readonly draftRole = signal('');
 
   protected peopleOptions() {
     return this.people().map((p) => ({ label: p.name, value: p.id }));
@@ -165,15 +168,17 @@ export class InterviewsPipelineComponent implements OnInit {
   }
 
   openCreate(): void {
-    this.draftPersonId = null;
-    this.draftRole = '';
+    this.draftPersonId.set(null);
+    this.draftRole.set('');
     this.showCreate.set(true);
   }
 
   submit(): void {
-    if (!this.draftPersonId || !this.draftRole.trim()) return;
+    const personId = this.draftPersonId();
+    const role = this.draftRole().trim();
+    if (!personId || !role) return;
     this.service
-      .create({ candidatePersonId: this.draftPersonId, roleTitle: this.draftRole.trim() })
+      .create({ candidatePersonId: personId, roleTitle: role })
       .subscribe({
         next: (iv) => {
           this.items.update((list) => [iv, ...list]);

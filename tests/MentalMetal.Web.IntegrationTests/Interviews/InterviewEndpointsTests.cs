@@ -185,8 +185,12 @@ public sealed class InterviewEndpointsTests(PostgresFixture postgres) : Integrat
         });
         var interview = await ReadJsonAsync<InterviewBody>(create);
 
-        // Set a transcript so the analyze precondition passes
-        await client.PutAsJsonAsync($"/api/interviews/{interview!.Id}/transcript", new { rawText = "some transcript" });
+        // Set a transcript so the analyze precondition passes. Assert the PUT itself
+        // succeeds so that a regression there can't masquerade as an analyze failure.
+        var transcriptResp = await client.PutAsJsonAsync(
+            $"/api/interviews/{interview!.Id}/transcript",
+            new { rawText = "some transcript" });
+        Assert.Equal(HttpStatusCode.OK, transcriptResp.StatusCode);
 
         var resp = await client.PostAsync($"/api/interviews/{interview.Id}/analyze", content: null);
         Assert.Equal(HttpStatusCode.Conflict, resp.StatusCode);
@@ -239,6 +243,14 @@ public sealed class InterviewEndpointsTests(PostgresFixture postgres) : Integrat
             $"/api/interviews/{interview.Id}/scorecards/{scorecard!.Id}",
             new { competency = "System Design", rating = 5, notes = "Even stronger" });
         Assert.Equal(HttpStatusCode.OK, updResp.StatusCode);
+
+        // Verify the update actually persisted before we delete - otherwise a silently
+        // dropped update could still pass the delete assertions that follow.
+        var afterUpdate = await client.GetAsync($"/api/interviews/{interview.Id}");
+        var afterUpdateBody = await ReadJsonAsync<InterviewBody>(afterUpdate);
+        var persistedCard = Assert.Single(afterUpdateBody!.Scorecards);
+        Assert.Equal(5, persistedCard.Rating);
+        Assert.Equal("Even stronger", persistedCard.Notes);
 
         // Delete
         var delResp = await client.DeleteAsync($"/api/interviews/{interview.Id}/scorecards/{scorecard.Id}");
