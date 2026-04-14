@@ -12,22 +12,22 @@ The system SHALL allow an authenticated user to create a new Nudge with a title 
 
 #### Scenario: Create a daily nudge
 
-- **WHEN** an authenticated user sends a POST to `/api/nudges` with title "Review risk log" and cadence "Daily"
+- **WHEN** an authenticated user sends a POST to `/api/nudges` with title "Review risk log" and cadenceType "Daily"
 - **THEN** the system creates a Nudge with cadence Daily, NextDueDate equal to today, IsActive=true, and returns HTTP 201
 
 #### Scenario: Create a weekly nudge anchored to Thursday
 
-- **WHEN** an authenticated user sends a POST to `/api/nudges` with title "Project X risks", cadence "Weekly", and dayOfWeek "Thursday"
+- **WHEN** an authenticated user sends a POST to `/api/nudges` with title "Project X risks", cadenceType "Weekly", and dayOfWeek "Thursday"
 - **THEN** the system creates a Nudge with NextDueDate equal to the next Thursday on or after today and returns HTTP 201
 
 #### Scenario: Create a monthly nudge anchored to day 15
 
-- **WHEN** an authenticated user sends a POST to `/api/nudges` with title "Career check-in with Sarah", cadence "Monthly", dayOfMonth 15, and personId for Sarah
+- **WHEN** an authenticated user sends a POST to `/api/nudges` with title "Career check-in with Sarah", cadenceType "Monthly", dayOfMonth 15, and personId for Sarah
 - **THEN** the system creates a Nudge with NextDueDate equal to the 15th of the current or next month and returns HTTP 201
 
 #### Scenario: Create a custom-interval nudge
 
-- **WHEN** an authenticated user sends a POST to `/api/nudges` with title "Retro temperature", cadence "Custom", and customIntervalDays 10
+- **WHEN** an authenticated user sends a POST to `/api/nudges` with title "Retro temperature", cadenceType "Custom", and customIntervalDays 10
 - **THEN** the system creates a Nudge advancing every 10 days and returns HTTP 201
 
 #### Scenario: Empty title rejected
@@ -42,12 +42,12 @@ The system SHALL allow an authenticated user to create a new Nudge with a title 
 
 #### Scenario: Weekly without day of week rejected
 
-- **WHEN** an authenticated user sends a POST to `/api/nudges` with cadence "Weekly" and no dayOfWeek
+- **WHEN** an authenticated user sends a POST to `/api/nudges` with cadenceType "Weekly" and no dayOfWeek
 - **THEN** the system returns HTTP 400 with error code `nudge.invalidCadence`
 
 #### Scenario: Custom without positive interval rejected
 
-- **WHEN** an authenticated user sends a POST to `/api/nudges` with cadence "Custom" and customIntervalDays 0 or negative
+- **WHEN** an authenticated user sends a POST to `/api/nudges` with cadenceType "Custom" and customIntervalDays 0 or negative
 - **THEN** the system returns HTTP 400 with error code `nudge.invalidCadence`
 
 #### Scenario: PersonId for another user rejected
@@ -154,7 +154,7 @@ The system SHALL allow an authenticated user to update a nudge's title, notes, a
 
 ### Requirement: Update cadence
 
-The system SHALL expose `PATCH /api/nudges/{id}/cadence` for cadence updates (distinct from `PATCH /api/nudges/{id}`, which handles title/notes/links). When the cadence changes, the system SHALL recompute `NextDueDate` from today using the new cadence's `CalculateFirst(today)`. Validation rules from "Create a nudge" SHALL apply. The system SHALL raise a `NudgeCadenceChanged` domain event.
+The system SHALL expose `PATCH /api/nudges/{id}/cadence` for cadence updates (distinct from `PATCH /api/nudges/{id}`, which handles title/notes/links). When the cadence changes on an **active** nudge, the system SHALL recompute `NextDueDate` from today using the new cadence's `CalculateFirst(today)`. When the cadence changes on a **paused** nudge, the existing `NextDueDate` SHALL be preserved; it is recomputed by `Resume(today)` whenever the nudge is reactivated. Validation rules from "Create a nudge" SHALL apply. The system SHALL raise a `NudgeCadenceChanged` domain event.
 
 #### Scenario: Change from Weekly to Monthly
 
@@ -286,5 +286,5 @@ The frontend SHALL provide a dialog for creating and editing nudges. The form SH
 
 #### Scenario: Cadence-specific anchors shown conditionally
 
-- **WHEN** a user selects cadence "Monthly" in the dialog
+- **WHEN** a user selects cadenceType "Monthly" in the dialog
 - **THEN** a DayOfMonth input is shown and the DayOfWeek input is hidden
