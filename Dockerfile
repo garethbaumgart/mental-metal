@@ -16,6 +16,7 @@ COPY src/MentalMetal.Infrastructure/MentalMetal.Infrastructure.csproj MentalMeta
 COPY src/MentalMetal.Web/MentalMetal.Web.csproj MentalMetal.Web/
 COPY tests/MentalMetal.Domain.Tests/MentalMetal.Domain.Tests.csproj ../tests/MentalMetal.Domain.Tests/
 COPY tests/MentalMetal.Application.Tests/MentalMetal.Application.Tests.csproj ../tests/MentalMetal.Application.Tests/
+COPY tests/MentalMetal.Web.IntegrationTests/MentalMetal.Web.IntegrationTests.csproj ../tests/MentalMetal.Web.IntegrationTests/
 RUN dotnet restore MentalMetal.slnx
 
 # Stage 3: Build and publish .NET app
