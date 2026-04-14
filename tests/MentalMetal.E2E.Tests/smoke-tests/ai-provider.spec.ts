@@ -5,7 +5,7 @@ test.describe('AI Provider Settings', () => {
     await authenticatedPage.goto('/settings');
 
     await expect(authenticatedPage).toHaveURL(/\/settings/);
-    await expect(authenticatedPage.getByText('AI Provider')).toBeVisible();
+    await expect(authenticatedPage.getByRole('heading', { name: 'AI Provider' })).toBeVisible();
   });
 
   test('Provider status returns isConfigured=false for new user', async ({ authenticatedPage, testUser }) => {
