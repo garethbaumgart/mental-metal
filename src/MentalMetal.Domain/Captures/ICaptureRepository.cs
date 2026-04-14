@@ -3,6 +3,14 @@ namespace MentalMetal.Domain.Captures;
 public interface ICaptureRepository
 {
     Task<Capture?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Same as <see cref="GetByIdAsync"/> but eagerly loads the owned
+    /// <c>TranscriptSegments</c> collection. Use only from audio-capture paths
+    /// — non-audio callers should use <see cref="GetByIdAsync"/> to avoid
+    /// loading potentially large transcript data on every fetch.
+    /// </summary>
+    Task<Capture?> GetByIdWithTranscriptAsync(Guid id, CancellationToken cancellationToken);
     /// <summary>
     /// Lists captures for the user. <paramref name="includeTriaged"/> defaults to <c>false</c>,
     /// so triaged captures (confirmed, discarded, or quick-discarded) are excluded unless the

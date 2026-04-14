@@ -1,5 +1,7 @@
+using System.Globalization;
 using MentalMetal.Application.Captures;
 using Microsoft.AspNetCore.Http.Metadata;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace MentalMetal.Web.Features.Captures;
@@ -8,6 +10,12 @@ public static class AudioCaptureEndpoints
 {
     public static IEndpointRouteBuilder MapAudioCaptureEndpoints(this IEndpointRouteBuilder app)
     {
+        // Read the configured upload cap at startup so the Kestrel-level RequestSizeLimit
+        // matches AudioUploadOptions.MaxSizeBytes. Otherwise clients could stream MBs past the
+        // Kestrel cap only to be rejected in-handler.
+        var uploadOptions = app.ServiceProvider
+            .GetRequiredService<IOptions<AudioUploadOptions>>().Value;
+
         app.MapPost("/api/captures/audio", async (
             HttpRequest httpRequest,
             IOptions<AudioUploadOptions> optionsAccessor,
@@ -34,8 +42,15 @@ public static class AudioCaptureEndpoints
             var source = form["source"].ToString();
             var durationStr = form["durationSeconds"].ToString();
             double duration = 0;
-            if (!string.IsNullOrWhiteSpace(durationStr) && double.TryParse(durationStr, out var parsed))
+            if (!string.IsNullOrWhiteSpace(durationStr))
+            {
+                // Culture-invariant: the browser sends "12.5" regardless of server locale.
+                if (!double.TryParse(durationStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
+                    return Results.BadRequest(new { error = "Invalid durationSeconds." });
+                if (parsed < 0)
+                    return Results.BadRequest(new { error = "durationSeconds must be non-negative." });
                 duration = parsed;
+            }
 
             try
             {
@@ -55,7 +70,7 @@ public static class AudioCaptureEndpoints
         })
         .RequireAuthorization()
         .DisableAntiforgery()
-        .WithMetadata(new RequestSizeLimitAttribute(500_000_000)); // outer cap; options enforces tighter limit
+        .WithMetadata(new RequestSizeLimitAttribute(uploadOptions.MaxSizeBytes));
 
         app.MapPost("/api/captures/{id:guid}/transcribe", async (
             Guid id,

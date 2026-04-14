@@ -58,6 +58,16 @@ builder.Services.AddOptions<MentalMetal.Web.Features.Captures.AudioUploadOptions
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
+// IAudioTranscriptionProvider — Development-only stub. Production environments must register
+// a real provider (future work); attempting to upload audio without one will fail at request
+// time with a clear DI error rather than silently returning fake transcripts.
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddSingleton<
+        MentalMetal.Application.Common.Ai.IAudioTranscriptionProvider,
+        MentalMetal.Infrastructure.Ai.StubAudioTranscriptionProvider>();
+}
+
 // --- DataProtection ---
 // In hosted environments (e.g. Cloud Run) the local filesystem is ephemeral, so
 // keys must be persisted to durable storage. When DataProtection:BucketName is

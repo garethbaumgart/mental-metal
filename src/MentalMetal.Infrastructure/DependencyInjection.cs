@@ -215,9 +215,12 @@ public static class DependencyInjection
         services.AddScoped<ConfirmExtractionHandler>();
         services.AddScoped<DiscardExtractionHandler>();
 
-        // Audio capture
+        // Audio capture.
+        // NOTE: IAudioTranscriptionProvider is intentionally NOT registered here — callers
+        // (Program.cs) must register an environment-appropriate implementation. The repo ships
+        // StubAudioTranscriptionProvider which is wired up only in Development so production
+        // audio uploads fail loudly rather than silently serving fake transcripts.
         services.AddSingleton<IAudioBlobStore, FileSystemAudioBlobStore>();
-        services.AddSingleton<IAudioTranscriptionProvider, StubAudioTranscriptionProvider>();
         services.AddScoped<UploadAudioCaptureHandler>();
         services.AddScoped<TranscribeCaptureHandler>();
         services.AddScoped<GetCaptureTranscriptHandler>();

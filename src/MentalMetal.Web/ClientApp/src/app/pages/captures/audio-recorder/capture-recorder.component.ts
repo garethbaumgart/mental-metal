@@ -94,12 +94,25 @@ export class CaptureRecorderComponent implements OnDestroy {
     }
 
     this.chunks = [];
-    this.recorder = new MediaRecorder(this.stream);
-    this.recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) this.chunks.push(e.data);
-    };
-    this.recorder.onstop = () => this.onRecorderStopped();
-    this.recorder.start();
+    try {
+      this.recorder = new MediaRecorder(this.stream);
+      this.recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) this.chunks.push(e.data);
+      };
+      this.recorder.onstop = () => this.onRecorderStopped();
+      this.recorder.start();
+    } catch (err) {
+      this.stream?.getTracks().forEach((t) => t.stop());
+      this.stream = null;
+      this.recorder = null;
+      this.state.set('error');
+      this.errorMessage.set(
+        err instanceof Error
+          ? err.message
+          : 'Recording is not supported in this browser.',
+      );
+      return;
+    }
 
     this.startedAtMs = Date.now();
     this.durationSeconds.set(0);

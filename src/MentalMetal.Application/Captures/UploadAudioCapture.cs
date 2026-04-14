@@ -80,17 +80,22 @@ public sealed class UploadAudioCaptureHandler(
         }
 
         // 3. Discard the blob after successful transcription (infra concern, not aggregate).
+        // Only record the discard on the aggregate when the delete actually succeeded — if the
+        // blob is still on disk we must leave AudioBlobRef intact so orphan cleanup / retry can
+        // find it.
+        var deleted = false;
         try
         {
             await blobStore.DeleteAsync(blobRef, cancellationToken);
+            deleted = true;
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to delete audio blob {BlobRef} after transcription; capture {CaptureId} continues", blobRef, capture.Id);
-            // Swallow — orphan cleanup is future work.
+            logger.LogWarning(ex, "Failed to delete audio blob {BlobRef} after transcription; capture {CaptureId} continues with blob retained", blobRef, capture.Id);
         }
 
-        capture.MarkAudioDiscarded(timeProvider.GetUtcNow());
+        if (deleted)
+            capture.MarkAudioDiscarded(timeProvider.GetUtcNow());
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return CaptureResponse.From(capture);

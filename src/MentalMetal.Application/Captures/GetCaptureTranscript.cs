@@ -22,7 +22,7 @@ public sealed class GetCaptureTranscriptHandler(
     public async Task<GetCaptureTranscriptResponse?> HandleAsync(
         Guid captureId, CancellationToken cancellationToken)
     {
-        var capture = await captureRepository.GetByIdAsync(captureId, cancellationToken);
+        var capture = await captureRepository.GetByIdWithTranscriptAsync(captureId, cancellationToken);
         if (capture is null || capture.UserId != currentUserService.UserId)
             return null;
 

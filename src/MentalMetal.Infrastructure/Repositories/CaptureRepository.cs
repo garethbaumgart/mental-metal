@@ -7,6 +7,9 @@ namespace MentalMetal.Infrastructure.Repositories;
 public sealed class CaptureRepository(MentalMetalDbContext dbContext) : ICaptureRepository
 {
     public async Task<Capture?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
+        await dbContext.Captures.FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
+
+    public async Task<Capture?> GetByIdWithTranscriptAsync(Guid id, CancellationToken cancellationToken) =>
         await dbContext.Captures
             .Include(c => c.TranscriptSegments)
             .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);

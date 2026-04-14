@@ -18,7 +18,7 @@ public sealed class TranscribeCaptureHandler(
     public async Task<CaptureResponse> HandleAsync(Guid captureId, CancellationToken cancellationToken)
     {
         var userId = currentUserService.UserId;
-        var capture = await captureRepository.GetByIdAsync(captureId, cancellationToken);
+        var capture = await captureRepository.GetByIdWithTranscriptAsync(captureId, cancellationToken);
         if (capture is null || capture.UserId != userId)
             throw new AudioCaptureException(AudioCaptureErrorCodes.CaptureNotFound);
 
@@ -64,16 +64,19 @@ public sealed class TranscribeCaptureHandler(
             throw new AudioCaptureException(code, ex.Message);
         }
 
+        var deleted = false;
         try
         {
             await blobStore.DeleteAsync(capture.AudioBlobRef!, cancellationToken);
+            deleted = true;
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to delete audio blob after successful retry; capture {CaptureId} continues", capture.Id);
+            logger.LogWarning(ex, "Failed to delete audio blob after successful retry; capture {CaptureId} continues with blob retained", capture.Id);
         }
 
-        capture.MarkAudioDiscarded(timeProvider.GetUtcNow());
+        if (deleted)
+            capture.MarkAudioDiscarded(timeProvider.GetUtcNow());
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return CaptureResponse.From(capture);

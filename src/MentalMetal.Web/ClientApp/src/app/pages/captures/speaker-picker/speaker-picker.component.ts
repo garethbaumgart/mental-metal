@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Observable, shareReplay } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { AutoCompleteModule, AutoCompleteCompleteEvent } from 'primeng/autocomplete';
 import { PeopleService } from '../../../shared/services/people.service';
@@ -53,9 +54,14 @@ export class SpeakerPickerComponent {
   protected readonly suggestions = signal<Person[]>([]);
   protected selected: Person | null = null;
 
+  // Cache the people list for the lifetime of the component — typing in the autocomplete
+  // would otherwise hit /api/people on every keystroke.
+  private people$: Observable<Person[]> | null = null;
+
   protected search(event: AutoCompleteCompleteEvent): void {
     const query = event.query.toLowerCase();
-    this.peopleService.list().subscribe((people) => {
+    this.people$ ??= this.peopleService.list().pipe(shareReplay({ bufferSize: 1, refCount: false }));
+    this.people$.subscribe((people) => {
       const filtered = people.filter((p) => p.name.toLowerCase().includes(query));
       this.suggestions.set(filtered);
     });
