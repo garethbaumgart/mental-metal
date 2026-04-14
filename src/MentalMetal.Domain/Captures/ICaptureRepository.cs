@@ -3,6 +3,14 @@ namespace MentalMetal.Domain.Captures;
 public interface ICaptureRepository
 {
     Task<Capture?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Same as <see cref="GetByIdAsync"/> but eagerly loads the owned
+    /// <c>TranscriptSegments</c> collection. Use only from audio-capture paths
+    /// — non-audio callers should use <see cref="GetByIdAsync"/> to avoid
+    /// loading potentially large transcript data on every fetch.
+    /// </summary>
+    Task<Capture?> GetByIdWithTranscriptAsync(Guid id, CancellationToken cancellationToken);
     /// <summary>
     /// Lists captures for the user. <paramref name="includeTriaged"/> defaults to <c>false</c>,
     /// so triaged captures (confirmed, discarded, or quick-discarded) are excluded unless the
@@ -24,4 +32,12 @@ public interface ICaptureRepository
     Task<IReadOnlyList<Capture>> GetCloseOutQueueAsync(Guid userId, CancellationToken cancellationToken);
 
     Task AddAsync(Capture capture, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// EF Core's snapshot change detection for field-backed owned collections does not always
+    /// recognise newly-appended items as Added, so handlers must call this helper immediately
+    /// after mutating the collection on a tracked aggregate.
+    /// </summary>
+    void MarkOwnedAdded(object ownedEntity);
+    void MarkOwnedRemoved(object ownedEntity);
 }

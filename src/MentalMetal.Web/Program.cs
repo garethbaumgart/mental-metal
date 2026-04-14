@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using MentalMetal.Application.Captures;
 using MentalMetal.Application.DailyCloseOut;
 using MentalMetal.Web;
+using MentalMetal.Web.Features.Captures;
 using MentalMetal.Web.Features.Interviews;
 using MentalMetal.Web.Features.Nudges;
 using MentalMetal.Application.Commitments;
@@ -51,6 +52,21 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services.AddOptions<MentalMetal.Web.Features.Captures.AudioUploadOptions>()
+    .Bind(builder.Configuration.GetSection(MentalMetal.Web.Features.Captures.AudioUploadOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+// IAudioTranscriptionProvider — Development-only stub. Production environments must register
+// a real provider (future work); attempting to upload audio without one will fail at request
+// time with a clear DI error rather than silently returning fake transcripts.
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddSingleton<
+        MentalMetal.Application.Common.Ai.IAudioTranscriptionProvider,
+        MentalMetal.Infrastructure.Ai.StubAudioTranscriptionProvider>();
+}
 
 // --- DataProtection ---
 // In hosted environments (e.g. Cloud Run) the local filesystem is ephemeral, so
@@ -1963,6 +1979,7 @@ app.MapGet("/api/people/{personId:guid}/evidence-summary", async (
     return Results.Ok(response);
 }).RequireAuthorization();
 
+app.MapAudioCaptureEndpoints();
 app.MapDailyCloseOutEndpoints();
 app.MapMyQueueEndpoints();
 app.MapBriefingEndpoints();

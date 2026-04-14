@@ -18,7 +18,7 @@ public sealed class CaptureConfiguration : IEntityTypeConfiguration<Capture>
         builder.Property(c => c.CaptureType)
             .HasConversion<string>()
             .IsRequired()
-            .HasMaxLength(20);
+            .HasMaxLength(30);
 
         builder.Property(c => c.ProcessingStatus)
             .HasConversion<string>()
@@ -88,5 +88,39 @@ public sealed class CaptureConfiguration : IEntityTypeConfiguration<Capture>
 
         builder.HasIndex(c => c.UserId);
         builder.HasIndex(c => new { c.UserId, c.Triaged });
+
+        // --- Audio / transcription fields ---
+        builder.Property(c => c.AudioBlobRef).HasMaxLength(500);
+        builder.Property(c => c.AudioMimeType).HasMaxLength(100);
+        builder.Property(c => c.AudioDurationSeconds);
+        builder.Property(c => c.AudioDiscardedAt);
+        builder.Property(c => c.TranscriptionStatus)
+            .HasConversion<string>()
+            .IsRequired()
+            .HasMaxLength(20)
+            .HasDefaultValue(TranscriptionStatus.NotApplicable);
+        builder.Property(c => c.TranscriptionFailureReason).HasMaxLength(2000);
+
+        builder.OwnsMany(c => c.TranscriptSegments, segment =>
+        {
+            segment.ToTable("CaptureTranscriptSegments");
+            segment.WithOwner().HasForeignKey("CaptureId");
+            segment.Property<Guid>("CaptureId");
+            segment.HasKey(s => s.Id);
+            segment.Property(s => s.Id).ValueGeneratedNever();
+            segment.Property(s => s.StartSeconds).IsRequired();
+            segment.Property(s => s.EndSeconds).IsRequired();
+            segment.Property(s => s.SpeakerLabel)
+                .IsRequired()
+                .HasMaxLength(TranscriptSegment.MaxSpeakerLabelLength);
+            segment.Property(s => s.Text)
+                .IsRequired()
+                .HasMaxLength(TranscriptSegment.MaxTextLength);
+            segment.Property(s => s.LinkedPersonId);
+            segment.HasIndex("CaptureId");
+        });
+        builder.Navigation(c => c.TranscriptSegments)
+            .UsePropertyAccessMode(PropertyAccessMode.Field)
+            .HasField("_transcriptSegments");
     }
 }

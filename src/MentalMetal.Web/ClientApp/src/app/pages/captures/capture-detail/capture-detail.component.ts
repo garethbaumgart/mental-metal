@@ -14,7 +14,9 @@ import { MessageService } from 'primeng/api';
 import { CapturesService } from '../../../shared/services/captures.service';
 import { PeopleService } from '../../../shared/services/people.service';
 import { InitiativesService } from '../../../shared/services/initiatives.service';
-import { Capture, CaptureType, ProcessingStatus } from '../../../shared/models/capture.model';
+import { Capture, CaptureTranscript, CaptureType, ProcessingStatus } from '../../../shared/models/capture.model';
+import { TranscriptViewerComponent } from '../transcript-viewer/transcript-viewer.component';
+import { SpeakerPickerComponent } from '../speaker-picker/speaker-picker.component';
 import { Person } from '../../../shared/models/person.model';
 import { Initiative } from '../../../shared/models/initiative.model';
 
@@ -33,6 +35,8 @@ import { Initiative } from '../../../shared/models/initiative.model';
     PanelModule,
     DividerModule,
     AutoCompleteModule,
+    TranscriptViewerComponent,
+    SpeakerPickerComponent,
   ],
   styles: [`
     .content-block {
@@ -137,6 +141,22 @@ import { Initiative } from '../../../shared/models/initiative.model';
           <h2 class="text-xl font-semibold">Content</h2>
           <div class="p-4 rounded-md border content-block whitespace-pre-wrap text-sm">{{ capture()!.rawContent }}</div>
         </section>
+
+        <!-- Transcript (audio captures only) -->
+        @if (capture()!.captureType === 'AudioRecording') {
+          <section class="flex flex-col gap-4">
+            <div class="flex items-center justify-between">
+              <h2 class="text-xl font-semibold">Transcript</h2>
+              @if (transcript()?.transcriptionStatus === 'Failed') {
+                <p-button label="Retry transcription" icon="pi pi-refresh" severity="warn" (onClick)="retryTranscription()" [loading]="retryingTranscription()" />
+              }
+            </div>
+            <app-transcript-viewer [transcript]="transcript()" (linkRequested)="openSpeakerPicker($event)" />
+            @if (pickerSpeakerLabel(); as label) {
+              <app-speaker-picker [speakerLabel]="label" (linked)="onSpeakerLinked($event)" (cancelled)="pickerSpeakerLabel.set(null)" />
+            }
+          </section>
+        }
 
         <!-- AI Extraction Review Panel -->
         @if (capture()!.processingStatus === 'Processed' && capture()!.aiExtraction) {
@@ -428,6 +448,9 @@ export class CaptureDetailComponent implements OnInit {
   readonly editSource = signal('');
   readonly selectedPerson = signal<Person | null>(null);
   readonly selectedInitiative = signal<Initiative | null>(null);
+  readonly transcript = signal<CaptureTranscript | null>(null);
+  readonly retryingTranscription = signal(false);
+  readonly pickerSpeakerLabel = signal<string | null>(null);
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -665,6 +688,7 @@ export class CaptureDetailComponent implements OnInit {
       case 'QuickNote': return 'Quick Note';
       case 'Transcript': return 'Transcript';
       case 'MeetingNotes': return 'Meeting Notes';
+      case 'AudioRecording': return 'Audio';
     }
   }
 
@@ -673,6 +697,7 @@ export class CaptureDetailComponent implements OnInit {
       case 'QuickNote': return 'info';
       case 'Transcript': return 'warn';
       case 'MeetingNotes': return 'success';
+      case 'AudioRecording': return 'warn';
     }
   }
 
@@ -703,6 +728,9 @@ export class CaptureDetailComponent implements OnInit {
         this.editSource.set(capture.source ?? '');
         this.loadLinkedPeople(capture.linkedPersonIds);
         this.loadLinkedInitiatives(capture.linkedInitiativeIds);
+        if (capture.captureType === 'AudioRecording') {
+          this.loadTranscript(capture.id);
+        }
         this.loading.set(false);
       },
       error: () => {
@@ -723,6 +751,60 @@ export class CaptureDetailComponent implements OnInit {
         this.linkedPeople.set(people.filter((p) => idSet.has(p.id)));
       },
     });
+  }
+
+  private loadTranscript(id: string): void {
+    this.capturesService.getTranscript(id).subscribe({
+      next: (t) => this.transcript.set(t),
+      error: () => this.transcript.set(null),
+    });
+  }
+
+  protected retryTranscription(): void {
+    const id = this.capture()?.id;
+    if (!id) return;
+    this.retryingTranscription.set(true);
+    this.capturesService.retryTranscription(id).subscribe({
+      next: (capture) => {
+        this.capture.set(capture);
+        this.loadTranscript(id);
+        this.retryingTranscription.set(false);
+        this.messageService.add({ severity: 'success', summary: 'Transcription retried' });
+      },
+      error: (err) => {
+        this.retryingTranscription.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Retry failed',
+          detail: err?.error?.errorCode ?? err?.error?.message ?? 'Unknown error',
+        });
+      },
+    });
+  }
+
+  protected openSpeakerPicker(speakerLabel: string): void {
+    this.pickerSpeakerLabel.set(speakerLabel);
+  }
+
+  protected onSpeakerLinked(event: { speakerLabel: string; personId: string }): void {
+    const id = this.capture()?.id;
+    if (!id) return;
+    this.capturesService
+      .updateSpeakers(id, { mappings: [{ speakerLabel: event.speakerLabel, personId: event.personId }] })
+      .subscribe({
+        next: () => {
+          this.loadTranscript(id);
+          this.pickerSpeakerLabel.set(null);
+          this.messageService.add({ severity: 'success', summary: 'Speaker linked' });
+        },
+        error: (err) => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Failed to link speaker',
+            detail: err?.error?.errorCode ?? err?.error?.message ?? 'Unknown error',
+          });
+        },
+      });
   }
 
   private loadLinkedInitiatives(initiativeIds: string[]): void {

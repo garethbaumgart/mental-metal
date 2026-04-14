@@ -37,6 +37,7 @@ using MentalMetal.Infrastructure.Ai;
 using MentalMetal.Infrastructure.Auth;
 using MentalMetal.Infrastructure.Persistence;
 using MentalMetal.Infrastructure.Repositories;
+using MentalMetal.Infrastructure.Storage;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -69,6 +70,10 @@ public static class DependencyInjection
             .ValidateOnStart();
         services.AddOptions<InterviewAnalysisOptions>()
             .Bind(configuration.GetSection(InterviewAnalysisOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+        services.AddOptions<AudioBlobStoreOptions>()
+            .Bind(configuration.GetSection(AudioBlobStoreOptions.SectionName))
             .ValidateDataAnnotations()
             .ValidateOnStart();
         services.AddOptions<AiProviderSettings>()
@@ -209,6 +214,17 @@ public static class DependencyInjection
         services.AddScoped<RetryProcessingHandler>();
         services.AddScoped<ConfirmExtractionHandler>();
         services.AddScoped<DiscardExtractionHandler>();
+
+        // Audio capture.
+        // NOTE: IAudioTranscriptionProvider is intentionally NOT registered here — callers
+        // (Program.cs) must register an environment-appropriate implementation. The repo ships
+        // StubAudioTranscriptionProvider which is wired up only in Development so production
+        // audio uploads fail loudly rather than silently serving fake transcripts.
+        services.AddSingleton<IAudioBlobStore, FileSystemAudioBlobStore>();
+        services.AddScoped<UploadAudioCaptureHandler>();
+        services.AddScoped<TranscribeCaptureHandler>();
+        services.AddScoped<GetCaptureTranscriptHandler>();
+        services.AddScoped<UpdateCaptureSpeakersHandler>();
 
         // Initiative chat services and handlers
         services.AddScoped<IInitiativeChatContextBuilder, InitiativeChatContextBuilder>();

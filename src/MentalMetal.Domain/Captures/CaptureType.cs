@@ -4,5 +4,6 @@ public enum CaptureType
 {
     QuickNote,
     Transcript,
-    MeetingNotes
+    MeetingNotes,
+    AudioRecording
 }
