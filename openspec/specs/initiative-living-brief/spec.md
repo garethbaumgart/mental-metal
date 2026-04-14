@@ -1,8 +1,11 @@
-# initiative-living-brief Specification
+# Initiative Living Brief
 
 ## Purpose
-TBD - created by archiving change initiative-living-brief. Update Purpose after archive.
+
+AI-maintained narrative view of an Initiative that updates automatically when linked Captures are processed. Embeds a `LivingBrief` value-object cluster (Summary, KeyDecisions, Risks, RequirementsHistory, DesignDirectionHistory, BriefVersion) on the Initiative aggregate, drives updates via the `BriefMaintenanceService` triggered by `CaptureExtractionConfirmed`, and retains editorial control through a human-in-the-loop `PendingBriefUpdate` review workflow with manual edit endpoints.
+
 ## Requirements
+
 ### Requirement: LivingBrief value-object cluster on Initiative
 
 The `Initiative` aggregate SHALL embed a `LivingBrief` value-object cluster comprising: `Summary` (string, may be empty), `SummaryLastRefreshedAt` (datetime, nullable), `BriefVersion` (monotonic integer, starting at 0), `KeyDecisions` (append-only list of `KeyDecision`), `Risks` (list of `Risk`), `RequirementsHistory` (append-only list of `RequirementsSnapshot`), and `DesignDirectionHistory` (append-only list of `DesignDirectionSnapshot`). All embedded value objects are persisted with the Initiative.

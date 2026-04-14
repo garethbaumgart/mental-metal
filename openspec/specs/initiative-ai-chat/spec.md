@@ -1,8 +1,11 @@
-# initiative-ai-chat Specification
+# Initiative AI Chat
 
 ## Purpose
-TBD - created by archiving change initiative-ai-chat. Update Purpose after archive.
+
+Multi-turn AI chat panel scoped to a single Initiative, with answers grounded in that initiative's living brief, linked captures, commitments, and delegations. Introduces the `ChatThread` aggregate (which `global-ai-chat` later reuses with a `Global()` context scope), `ChatMessage` value object, `SourceReference` citations, and `InitiativeChatContextBuilder` for rule-based context assembly.
+
 ## Requirements
+
 ### Requirement: ChatThread aggregate
 
 The system SHALL define a `ChatThread` aggregate root with: `Id` (Guid), `UserId` (Guid, required), `ContextScope` (value object — for this spec, only `ContextScope.Initiative(InitiativeId)` is supported), `Title` (string, may be empty), `Status` (`Active | Archived`), `CreatedAt`, `LastMessageAt` (nullable until first message), `MessageCount` (int, denormalised), and `Messages` (ordered list of `ChatMessage` value objects). All ChatThreads SHALL be scoped to a single user via UserId.

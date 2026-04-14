@@ -1,8 +1,11 @@
-# global-ai-chat Specification
+# Global AI Chat
 
 ## Purpose
-TBD - created by archiving change global-ai-chat. Update Purpose after archive.
+
+Cross-initiative AI chat surface that extends the `ChatThread` aggregate with a `Global()` context scope. Enables the manager to ask questions spanning multiple initiatives (and their linked captures, commitments, delegations) with answers grounded in rule-based context assembly and source-referenced back to the underlying records.
+
 ## Requirements
+
 ### Requirement: Global ContextScope variant
 
 The `ContextScope` value object (introduced by `initiative-ai-chat`) SHALL support a `Global()` variant carrying no fields. A `ChatThread` SHALL be considered global when its `ContextScope` is `Global()`. The persisted discriminator value is `"Global"` and `ContextInitiativeId` is `NULL` for global threads.
