@@ -5,6 +5,7 @@ using MentalMetal.Application.Captures;
 using MentalMetal.Application.DailyCloseOut;
 using MentalMetal.Web;
 using MentalMetal.Web.Features.Interviews;
+using MentalMetal.Web.Features.Nudges;
 using MentalMetal.Application.Commitments;
 using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.Delegations;
@@ -1966,6 +1967,7 @@ app.MapDailyCloseOutEndpoints();
 app.MapMyQueueEndpoints();
 app.MapBriefingEndpoints();
 app.MapInterviewEndpoints();
+app.MapNudgesEndpoints();
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
 
