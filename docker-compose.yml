@@ -20,12 +20,37 @@ services:
       timeout: 5s
       retries: 5
 
+  migrations:
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    container_name: mentalmetal-migrations-dev
+    profiles: ["dev-stack"]
+    working_dir: /src/MentalMetal.Infrastructure
+    # Install dotnet-ef (not in the SDK image by default) and apply migrations.
+    # The API does not auto-migrate at startup, so this one-shot service ensures
+    # the schema matches the model before the API or E2E tests touch it.
+    # `dotnet ef database update` requires a restored project (it reads
+    # project.assets.json); the fresh SDK container has no restore cache, so
+    # we restore first.
+    command: sh -c "dotnet tool install --global dotnet-ef --version 10.0.* >/dev/null 2>&1 || true; export PATH=$PATH:/root/.dotnet/tools; dotnet restore ../MentalMetal.Web/MentalMetal.Web.csproj && dotnet ef database update --startup-project ../MentalMetal.Web"
+    environment:
+      DATABASE_URL: "Host=postgres-dev;Port=5432;Database=mentalmetal;Username=mentalmetal;Password=devTestPassword"
+    volumes:
+      - ./src:/src
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+    restart: "no"
+
   api:
     image: mcr.microsoft.com/dotnet/sdk:10.0
     container_name: mentalmetal-api-dev
     profiles: ["dev-stack"]
     working_dir: /src/MentalMetal.Web
-    command: dotnet watch run
+    # --no-launch-profile skips Properties/launchSettings.json so ASPNETCORE_URLS
+    # below wins; otherwise the http profile's applicationUrl (http://localhost:5289)
+    # takes precedence and the API binds to the loopback interface inside the
+    # container — making the published port unreachable from the host.
+    command: dotnet watch run --no-launch-profile
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:5002
@@ -40,13 +65,18 @@ services:
     depends_on:
       postgres-dev:
         condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
 
   frontend:
     image: node:22-alpine
     container_name: mentalmetal-frontend-dev
     profiles: ["dev-stack"]
     working_dir: /app
-    command: sh -c "[ -d node_modules ] || npm ci; API_TARGET=http://api:5002 npx ng serve --host 0.0.0.0 --poll 2000"
+    # The anonymous volume for node_modules pre-creates an empty dir, so a plain
+    # `[ -d node_modules ]` check is always true. Probe for the ng binary instead
+    # to decide whether we need to install.
+    command: sh -c "[ -x node_modules/.bin/ng ] || npm ci; API_TARGET=http://api:5002 npx ng serve --host 0.0.0.0 --poll 2000"
     ports:
       - "4200:4200"
     volumes:

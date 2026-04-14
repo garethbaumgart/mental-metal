@@ -5,9 +5,9 @@ test.describe('Settings Page', () => {
     await authenticatedPage.goto('/settings');
 
     await expect(authenticatedPage).toHaveURL(/\/settings/);
-    await expect(authenticatedPage.getByText('Settings')).toBeVisible();
-    await expect(authenticatedPage.getByText('Profile')).toBeVisible();
-    await expect(authenticatedPage.getByText('Preferences')).toBeVisible();
+    await expect(authenticatedPage.getByRole('heading', { name: 'Settings' })).toBeVisible();
+    await expect(authenticatedPage.getByRole('heading', { name: 'Profile' })).toBeVisible();
+    await expect(authenticatedPage.getByRole('heading', { name: 'Preferences' })).toBeVisible();
   });
 
   test('User can update profile name', async ({ authenticatedPage }) => {

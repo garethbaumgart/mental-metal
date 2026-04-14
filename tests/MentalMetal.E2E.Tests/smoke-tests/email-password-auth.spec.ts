@@ -26,9 +26,16 @@ async function submitRegister(
 
   await page.getByLabel('Name').fill(name);
   await page.getByLabel('Email').fill(email);
-  // p-password renders a single password input; getByLabel resolves to it via
-  // the associated label[for="password"].
-  await page.getByLabel('Password', { exact: true }).fill(password);
+  // p-password wraps the actual <input type="password"> in a custom element, and
+  // the label's for="password" points at the <p-password> host (not the input).
+  // Playwright's getByLabel therefore does not resolve the input; select the
+  // real input directly via its name attribute.
+  const pwdInput = page.locator('input[name="password"]');
+  await pwdInput.fill(password);
+  // In register mode p-password shows a strength-meter overlay on focus which
+  // intercepts clicks on the submit button. Clicking outside the password
+  // control (the page heading) is what PrimeNG uses to dismiss the overlay.
+  await page.locator('h1').click();
 
   await page.getByRole('button', { name: 'Create account' }).click();
 }
@@ -45,7 +52,8 @@ async function submitLogin(
   await page.goto('/login');
 
   await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Password', { exact: true }).fill(password);
+  // See note in submitRegister re: p-password and the label/for association.
+  await page.locator('input[name="password"]').fill(password);
 
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 }
@@ -142,8 +150,14 @@ baseTest.describe('Email/Password Auth — Add password to Google-only user', ()
     const loginBody = await loginResponse.json();
     expect(loginBody.accessToken).toBeTruthy();
 
+    // Use a sessionStorage-flagged init script so the token is only seeded on
+    // the FIRST navigation — otherwise the logout() step later in this test
+    // would be undone by the next goto() re-seeding localStorage.
     await page.addInitScript((token: string) => {
-      localStorage.setItem('access_token', token);
+      if (!sessionStorage.getItem('__seededAuthToken')) {
+        localStorage.setItem('access_token', token);
+        sessionStorage.setItem('__seededAuthToken', '1');
+      }
     }, loginBody.accessToken);
 
     // Navigate to settings — the freshly created user has no password yet, so
@@ -155,7 +169,12 @@ baseTest.describe('Email/Password Auth — Add password to Google-only user', ()
       page.getByRole('heading', { name: 'Set a password' }),
     ).toBeVisible();
 
-    await page.getByLabel('New password').fill(password);
+    // p-password wraps the input; target the real <input> by its name attribute.
+    const newPwdInput = page.locator('input[name="newPassword"]');
+    await newPwdInput.fill(password);
+    // Dismiss the p-password strength-meter overlay by clicking the heading;
+    // it otherwise intercepts clicks on the submit button below.
+    await page.getByRole('heading', { name: 'Set a password' }).click();
     await page.getByRole('button', { name: 'Set a password' }).click();
 
     // Success toast from MessageService.

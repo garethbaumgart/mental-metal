@@ -9,8 +9,16 @@ let isRefreshing = false;
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
 
-  // Don't attach token to auth endpoints
-  if (req.url.includes('/api/auth/')) {
+  // Don't attach token to unauthenticated auth endpoints (login, register,
+  // refresh, logout). /api/auth/password requires auth and must get the token.
+  const unauthenticatedAuthEndpoints = [
+    '/api/auth/login',
+    '/api/auth/register',
+    '/api/auth/refresh',
+    '/api/auth/logout',
+    '/api/auth/test-login',
+  ];
+  if (unauthenticatedAuthEndpoints.some((p) => req.url.includes(p))) {
     return next(req);
   }
 

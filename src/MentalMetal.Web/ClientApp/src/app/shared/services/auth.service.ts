@@ -23,7 +23,14 @@ export class AuthService {
   constructor() {
     this.extractTokenFromHash();
     if (this.isAuthenticated()) {
-      this.loadCurrentUser();
+      // Defer to break the circular DI between AuthService and authInterceptor:
+      // the interceptor calls inject(AuthService) for every outgoing request,
+      // and firing the /api/users/me call synchronously from the constructor
+      // lands inside that interceptor while AuthService is still being
+      // constructed (NG0200 cyclic resolution -> subscribe errors synchronously
+      // with no network request, which clears the just-restored token).
+      // Queueing a microtask lets the constructor return first.
+      queueMicrotask(() => this.loadCurrentUser());
     }
   }
 
