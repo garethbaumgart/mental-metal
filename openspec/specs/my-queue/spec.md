@@ -14,7 +14,7 @@ The system SHALL expose `GET /api/my-queue` returning the authenticated user's p
 2. **Delegation items** — every Delegation belonging to the user with `Status` in `{Assigned, InProgress, Blocked}` AND (`IsOverdue = true` OR `(now - (LastFollowedUpAt ?? CreatedAt)).Days >= DelegationStalenessDays` (default 7) OR `Priority` in `{High, Urgent}`).
 3. **Capture items** — every Capture belonging to the user that is NOT triaged AND is in one of: `Status = Raw`, `Status = Failed`, or `Status = Processed` with its extraction neither confirmed nor discarded, AND `(now - CapturedAtUtc).Days >= CaptureStalenessDays` (default 3).
 
-Each item SHALL have a deterministically computed `priorityScore` (integer) per the scoring rules, and items SHALL be returned sorted by `priorityScore` descending, with ties broken by (dueDate ascending, then capturedAt descending, then id ascending).
+Each item SHALL have a deterministically computed `priorityScore` (integer) per the scoring rules, and items SHALL be returned sorted by `priorityScore` descending, with ties broken by (dueDate ascending, then daysSinceCaptured descending (older captures first), then id ascending).
 
 #### Scenario: Empty queue
 
@@ -94,7 +94,7 @@ Unknown values SHALL return HTTP 400.
 
 ### Requirement: Filter by item type
 
-The endpoint SHALL accept a repeated `itemType` query parameter with allowed values `commitment`, `delegation`, `capture`. When the parameter is absent, all three types are included. Unknown values SHALL return HTTP 400.
+The endpoint SHALL accept a repeated `itemType` query parameter whose values match the `QueueItemType` enum (`Commitment`, `Delegation`, `Capture`) case-insensitively. When the parameter is absent, all three types are included. Unknown values SHALL return HTTP 400.
 
 #### Scenario: Single type filter
 
@@ -197,7 +197,7 @@ Counts SHALL reflect the items returned AFTER filters are applied.
 
 Each queue item SHALL expose the following fields. Fields not applicable to a given item type SHALL be null:
 
-- `itemType`: `commitment` | `delegation` | `capture`
+- `itemType`: `Commitment` | `Delegation` | `Capture` (PascalCase; serialized via `JsonStringEnumConverter`)
 - `id`: the source aggregate id (Guid)
 - `title`: the commitment description, delegation description, or capture title
 - `status`: the source aggregate's status enum value as a string
