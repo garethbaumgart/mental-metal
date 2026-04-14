@@ -14,11 +14,14 @@ authTest.describe('Briefings', () => {
   });
 
   authTest('morning endpoint returns 409 when no AI provider is configured', async ({ authenticatedPage }) => {
-    // E2E users have no AI provider configured by default - the endpoint should
-    // surface that with HTTP 409 + the well-known error code.
+    // localStorage is only accessible after navigating to a same-origin page;
+    // matching the pattern used by the other auth-aware specs.
+    await authenticatedPage.goto('/dashboard');
     const token = await authenticatedPage.evaluate(() => localStorage.getItem('access_token'));
     const headers = { Authorization: `Bearer ${token}` };
 
+    // E2E users have no AI provider configured by default - the endpoint should
+    // surface that with HTTP 409 + the well-known error code.
     const resp = await authenticatedPage.request.post(`${API_BASE}/api/briefings/morning`, {
       headers,
     });
