@@ -1,0 +1,44 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.userprefs
+*.ncrunchproject
+*.ncrunchsolution
+packages/
+*.DotSettings.user
+
+# Node / npm
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.npm
+
+# Angular
+.angular/
+dist/
+
+# IDE / Editor files
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# Docker / Environment
+.env
+.env.local
+.env.*.local
+docker-compose.override.yml
+
+# Build / Misc
+*.log
+coverage/
+TestResults/

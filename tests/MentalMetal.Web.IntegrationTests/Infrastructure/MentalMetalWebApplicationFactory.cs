@@ -60,6 +60,17 @@ public sealed class MentalMetalWebApplicationFactory : WebApplicationFactory<Pro
         var db = scope.ServiceProvider.GetRequiredService<MentalMetalDbContext>();
         // Cascade truncate wipes child tables (RefreshTokens) alongside Users.
         await db.Database.ExecuteSqlRawAsync(
-            "TRUNCATE TABLE \"RefreshTokens\", \"Users\" RESTART IDENTITY CASCADE;");
+            """
+            TRUNCATE TABLE
+                "OneOnOneActionItems",
+                "OneOnOneFollowUps",
+                "OneOnOnes",
+                "Observations",
+                "GoalCheckIns",
+                "Goals",
+                "RefreshTokens",
+                "Users"
+            RESTART IDENTITY CASCADE;
+            """);
     }
 }
