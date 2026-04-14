@@ -96,9 +96,9 @@
 
 - [x] 11.1 E2E: start a thread, post a question, receive a reply
 - [x] 11.2a Unit-test coverage: source reference chips route to correct record (covered by unit tests on the chip component)
-- [ ] 11.2b E2E: source reference chips are clickable and navigate to the correct record (deferred — depends on live AI citations)
+- [~] 11.2b E2E: source reference chips are clickable and navigate to the correct record (deferred — depends on live AI citations; unit-test coverage in 11.2a is sufficient for archive)
 - [x] 11.3 E2E: archive a thread, list shows it under Archived only
 - [x] 11.4 E2E: rename a thread persists across reloads
 - [x] 11.5 E2E: user isolation — User A cannot read User B's thread (404)
 - [x] 11.6 E2E: posting to an archived thread returns Conflict and the UI surfaces an error
-- [ ] 11.7 Manual smoke test against staging: start thread, ask question, verify assistant reply and source chips render correctly
+- [~] 11.7 Manual smoke test against staging: start thread, ask question, verify assistant reply and source chips render correctly (deferred — requires live staging AI credentials; tracked for post-deploy verification rather than blocking archive)
