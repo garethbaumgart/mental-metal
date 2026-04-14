@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using MentalMetal.Application.Captures;
 using MentalMetal.Application.DailyCloseOut;
 using MentalMetal.Web;
+using MentalMetal.Web.Features.Captures;
 using MentalMetal.Web.Features.Interviews;
 using MentalMetal.Web.Features.Nudges;
 using MentalMetal.Application.Commitments;
@@ -51,6 +52,11 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services.AddOptions<MentalMetal.Web.Features.Captures.AudioUploadOptions>()
+    .Bind(builder.Configuration.GetSection(MentalMetal.Web.Features.Captures.AudioUploadOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 
 // --- DataProtection ---
 // In hosted environments (e.g. Cloud Run) the local filesystem is ephemeral, so
@@ -1963,6 +1969,7 @@ app.MapGet("/api/people/{personId:guid}/evidence-summary", async (
     return Results.Ok(response);
 }).RequireAuthorization();
 
+app.MapAudioCaptureEndpoints();
 app.MapDailyCloseOutEndpoints();
 app.MapMyQueueEndpoints();
 app.MapBriefingEndpoints();

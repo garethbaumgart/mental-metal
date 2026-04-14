@@ -3,11 +3,13 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
   Capture,
+  CaptureTranscript,
   CaptureType,
   ConfirmExtractionResponse,
   CreateCaptureRequest,
   ProcessingStatus,
   UpdateCaptureMetadataRequest,
+  UpdateCaptureSpeakersRequest,
 } from '../models/capture.model';
 
 @Injectable({ providedIn: 'root' })
@@ -68,5 +70,34 @@ export class CapturesService {
 
   unlinkInitiative(id: string, initiativeId: string): Observable<Capture> {
     return this.http.post<Capture>(`${this.baseUrl}/${id}/unlink-initiative`, { initiativeId });
+  }
+
+  uploadAudio(blob: Blob, durationSeconds: number, title?: string, source?: string): Observable<Capture> {
+    const form = new FormData();
+    // Preserve MIME on the file part — the backend reads `file.ContentType`.
+    const ext = blob.type.includes('webm')
+      ? 'webm'
+      : blob.type.includes('mp4')
+      ? 'm4a'
+      : blob.type.includes('wav')
+      ? 'wav'
+      : 'bin';
+    form.append('file', blob, `recording.${ext}`);
+    form.append('durationSeconds', durationSeconds.toString());
+    if (title) form.append('title', title);
+    if (source) form.append('source', source);
+    return this.http.post<Capture>(`${this.baseUrl}/audio`, form);
+  }
+
+  retryTranscription(id: string): Observable<Capture> {
+    return this.http.post<Capture>(`${this.baseUrl}/${id}/transcribe`, {});
+  }
+
+  getTranscript(id: string): Observable<CaptureTranscript> {
+    return this.http.get<CaptureTranscript>(`${this.baseUrl}/${id}/transcript`);
+  }
+
+  updateSpeakers(id: string, request: UpdateCaptureSpeakersRequest): Observable<Capture> {
+    return this.http.patch<Capture>(`${this.baseUrl}/${id}/speakers`, request);
   }
 }

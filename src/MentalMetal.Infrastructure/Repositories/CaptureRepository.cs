@@ -7,7 +7,9 @@ namespace MentalMetal.Infrastructure.Repositories;
 public sealed class CaptureRepository(MentalMetalDbContext dbContext) : ICaptureRepository
 {
     public async Task<Capture?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
-        await dbContext.Captures.FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
+        await dbContext.Captures
+            .Include(c => c.TranscriptSegments)
+            .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
 
     public async Task<IReadOnlyList<Capture>> GetAllAsync(
         Guid userId,
@@ -70,4 +72,10 @@ public sealed class CaptureRepository(MentalMetalDbContext dbContext) : ICapture
 
     public async Task AddAsync(Capture capture, CancellationToken cancellationToken) =>
         await dbContext.Captures.AddAsync(capture, cancellationToken);
+
+    public void MarkOwnedAdded(object ownedEntity) =>
+        dbContext.Entry(ownedEntity).State = EntityState.Added;
+
+    public void MarkOwnedRemoved(object ownedEntity) =>
+        dbContext.Entry(ownedEntity).State = EntityState.Deleted;
 }

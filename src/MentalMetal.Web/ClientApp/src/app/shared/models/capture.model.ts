@@ -1,6 +1,36 @@
-export type CaptureType = 'QuickNote' | 'Transcript' | 'MeetingNotes';
+export type CaptureType = 'QuickNote' | 'Transcript' | 'MeetingNotes' | 'AudioRecording';
 
 export type ProcessingStatus = 'Raw' | 'Processing' | 'Processed' | 'Failed';
+
+export type TranscriptionStatus =
+  | 'NotApplicable'
+  | 'Pending'
+  | 'InProgress'
+  | 'Transcribed'
+  | 'Failed';
+
+export interface TranscriptSegment {
+  startSeconds: number;
+  endSeconds: number;
+  speakerLabel: string;
+  text: string;
+  linkedPersonId: string | null;
+}
+
+export interface CaptureTranscript {
+  captureId: string;
+  transcriptionStatus: TranscriptionStatus;
+  segments: TranscriptSegment[];
+}
+
+export interface SpeakerMapping {
+  speakerLabel: string;
+  personId: string;
+}
+
+export interface UpdateCaptureSpeakersRequest {
+  mappings: SpeakerMapping[];
+}
 
 export type ExtractionStatus = 'None' | 'Pending' | 'Confirmed' | 'Discarded';
 

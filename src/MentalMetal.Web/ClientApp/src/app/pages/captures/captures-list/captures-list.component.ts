@@ -9,18 +9,21 @@ import { TagModule } from 'primeng/tag';
 import { CapturesService } from '../../../shared/services/captures.service';
 import { Capture, CaptureType, ProcessingStatus } from '../../../shared/models/capture.model';
 import { QuickCaptureDialogComponent } from '../quick-capture-dialog/quick-capture-dialog.component';
+import { CaptureRecorderComponent } from '../audio-recorder/capture-recorder.component';
 
 @Component({
   selector: 'app-captures-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, DatePipe, ButtonModule, SelectModule, TableModule, TagModule, QuickCaptureDialogComponent],
+  imports: [FormsModule, DatePipe, ButtonModule, SelectModule, TableModule, TagModule, QuickCaptureDialogComponent, CaptureRecorderComponent],
   template: `
     <div class="flex flex-col gap-6">
       <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold">Captures</h1>
         <p-button label="New Capture" icon="pi pi-plus" (onClick)="showCreateDialog.set(true)" />
       </div>
+
+      <app-capture-recorder (uploaded)="onCaptureCreated($event)" />
 
       <div class="flex items-center gap-4">
         <p-select
@@ -142,6 +145,7 @@ export class CapturesListComponent implements OnInit {
       case 'QuickNote': return 'Quick Note';
       case 'Transcript': return 'Transcript';
       case 'MeetingNotes': return 'Meeting Notes';
+      case 'AudioRecording': return 'Audio';
     }
   }
 
@@ -150,6 +154,7 @@ export class CapturesListComponent implements OnInit {
       case 'QuickNote': return 'info';
       case 'Transcript': return 'warn';
       case 'MeetingNotes': return 'success';
+      case 'AudioRecording': return 'warn';
     }
   }
 
