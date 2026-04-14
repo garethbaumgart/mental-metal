@@ -66,8 +66,8 @@ Facts assembly `WeeklyBriefingFacts`:
 
 - `milestonesThisWeek` — up to 2 × `TopItemsPerSection` initiative milestones whose target date falls within Monday–Sunday of the current ISO week.
 - `overdueCommitments` / `overdueDelegations` — all items currently overdue, capped at 2 × `TopItemsPerSection` per type.
-- `initiativesNeedingAttention` — initiatives with status `AtRisk` or whose `LivingBrief.UpdatedAtUtc` is older than 7 days.
-- `peopleWithoutRecent1on1` — people with no OneOnOne in 21 days, capped at `TopItemsPerSection`.
+- `initiativesNeedingAttention` — Active initiatives whose `LivingBrief.SummaryLastRefreshedAt` is null or older than 7 days. (The Initiative aggregate has no explicit "AtRisk" status; living-brief staleness is the closest "needs attention" signal currently modelled.)
+- `peopleWithoutRecent1on1` — people with no OneOnOne in 21 days (or no OneOnOne at all) AND with at least one open commitment or delegation, capped at `TopItemsPerSection`. (The open-items precondition is intentional: people with no recent 1:1 AND no in-flight work do not produce actionable briefing items.)
 - `weekNumber` / `weekStartIso` / `weekEndIso` — labels for the prompt.
 
 Synthesis SHALL produce a markdown document with sections (Focus, Milestones, Overdue, Attention) of combined length ≤ `MaxBriefingTokens`.

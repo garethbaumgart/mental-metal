@@ -1,3 +1,4 @@
+using MentalMetal.Application.Briefings;
 using MentalMetal.Application.Captures;
 using MentalMetal.Application.DailyCloseOut;
 using MentalMetal.Application.Chat.Global;
@@ -16,6 +17,7 @@ using MentalMetal.Application.OneOnOnes;
 using MentalMetal.Application.People;
 using MentalMetal.Application.PeopleLens;
 using MentalMetal.Application.Users;
+using MentalMetal.Domain.Briefings;
 using MentalMetal.Domain.Captures;
 using MentalMetal.Domain.ChatThreads;
 using MentalMetal.Domain.Commitments;
@@ -57,6 +59,10 @@ public static class DependencyInjection
             .Bind(configuration.GetSection(MyQueueOptions.SectionName))
             .ValidateDataAnnotations()
             .ValidateOnStart();
+        services.AddOptions<BriefingOptions>()
+            .Bind(configuration.GetSection(BriefingOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
         services.AddOptions<AiProviderSettings>()
             .Bind(configuration.GetSection(AiProviderSettings.SectionName))
             .Validate(s => !string.IsNullOrWhiteSpace(s.EncryptionKey),
@@ -81,6 +87,7 @@ public static class DependencyInjection
         services.AddScoped<IOneOnOneRepository, OneOnOneRepository>();
         services.AddScoped<IObservationRepository, ObservationRepository>();
         services.AddScoped<IGoalRepository, GoalRepository>();
+        services.AddScoped<IBriefingRepository, BriefingRepository>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
@@ -253,6 +260,16 @@ public static class DependencyInjection
         // My Queue handlers
         services.AddSingleton<QueuePrioritizationService>();
         services.AddScoped<GetMyQueueHandler>();
+
+        // Briefing services and handlers
+        services.AddScoped<BriefingFactsAssembler>();
+        services.AddSingleton<BriefingPromptBuilder>();
+        services.AddScoped<BriefingService>();
+        services.AddScoped<GenerateMorningBriefingHandler>();
+        services.AddScoped<GenerateWeeklyBriefingHandler>();
+        services.AddScoped<GenerateOneOnOnePrepHandler>();
+        services.AddScoped<GetRecentBriefingsHandler>();
+        services.AddScoped<GetBriefingHandler>();
 
         // Daily close-out handlers
         services.AddScoped<GetCloseOutQueueHandler>();
