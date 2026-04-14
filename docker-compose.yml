@@ -30,8 +30,18 @@ services:
     # the schema matches the model before the API or E2E tests touch it.
     # `dotnet ef database update` requires a restored project (it reads
     # project.assets.json); the fresh SDK container has no restore cache, so
-    # we restore first.
-    command: sh -c "dotnet tool install --global dotnet-ef --version 10.0.* >/dev/null 2>&1 || true; export PATH=$PATH:/root/.dotnet/tools; dotnet restore ../MentalMetal.Web/MentalMetal.Web.csproj && dotnet ef database update --startup-project ../MentalMetal.Web"
+    # we restore first. `dotnet tool install` fails with exit 1 if the tool
+    # is already present — we tolerate that specific case but surface all
+    # other failures so a broken container is obvious rather than confusing.
+    command: |
+      sh -eu -c '
+        export PATH="$PATH:/root/.dotnet/tools"
+        if ! command -v dotnet-ef >/dev/null 2>&1; then
+          dotnet tool install --global dotnet-ef --version 10.0.*
+        fi
+        dotnet restore ../MentalMetal.Web/MentalMetal.Web.csproj
+        dotnet ef database update --startup-project ../MentalMetal.Web
+      '
     environment:
       DATABASE_URL: "Host=postgres-dev;Port=5432;Database=mentalmetal;Username=mentalmetal;Password=devTestPassword"
     volumes:

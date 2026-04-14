@@ -194,8 +194,15 @@ baseTest.describe('Email/Password Auth — Add password to Google-only user', ()
     // Log out and log back in via email/password using the newly set password.
     await logout(page);
 
+    // Verify the init-script's seed-once guard actually prevents re-seeding
+    // on the next navigation — otherwise the logout we just performed would
+    // silently be undone and this test would pass for the wrong reason.
     await page.goto('/dashboard');
     await expect(page).toHaveURL(/\/login/);
+    const tokenAfterLogout = await page.evaluate(() =>
+      localStorage.getItem('access_token'),
+    );
+    expect(tokenAfterLogout).toBeNull();
 
     await submitLogin(page, email, password);
     await expect(page).toHaveURL(/\/dashboard/);
