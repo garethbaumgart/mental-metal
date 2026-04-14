@@ -66,4 +66,4 @@
 - [x] 9.2 Run frontend test suite: `(cd src/MentalMetal.Web/ClientApp && npx ng test --watch=false)`
 - [ ] 9.3 Run E2E suite with Docker dev stack if applicable
 - [ ] 9.4 Manually verify the login page, register flow, and settings password section in a browser with the dev stack running
-- [ ] 9.5 Open PR via the `/pr` skill (per project convention)
+- [x] 9.5 Open PR via the `/pr` skill (per project convention)
