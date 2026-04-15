@@ -4,6 +4,13 @@ namespace MentalMetal.Domain.OneOnOnes;
 
 public sealed class OneOnOne : AggregateRoot, IUserScoped
 {
+    /// <summary>
+    /// Earliest valid date a 1:1 may be recorded on. Prevents default/unset
+    /// <see cref="DateOnly"/> values (e.g. Year 1) being persisted if legacy or
+    /// malformed data bypasses endpoint-level validation.
+    /// </summary>
+    public static readonly DateOnly MinimumOccurredAt = new(2000, 1, 1);
+
     private readonly List<ActionItem> _actionItems = [];
     private readonly List<FollowUp> _followUps = [];
     private readonly List<string> _topics = [];
@@ -33,6 +40,11 @@ public sealed class OneOnOne : AggregateRoot, IUserScoped
             throw new ArgumentException("UserId is required.", nameof(userId));
         if (personId == Guid.Empty)
             throw new ArgumentException("PersonId is required.", nameof(personId));
+        if (occurredAt < MinimumOccurredAt)
+            throw new ArgumentOutOfRangeException(
+                nameof(occurredAt),
+                occurredAt,
+                $"OccurredAt must be on or after {MinimumOccurredAt:yyyy-MM-dd}.");
 
         if (moodRating is not null)
             _ = OneOnOnes.MoodRating.Create(moodRating.Value); // validate

@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DatePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
@@ -22,7 +21,6 @@ import { Person } from '../../../shared/models/person.model';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
-    DatePipe,
     ButtonModule,
     DialogModule,
     InputTextModule,
@@ -62,7 +60,7 @@ import { Person } from '../../../shared/models/person.model';
           </ng-template>
           <ng-template #body let-row>
             <tr>
-              <td>{{ row.occurredAt | date: 'mediumDate' }}</td>
+              <td>{{ formatOccurredAt(row.occurredAt) }}</td>
               <td>{{ personName(row.personId) }}</td>
               <td>
                 @if (row.moodRating !== null) { {{ row.moodRating }} / 5 } @else { — }
@@ -145,6 +143,26 @@ export class OneOnOnesListComponent implements OnInit {
 
   protected personName(id: string): string {
     return this.people().find((p) => p.id === id)?.name ?? '(unknown)';
+  }
+
+  /**
+   * Defensively renders a 1:1 date. The API validates OccurredAt >= 2000-01-01,
+   * but legacy rows that bypassed validation can still exist; render them as
+   * an em dash rather than "Jan 1, 1" to avoid user confusion.
+   *
+   * `occurredAt` is a DateOnly string (`YYYY-MM-DD`). We parse components
+   * explicitly and format in UTC so the calendar day shown matches what the
+   * user recorded, rather than shifting across midnight in local time.
+   */
+  protected formatOccurredAt(raw: string | null | undefined): string {
+    if (!raw) return '—';
+    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+    if (!match) return '—';
+    const year = Number(match[1]);
+    if (year < 2000) return '—';
+    const utc = new Date(Date.UTC(year, Number(match[2]) - 1, Number(match[3])));
+    if (Number.isNaN(utc.getTime())) return '—';
+    return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeZone: 'UTC' }).format(utc);
   }
 
   ngOnInit(): void {
