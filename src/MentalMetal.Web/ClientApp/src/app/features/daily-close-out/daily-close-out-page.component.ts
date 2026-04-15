@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { ToastModule } from 'primeng/toast';
@@ -15,6 +16,7 @@ import { CloseOutQueueItem, ReassignCaptureRequest } from './daily-close-out.mod
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    RouterLink,
     ButtonModule,
     ProgressBarModule,
     ToastModule,
@@ -42,13 +44,35 @@ import { CloseOutQueueItem, ReassignCaptureRequest } from './daily-close-out.mod
               Processed {{ store.counts().processed }} · Failed {{ store.counts().failed }}
             </span>
           </div>
-          <p-button
-            label="Close out the day"
-            icon="pi pi-flag"
-            [disabled]="store.isLoading()"
-            (onClick)="closeOutDay()"
-          />
+          <div class="flex items-center gap-2 flex-wrap">
+            <p-button
+              label="Process all raw"
+              icon="pi pi-sparkles"
+              severity="secondary"
+              [outlined]="true"
+              [disabled]="!hasRaw() || bulkProcessing()"
+              [loading]="bulkProcessing()"
+              (onClick)="processAllRaw()"
+            />
+            <p-button
+              label="Close out the day"
+              icon="pi pi-flag"
+              [disabled]="store.isLoading() || bulkProcessing()"
+              (onClick)="closeOutDay()"
+            />
+          </div>
         </div>
+        @if (providerNotConfigured()) {
+          <div class="flex flex-col items-start gap-1 pt-3 border-t">
+            <p class="text-sm text-muted-color">
+              Configure your AI provider to process captures.
+            </p>
+            <a
+              routerLink="/settings"
+              class="text-sm font-medium text-primary hover:underline"
+            >Open settings</a>
+          </div>
+        }
       </section>
 
       @if (store.isLoading()) {
@@ -63,7 +87,11 @@ import { CloseOutQueueItem, ReassignCaptureRequest } from './daily-close-out.mod
       } @else {
         <div class="flex flex-col gap-3">
           @for (item of store.items(); track item.id) {
-            <app-triage-card [capture]="item" (action)="onAction(item, $event)" />
+            <app-triage-card
+              [capture]="item"
+              [processing]="processingIds().has(item.id)"
+              (action)="onAction(item, $event)"
+            />
           }
         </div>
       }
@@ -95,6 +123,13 @@ export class DailyCloseOutPageComponent implements OnInit {
 
   protected readonly reassignVisible = signal(false);
   protected readonly reassignTarget = signal<CloseOutQueueItem | null>(null);
+  protected readonly bulkProcessing = signal(false);
+  protected readonly providerNotConfigured = signal(false);
+  /** capture IDs currently being processed (per-row or bulk). */
+  protected readonly processingIds = signal<ReadonlySet<string>>(new Set());
+  protected readonly hasRaw = computed(() =>
+    this.store.items().some((c) => c.processingStatus === 'Raw'),
+  );
 
   ngOnInit(): void {
     this.store.refreshQueue();
@@ -136,6 +171,69 @@ export class DailyCloseOutPageComponent implements OnInit {
             this.messageService.add({ severity: 'error', summary: 'Failed to discard' }),
         });
         break;
+      case 'process':
+        this.processOne(item.id);
+        break;
+    }
+  }
+
+  private processOne(id: string): void {
+    this.markProcessing(id, true);
+    this.capturesService.process(id).subscribe({
+      next: () => {
+        this.markProcessing(id, false);
+        this.store.refreshQueue();
+      },
+      error: (err) => {
+        this.markProcessing(id, false);
+        const code = (err?.error as { code?: string } | null)?.code;
+        if (err?.status === 409 && code === 'ai_provider_not_configured') {
+          this.providerNotConfigured.set(true);
+          return;
+        }
+        this.messageService.add({ severity: 'error', summary: 'Failed to process' });
+      },
+    });
+  }
+
+  private markProcessing(id: string, inFlight: boolean): void {
+    this.processingIds.update((set) => {
+      const next = new Set(set);
+      if (inFlight) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  async processAllRaw(): Promise<void> {
+    if (this.bulkProcessing() || !this.hasRaw()) return;
+    this.bulkProcessing.set(true);
+    this.providerNotConfigured.set(false);
+
+    const rawIds = this.store.items()
+      .filter((c) => c.processingStatus === 'Raw')
+      .map((c) => c.id);
+    // Mark all as in-flight so each card shows a spinner alongside its Process button.
+    this.processingIds.update((set) => {
+      const next = new Set(set);
+      for (const id of rawIds) next.add(id);
+      return next;
+    });
+
+    try {
+      const result = await this.service.processAllRaw(rawIds);
+      if (result.providerNotConfigured) {
+        this.providerNotConfigured.set(true);
+      } else {
+        this.messageService.add({
+          severity: result.failed > 0 ? 'warn' : 'success',
+          summary: `Processed ${result.succeeded} of ${result.attempted} · ${result.failed} failed`,
+        });
+      }
+    } finally {
+      this.processingIds.update(() => new Set());
+      this.bulkProcessing.set(false);
+      this.store.refreshQueue();
     }
   }
 

@@ -3,7 +3,7 @@ import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { CloseOutQueueItem } from './daily-close-out.models';
 
-export type TriageAction = 'confirm' | 'discard' | 'reassign' | 'quick-discard';
+export type TriageAction = 'confirm' | 'discard' | 'reassign' | 'quick-discard' | 'process';
 
 @Component({
   selector: 'app-triage-card',
@@ -59,6 +59,17 @@ export type TriageAction = 'confirm' | 'discard' | 'reassign' | 'quick-discard';
             (onClick)="action.emit('discard')"
           />
         }
+        @if (canProcess()) {
+          <p-button
+            label="Process"
+            icon="pi pi-sparkles"
+            size="small"
+            severity="primary"
+            [loading]="processing()"
+            [disabled]="processing()"
+            (onClick)="action.emit('process')"
+          />
+        }
         <p-button
           label="Reassign"
           icon="pi pi-sync"
@@ -80,11 +91,21 @@ export type TriageAction = 'confirm' | 'discard' | 'reassign' | 'quick-discard';
 })
 export class TriageCardComponent {
   readonly capture = input.required<CloseOutQueueItem>();
+  /**
+   * True while a bulk "Process all raw" is running and this card is in
+   * flight — lets the parent disable the per-row Process button and
+   * show a spinner without changing the underlying data model.
+   */
+  readonly processing = input<boolean>(false);
   readonly action = output<TriageAction>();
 
   protected canConfirmDiscard(): boolean {
     const c = this.capture();
     return c.processingStatus === 'Processed' && !c.extractionResolved;
+  }
+
+  protected canProcess(): boolean {
+    return this.capture().processingStatus === 'Raw';
   }
 
   protected statusSeverity(): 'info' | 'warn' | 'danger' | 'success' | 'secondary' {
