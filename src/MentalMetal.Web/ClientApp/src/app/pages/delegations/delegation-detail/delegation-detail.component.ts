@@ -23,7 +23,7 @@ import { DelegationDialogComponent } from '../delegation-dialog/delegation-dialo
   providers: [MessageService],
   styles: [`
     .detail-row {
-      border-color: var(--p-surface-200);
+      border-color: var(--p-content-border-color);
     }
   `],
   template: `

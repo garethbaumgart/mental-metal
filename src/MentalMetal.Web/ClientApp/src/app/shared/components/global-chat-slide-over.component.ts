@@ -120,7 +120,7 @@ import { SourceReferenceChipComponent } from '../../pages/initiatives/chat/sourc
     </p-drawer>
   `,
   styles: [`
-    .message-bubble { border: 1px solid var(--p-surface-200); }
+    .message-bubble { border: 1px solid var(--p-content-border-color); }
     .user-bubble { background: var(--p-primary-50); }
     .assistant-bubble { background: var(--p-surface-50); }
   `],

@@ -43,7 +43,7 @@ import {
 
         <!-- Pending Updates Panel -->
         @if (pendingUpdates().length > 0) {
-          <section class="border rounded p-4 flex flex-col gap-3" style="border-color: var(--p-surface-200)">
+          <section class="border rounded p-4 flex flex-col gap-3" style="border-color: var(--p-content-border-color)">
             <div class="flex items-center justify-between">
               <h3 class="text-lg font-semibold">
                 Pending AI Updates
@@ -53,7 +53,7 @@ import {
             </div>
 
             @for (update of pendingUpdates(); track update.id) {
-              <div class="border rounded p-3 flex flex-col gap-2" style="border-color: var(--p-surface-200)">
+              <div class="border rounded p-3 flex flex-col gap-2" style="border-color: var(--p-content-border-color)">
                 <div class="flex items-center gap-2">
                   <p-tag [value]="update.status" [severity]="statusSeverity(update.status)" />
                   @if (update.isStale) {
