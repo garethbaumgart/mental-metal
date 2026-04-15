@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -7,6 +6,7 @@ import { catchError, EMPTY, finalize, tap } from 'rxjs';
 import { Briefing } from '../../shared/models/briefing.model';
 import { BriefingService } from '../../shared/services/briefing.service';
 import { MarkdownPipe } from '../../shared/pipes/markdown.pipe';
+import { classifyBriefingError } from '../../shared/utils/briefing-error';
 
 @Component({
   selector: 'app-weekly-briefing-page',
@@ -41,6 +41,12 @@ import { MarkdownPipe } from '../../shared/pipes/markdown.pipe';
         } @else if (errorMessage(); as msg) {
           <div class="flex flex-col items-start gap-2 py-4">
             <p class="text-sm text-muted-color">{{ msg }}</p>
+            @if (showSettingsLink()) {
+              <a
+                routerLink="/settings"
+                class="text-sm font-medium text-primary hover:underline"
+              >Check AI provider settings</a>
+            }
             <p-button label="Retry" icon="pi pi-refresh" size="small" (onClick)="regenerate()" />
           </div>
         } @else if (briefing(); as b) {
@@ -99,6 +105,7 @@ export class WeeklyBriefingPage implements OnInit {
   protected readonly loading = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly providerNotConfigured = signal(false);
+  protected readonly showSettingsLink = signal(false);
 
   ngOnInit(): void {
     this.load(false);
@@ -112,6 +119,7 @@ export class WeeklyBriefingPage implements OnInit {
     this.loading.set(true);
     this.errorMessage.set(null);
     this.providerNotConfigured.set(false);
+    this.showSettingsLink.set(false);
     this.briefingService
       .loadWeekly(force)
       .pipe(
@@ -126,13 +134,19 @@ export class WeeklyBriefingPage implements OnInit {
   }
 
   private handleError(err: unknown): void {
-    if (err instanceof HttpErrorResponse) {
-      const code = (err.error as { code?: string } | null)?.code;
-      if (err.status === 409 && code === 'ai_provider_not_configured') {
+    const state = classifyBriefingError(err);
+    switch (state.kind) {
+      case 'notConfigured':
         this.providerNotConfigured.set(true);
         return;
-      }
+      case 'providerError':
+      case 'rateLimit':
+        this.errorMessage.set(state.message);
+        this.showSettingsLink.set(true);
+        return;
+      case 'generic':
+        this.errorMessage.set(state.message);
+        return;
     }
-    this.errorMessage.set('Failed to generate briefing.');
   }
 }

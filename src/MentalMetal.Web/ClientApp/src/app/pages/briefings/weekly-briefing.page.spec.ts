@@ -73,4 +73,44 @@ describe('WeeklyBriefingPage', () => {
     const html = fixture.nativeElement.innerHTML as string;
     expect(html).toContain('Configure your AI provider');
   });
+
+  it('renders server message and settings link on 502 provider error', () => {
+    fixture.detectChanges();
+    httpMock.expectOne((r) => r.url === '/api/briefings/weekly' && r.method === 'POST').flush(
+      { error: 'AI provider request failed. Please try again or check your provider configuration.' },
+      { status: 502, statusText: 'Bad Gateway' },
+    );
+    fixture.detectChanges();
+
+    const html = fixture.nativeElement.innerHTML as string;
+    expect(html).toContain('AI provider request failed');
+    expect(html).toContain('Check AI provider settings');
+    expect(html).toContain('/settings');
+  });
+
+  it('renders server message and settings link on 429 rate limit', () => {
+    fixture.detectChanges();
+    httpMock.expectOne((r) => r.url === '/api/briefings/weekly' && r.method === 'POST').flush(
+      { error: 'Daily AI request budget reached.' },
+      { status: 429, statusText: 'Too Many Requests' },
+    );
+    fixture.detectChanges();
+
+    const html = fixture.nativeElement.innerHTML as string;
+    expect(html).toContain('Daily AI request budget reached');
+    expect(html).toContain('Check AI provider settings');
+  });
+
+  it('renders generic fallback on 500', () => {
+    fixture.detectChanges();
+    httpMock.expectOne((r) => r.url === '/api/briefings/weekly' && r.method === 'POST').flush(
+      'boom',
+      { status: 500, statusText: 'Server Error' },
+    );
+    fixture.detectChanges();
+
+    const html = fixture.nativeElement.innerHTML as string;
+    expect(html).toContain('Failed to generate briefing');
+    expect(html).not.toContain('Check AI provider settings');
+  });
 });
