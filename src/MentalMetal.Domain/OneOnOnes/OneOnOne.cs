@@ -41,9 +41,10 @@ public sealed class OneOnOne : AggregateRoot, IUserScoped
         if (personId == Guid.Empty)
             throw new ArgumentException("PersonId is required.", nameof(personId));
         if (occurredAt < MinimumOccurredAt)
-            throw new ArgumentException(
-                $"OccurredAt must be on or after {MinimumOccurredAt:yyyy-MM-dd}.",
-                nameof(occurredAt));
+            throw new ArgumentOutOfRangeException(
+                nameof(occurredAt),
+                occurredAt,
+                $"OccurredAt must be on or after {MinimumOccurredAt:yyyy-MM-dd}.");
 
         if (moodRating is not null)
             _ = OneOnOnes.MoodRating.Create(moodRating.Value); // validate

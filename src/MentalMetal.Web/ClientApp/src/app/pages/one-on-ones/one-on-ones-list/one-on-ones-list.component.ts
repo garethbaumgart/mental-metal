@@ -149,12 +149,20 @@ export class OneOnOnesListComponent implements OnInit {
    * Defensively renders a 1:1 date. The API validates OccurredAt >= 2000-01-01,
    * but legacy rows that bypassed validation can still exist; render them as
    * an em dash rather than "Jan 1, 1" to avoid user confusion.
+   *
+   * `occurredAt` is a DateOnly string (`YYYY-MM-DD`). We parse components
+   * explicitly and format in UTC so the calendar day shown matches what the
+   * user recorded, rather than shifting across midnight in local time.
    */
   protected formatOccurredAt(raw: string | null | undefined): string {
     if (!raw) return '—';
-    const d = new Date(raw);
-    if (Number.isNaN(d.getTime()) || d.getUTCFullYear() < 2000) return '—';
-    return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(d);
+    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+    if (!match) return '—';
+    const year = Number(match[1]);
+    if (year < 2000) return '—';
+    const utc = new Date(Date.UTC(year, Number(match[2]) - 1, Number(match[3])));
+    if (Number.isNaN(utc.getTime())) return '—';
+    return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeZone: 'UTC' }).format(utc);
   }
 
   ngOnInit(): void {

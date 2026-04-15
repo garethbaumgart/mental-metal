@@ -59,9 +59,9 @@ public class OneOnOneTests
     public void Create_OccurredAtBeforeMinimum_Throws(int year, int month, int day)
     {
         var bad = new DateOnly(year, month, day);
-        var ex = Assert.Throws<ArgumentException>(() =>
+        var ex = Assert.Throws<ArgumentOutOfRangeException>(() =>
             OneOnOne.Create(UserId, PersonId, bad));
-        Assert.Contains("OccurredAt", ex.Message);
+        Assert.Equal("occurredAt", ex.ParamName);
     }
 
     [Fact]
