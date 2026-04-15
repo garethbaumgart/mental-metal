@@ -77,7 +77,7 @@ import { Person } from '../../../shared/models/person.model';
           <ng-template #body let-row>
             <tr>
               <td>{{ row.title }}</td>
-              <td>{{ personName(row.personId) }}</td>
+              <td>{{ row.personName ?? personName(row.personId) }}</td>
               <td>{{ row.goalType }}</td>
               <td><p-tag [value]="row.status" [severity]="statusSeverity(row.status)" /></td>
               <td>{{ row.targetDate ? (row.targetDate | date: 'mediumDate') : '—' }}</td>

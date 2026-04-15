@@ -28,6 +28,7 @@ public sealed record GoalResponse(
     Guid Id,
     Guid UserId,
     Guid PersonId,
+    string? PersonName,
     string Title,
     string? Description,
     GoalType GoalType,
@@ -39,10 +40,11 @@ public sealed record GoalResponse(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt)
 {
-    public static GoalResponse From(Goal g) => new(
+    public static GoalResponse From(Goal g, string? personName = null) => new(
         g.Id,
         g.UserId,
         g.PersonId,
+        personName,
         g.Title,
         g.Description,
         g.Type,
