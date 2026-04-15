@@ -140,7 +140,7 @@ import { ThemeService } from '../services/theme.service';
       </a>
     </nav>
 
-    <div class="p-3 border-t sidebar-border flex flex-col gap-1">
+    <nav class="p-3 border-t sidebar-border flex flex-col gap-1" aria-label="Secondary">
       <a routerLink="/settings" routerLinkActive="font-semibold sidebar-link-active"
          class="flex items-center gap-3 px-3 py-2 rounded-md text-sm"
          (click)="navClick.emit()">
@@ -154,7 +154,7 @@ import { ThemeService } from '../services/theme.service';
         <i [class]="themeService.isDark() ? 'pi pi-sun' : 'pi pi-moon'"></i>
         <span>{{ themeService.isDark() ? 'Light mode' : 'Dark mode' }}</span>
       </button>
-    </div>
+    </nav>
   `,
 })
 export class SidebarComponent {
