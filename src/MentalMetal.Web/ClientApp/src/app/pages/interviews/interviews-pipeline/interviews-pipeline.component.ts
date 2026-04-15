@@ -149,7 +149,11 @@ export class InterviewsPipelineComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.peopleService.list().subscribe({ next: (p) => this.people.set(p) });
+    // Only Candidate-type people are valid for the New Interview dropdown.
+    // Without this filter the list silently mixes in DirectReports/Stakeholders,
+    // and — more importantly — previously passed no `type` param, which this
+    // component never intended. See issue #120.
+    this.peopleService.list('Candidate').subscribe({ next: (p) => this.people.set(p) });
     this.load();
   }
 
