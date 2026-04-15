@@ -48,7 +48,9 @@ Each widget SHALL render one of four local states: `loading`, `error`, `empty`, 
 
 The dashboard SHALL include a "Today's commitments" widget that fetches open commitments from `GET /api/commitments` and displays those whose `DueDate` equals the user's local today OR whose `IsOverdue = true`. The widget SHALL cap the visible list at 5 rows, sorted by (overdue desc, dueDate asc). If more than 5 match, the widget SHALL show a "View all" link to `/commitments`.
 
-Each row SHALL display the commitment description, the counterparty person (if any), the due date, and inline quick actions: "Mark complete" and "Snooze". Actions SHALL call the existing mutation endpoints used on the `/commitments` route. On success the widget SHALL refetch its own list.
+Each row SHALL display the commitment description, the due date (if set), an overdue badge when `IsOverdue = true`, and an inline "Mark complete" quick action. The action SHALL call the existing `POST /api/commitments/{id}/complete` endpoint used on the `/commitments` route. On success the widget SHALL refetch its own list. A row's action button SHALL be disabled and show a loading indicator while the mutation is in flight.
+
+(Snooze was considered but is deferred to a follow-up change — the backend has no first-class snooze verb today.)
 
 When no commitments match, the widget SHALL render an empty-state message ("Nothing due today — nice.").
 
@@ -74,7 +76,7 @@ When no commitments match, the widget SHALL render an empty-state message ("Noth
 
 ### Requirement: Today's 1:1s widget
 
-The dashboard SHALL include a "Today's 1:1s" widget that fetches one-on-ones from the existing one-on-ones endpoint and displays those whose `OccurredOnUtc` (or scheduled date equivalent) resolves to the user's local today. Each row SHALL show the person's display name and the scheduled time, and SHALL link to the person detail page.
+The dashboard SHALL include a "Today's 1:1s" widget that fetches one-on-ones from the existing one-on-ones endpoint and displays those whose `OccurredAt` (a `DateOnly`) resolves to the user's local today. Each row SHALL show the person's display name and link to the person detail page. (The underlying aggregate does not carry a scheduled time — date-only suffices.)
 
 When no 1:1s are scheduled today, the widget SHALL render an empty-state message ("No 1:1s today.").
 
@@ -90,14 +92,14 @@ When no 1:1s are scheduled today, the widget SHALL render an empty-state message
 
 ### Requirement: Top of queue widget
 
-The dashboard SHALL include a "Top of queue" widget that fetches `GET /api/my-queue` and renders the top 5 items in the queue's existing priority order (as defined by the `my-queue` capability). Each row SHALL show the item's summary and its queue-rank label, and SHALL link to the item's detail route. The widget SHALL provide a "View all" link to `/queue`.
+The dashboard SHALL include a "Top of queue" widget that fetches `GET /api/my-queue` and renders the top 5 items in the queue's existing priority order (as defined by the `my-queue` capability). Each row SHALL show the item's summary and its queue-rank label, and SHALL link to the item's detail route. The widget SHALL provide a "View all" link to `/my-queue`.
 
 When the queue is empty, the widget SHALL render an empty-state message ("Queue is empty.").
 
 #### Scenario: Widget shows top 5 queue items
 
 - **WHEN** the user's queue contains 12 items
-- **THEN** the widget renders the top 5 ranked items and a "View all" link to `/queue`
+- **THEN** the widget renders the top 5 ranked items and a "View all" link to `/my-queue`
 
 #### Scenario: Empty queue
 
@@ -106,7 +108,7 @@ When the queue is empty, the widget SHALL render an empty-state message ("Queue 
 
 ### Requirement: Overdue summary widget
 
-The dashboard SHALL include an "Overdue summary" widget that renders a single compact count bar across three segments: commitments overdue, delegations stale (`IsOverdue = true`), and unread nudges. Counts SHALL be derived from `GET /api/commitments`, `GET /api/delegations`, and the nudges capability respectively. Each count SHALL be a link to the corresponding filtered route.
+The dashboard SHALL include an "Overdue summary" widget that renders a single compact count bar across three segments: commitments overdue, delegations stale, and unread nudges. Commitments overdue counts are derived from `GET /api/commitments?overdue=true`. A delegation is considered stale when it is not Completed and either (a) its `DueDate` is in the past (local day) or (b) its last follow-up — or its creation time if never followed up — is older than 7 days. Unread-nudge counts come from the nudges capability when available. Each count SHALL be a link to the corresponding filtered route.
 
 If a count source fails to load, that segment SHALL render a placeholder ("— commitments overdue") while the other segments continue to render their live values. If the nudges capability is unavailable on the current deployment, the nudges segment SHALL render "0 unread nudges" rather than erroring.
 

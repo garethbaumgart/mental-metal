@@ -4,7 +4,7 @@ The dashboard route (`/dashboard`, component `DashboardPage`) currently consists
 
 - `/commitments` — open commitments (data via `CommitmentsService` → `GET /api/commitments`)
 - `/people` / person detail — 1:1s (data via `GET /api/one-on-ones`)
-- `/queue` — My Queue ranked items (data via `MyQueueService` → `GET /api/my-queue`)
+- `/my-queue` — My Queue ranked items (data via `MyQueueService` → `GET /api/my-queue`)
 - `/delegations` — open delegations (data via `GET /api/delegations`)
 
 All endpoints are user-scoped and already live. The backend has nothing to do.
@@ -23,7 +23,7 @@ Zoneless Angular 21 with signals is the rendering model; PrimeNG + `tailwindcss-
 - No new API endpoints, DTOs, or aggregates.
 - No change to briefing generation, caching, or synthesis rules.
 - No user-configurable widget visibility / ordering.
-- No rewrite of `/commitments`, `/people`, `/queue`, `/delegations` routes.
+- No rewrite of `/commitments`, `/people`, `/my-queue`, `/delegations` routes.
 - No drag-and-drop.
 
 ## Decisions
@@ -44,16 +44,29 @@ Each widget is a standalone component that injects its own service, calls its ow
 **Alternatives considered:** dedicated `DashboardCommitmentsService` etc. Rejected — duplicates HTTP parsing and caching behaviour.
 
 ### D4: Layout uses CSS grid with Tailwind utilities; no custom CSS colours
-```
-grid grid-cols-1 lg:grid-cols-2 gap-6
-  <briefing class="lg:col-span-2" />
+
+```html
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="lg:col-span-2"><briefing /></div>
   <commitments /> <one-on-ones />
-  <top-of-queue /> <overdue-summary class="lg:col-span-2" />
+  <top-of-queue />
+  <div class="lg:col-span-2"><overdue-summary /></div>
+</div>
 ```
-Overdue summary spans full width because it's a one-line count bar. All colours come from PrimeNG tokens (`bg-surface-*`, `text-muted-color`, `text-primary`) per CLAUDE.md.
+
+Overdue summary spans full width because it's a one-line count bar. The
+`lg:col-span-2` utility must live on the grid child (the wrapper), not
+inside the component host, so the browser's grid layout engine sees it.
+All colours come from PrimeNG tokens (`bg-surface-*`, `text-muted-color`,
+`text-primary`) per CLAUDE.md.
 
 ### D5: Quick-action semantics on commitments widget
-"Mark complete" and "snooze" dispatch via the existing `CommitmentsService` mutation methods used on the commitments page. On success the widget re-fetches its own list; no cross-widget invalidation. Other widgets remain unaffected — matches D2.
+Only "Mark complete" is shipped in this change: it calls the existing
+`CommitmentsService.complete(id)` mutation. On success the widget
+re-fetches its own list; no cross-widget invalidation. Snooze was in
+the initial brainstorm but deferred — the commitments API has no first-
+class snooze verb yet, and wiring it here would outpace the backend.
+Filed as a follow-up.
 
 ### D6: Overdue summary counts, not lists
 This widget is a density signal, not an inbox. It renders `"N commitments overdue · M delegations stale · K unread nudges"` where each number links to the relevant filtered route. If any count source fails, that segment renders `"— commitments overdue"` but the other segments still show. Nudge count degrades gracefully to 0 if nudges-rhythms is not available.

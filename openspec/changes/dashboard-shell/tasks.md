@@ -24,7 +24,7 @@
 
 - [ ] 4.1 Create `TopOfQueueWidgetComponent` (standalone, OnPush, signals).
 - [ ] 4.2 Inject `MyQueueService`; take the top 5 items in existing queue order.
-- [ ] 4.3 Implement the four local render states; each row links to the queue item detail route; include a "View all" link to `/queue`.
+- [ ] 4.3 Implement the four local render states; each row links to the queue item detail route; include a "View all" link to `/my-queue`.
 - [ ] 4.4 Add component unit tests for empty, populated, and error states.
 
 ## 5. Overdue summary widget

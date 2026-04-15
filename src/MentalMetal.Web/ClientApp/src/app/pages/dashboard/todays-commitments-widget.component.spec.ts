@@ -5,6 +5,7 @@ import { provideRouter } from '@angular/router';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { TodaysCommitmentsWidgetComponent } from './todays-commitments-widget.component';
 import { Commitment } from '../../shared/models/commitment.model';
+import { todayLocalIso } from './widget-shell';
 
 describe('TodaysCommitmentsWidgetComponent', () => {
   let fixture: ComponentFixture<TodaysCommitmentsWidgetComponent>;
@@ -26,8 +27,10 @@ describe('TodaysCommitmentsWidgetComponent', () => {
 
   afterEach(() => http.verify());
 
+  // Local calendar day — matches the widget's filtering so the tests
+  // don't flake around local midnight in non-UTC timezones.
   function today(): string {
-    return new Date().toISOString().slice(0, 10);
+    return todayLocalIso();
   }
 
   function make(overrides: Partial<Commitment> = {}): Commitment {
@@ -55,7 +58,7 @@ describe('TodaysCommitmentsWidgetComponent', () => {
     http.expectOne((r) => r.url.startsWith('/api/commitments')).flush([]);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('clear inbox');
+    expect(fixture.nativeElement.textContent).toContain('Nothing due today');
   });
 
   it('shows overdue commitments before today-due ones, capped at 5', () => {
@@ -75,12 +78,40 @@ describe('TodaysCommitmentsWidgetComponent', () => {
     expect((listItems[0] as HTMLElement).textContent).toContain('Overdue A');
   });
 
-  it('renders error state on failure and allows retry', () => {
+  it('renders error state on failure and Retry re-fetches', () => {
     fixture.detectChanges();
     http.expectOne((r) => r.url.startsWith('/api/commitments'))
       .flush('boom', { status: 500, statusText: 'Server Error' });
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain("Couldn't load commitments");
+
+    // Click the Retry button (PrimeNG renders a native <button> inside p-button).
+    const retry = Array.from(fixture.nativeElement.querySelectorAll('button'))
+      .find((b) => ((b as HTMLElement).textContent ?? '').trim().toLowerCase() === 'retry') as HTMLButtonElement | undefined;
+    expect(retry, 'retry button').toBeDefined();
+    retry!.click();
+    fixture.detectChanges();
+
+    // A second request was issued by Retry.
+    http.expectOne((r) => r.url.startsWith('/api/commitments')).flush([]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Nothing due today');
+  });
+
+  it('Mark complete posts and re-fetches only this widget', () => {
+    fixture.detectChanges();
+    const row = make({ id: 'c-today', description: 'Finish X', dueDate: today() });
+    http.expectOne((r) => r.url.startsWith('/api/commitments')).flush([row]);
+    fixture.detectChanges();
+
+    const btn = Array.from(fixture.nativeElement.querySelectorAll('button'))
+      .find((b) => (b as HTMLElement).getAttribute('aria-label') === 'Mark complete') as HTMLButtonElement | undefined;
+    expect(btn, 'mark-complete button').toBeDefined();
+    btn!.click();
+
+    http.expectOne((r) => r.url === '/api/commitments/c-today/complete' && r.method === 'POST').flush({});
+    // After complete, the widget re-fetches the list.
+    http.expectOne((r) => r.url.startsWith('/api/commitments')).flush([]);
   });
 });

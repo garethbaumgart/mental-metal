@@ -1,8 +1,9 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { catchError, finalize, of, tap } from 'rxjs';
+import { catchError, of, tap } from 'rxjs';
 import { CommitmentsService } from '../../shared/services/commitments.service';
 import { DelegationsService } from '../../shared/services/delegations.service';
+import { todayLocalIso, toLocalDateKey } from './widget-shell';
 
 interface SummaryCount {
   loaded: boolean;
@@ -28,7 +29,7 @@ const emptyCount = (): SummaryCount => ({ loaded: false, failed: false, value: 0
   imports: [RouterLink],
   template: `
     <section
-      class="flex flex-col gap-3 p-5 rounded-md bg-surface-50 lg:col-span-2"
+      class="flex flex-col gap-3 p-5 rounded-md bg-surface-50"
       aria-label="Overdue summary"
     >
       <h2 class="text-lg font-semibold">What's slipping</h2>
@@ -81,7 +82,6 @@ export class OverdueSummaryWidgetComponent implements OnInit {
           this.commitments.set({ loaded: true, failed: true, value: 0 });
           return of(null);
         }),
-        finalize(() => undefined),
       )
       .subscribe();
   }
@@ -92,12 +92,13 @@ export class OverdueSummaryWidgetComponent implements OnInit {
       .pipe(
         tap((list) => {
           // "Stale" = active delegation (not completed) that is either
-          // past its due date or hasn't been followed up in >7 days.
+          // past its due date (local day) or hasn't been followed up in >7 days.
           const sevenDaysAgoMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
-          const today = new Date().toISOString().slice(0, 10);
+          const today = todayLocalIso();
           const stale = list.filter((d) => {
             if (d.status === 'Completed') return false;
-            if (d.dueDate && d.dueDate.slice(0, 10) < today) return true;
+            const dueKey = toLocalDateKey(d.dueDate);
+            if (dueKey && dueKey < today) return true;
             if (d.lastFollowedUpAt) {
               return new Date(d.lastFollowedUpAt).getTime() < sevenDaysAgoMs;
             }

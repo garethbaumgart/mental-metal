@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
@@ -56,7 +56,7 @@ import { QueueItem } from '../../features/my-queue/my-queue.models';
     </section>
   `,
 })
-export class TopOfQueueWidgetComponent {
+export class TopOfQueueWidgetComponent implements OnInit {
   protected readonly queue = inject(MyQueueService);
 
   protected readonly top = computed<QueueItem[]>(() => {
@@ -64,16 +64,14 @@ export class TopOfQueueWidgetComponent {
     return resp ? resp.items.slice(0, 5) : [];
   });
 
-  constructor() {
-    // Only trigger a fetch if the queue service hasn't already loaded.
-    effect(() => {
-      if (!this.queue.response() && !this.queue.loading() && !this.queue.error()) {
-        this.queue.load();
-      }
-    });
+  ngOnInit(): void {
+    // Always refetch on mount with the default scope — the singleton
+    // MyQueueService is shared with the /my-queue page which may have
+    // applied filters, so we reset to a clean load here.
+    this.queue.load({ scope: 'All' });
   }
 
   protected reload(): void {
-    this.queue.load();
+    this.queue.load({ scope: 'All' });
   }
 }

@@ -1,11 +1,11 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { TagModule } from 'primeng/tag';
 import { catchError, EMPTY, finalize, tap } from 'rxjs';
 import { CommitmentsService } from '../../shared/services/commitments.service';
 import { Commitment } from '../../shared/models/commitment.model';
-import { isOnOrBeforeToday } from './widget-shell';
+import { isToday, toLocalDateKey } from './widget-shell';
 
 /**
  * Shows up to 5 open commitments that are either due today or already
@@ -16,7 +16,7 @@ import { isOnOrBeforeToday } from './widget-shell';
   selector: 'app-todays-commitments-widget',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, RouterLink, ButtonModule],
+  imports: [RouterLink, ButtonModule, TagModule],
   template: `
     <section
       class="flex flex-col gap-3 p-5 rounded-md bg-surface-50"
@@ -41,19 +41,17 @@ import { isOnOrBeforeToday } from './widget-shell';
           <p-button label="Retry" icon="pi pi-refresh" size="small" [text]="true" (onClick)="load()" />
         </div>
       } @else if (items().length === 0) {
-        <p class="text-sm text-muted-color py-2">Nothing due today — clear inbox.</p>
+        <p class="text-sm text-muted-color py-2">Nothing due today — nice.</p>
       } @else {
         <ul class="flex flex-col gap-2">
           @for (c of items(); track c.id) {
             <li class="flex items-center gap-3 p-2 rounded bg-surface-0">
               @if (c.isOverdue) {
-                <i class="pi pi-exclamation-circle text-red-500 text-sm" aria-label="Overdue"></i>
-              } @else {
-                <i class="pi pi-circle text-sm" aria-hidden="true"></i>
+                <p-tag value="Overdue" severity="danger" />
               }
               <span class="flex-1 text-sm">{{ c.description }}</span>
               @if (c.dueDate) {
-                <span class="text-xs text-muted-color">{{ c.dueDate | date: 'mediumDate' }}</span>
+                <span class="text-xs text-muted-color">{{ formatDueDate(c.dueDate) }}</span>
               }
               <p-button
                 icon="pi pi-check"
@@ -62,6 +60,8 @@ import { isOnOrBeforeToday } from './widget-shell';
                 [rounded]="true"
                 size="small"
                 ariaLabel="Mark complete"
+                [disabled]="completing() === c.id"
+                [loading]="completing() === c.id"
                 (onClick)="complete(c)"
               />
             </li>
@@ -77,6 +77,17 @@ export class TodaysCommitmentsWidgetComponent implements OnInit {
   protected readonly items = signal<Commitment[]>([]);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
+  /** id of the commitment currently being marked complete (for UI lockout). */
+  protected readonly completing = signal<string | null>(null);
+
+  /** Render a DateOnly (YYYY-MM-DD) as "medium" date without timezone shift. */
+  protected formatDueDate(raw: string): string {
+    const key = toLocalDateKey(raw);
+    if (!key) return '';
+    const [y, m, d] = key.split('-').map(Number);
+    return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeZone: 'UTC' })
+      .format(new Date(Date.UTC(y, m - 1, d)));
+  }
 
   ngOnInit(): void {
     this.load();
@@ -89,8 +100,9 @@ export class TodaysCommitmentsWidgetComponent implements OnInit {
       .list(undefined, 'Open')
       .pipe(
         tap((list) => {
+          // Spec: include anything overdue OR due today (local calendar day).
           const relevant = list
-            .filter((c) => c.isOverdue || isOnOrBeforeToday(c.dueDate))
+            .filter((c) => c.isOverdue || isToday(c.dueDate))
             .sort((a, b) => {
               if (a.isOverdue !== b.isOverdue) return a.isOverdue ? -1 : 1;
               return (a.dueDate ?? '\uffff').localeCompare(b.dueDate ?? '\uffff');
@@ -108,9 +120,17 @@ export class TodaysCommitmentsWidgetComponent implements OnInit {
   }
 
   protected complete(c: Commitment): void {
+    if (this.completing()) return;
+    this.completing.set(c.id);
     this.commitments.complete(c.id).subscribe({
-      next: () => this.load(),
-      error: () => this.error.set('Failed to mark complete.'),
+      next: () => {
+        this.completing.set(null);
+        this.load();
+      },
+      error: () => {
+        this.completing.set(null);
+        this.error.set('Failed to mark complete.');
+      },
     });
   }
 }

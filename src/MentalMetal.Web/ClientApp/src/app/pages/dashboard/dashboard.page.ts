@@ -39,8 +39,12 @@ import { OverdueSummaryWidgetComponent } from './overdue-summary-widget.componen
         <app-todays-one-on-ones-widget />
         <app-top-of-queue-widget />
 
-        <!-- Overdue summary spans full width as a one-line glance -->
-        <app-overdue-summary-widget />
+        <!-- Overdue summary spans full width as a one-line glance. The
+             lg:col-span-2 must live on the grid child (this wrapper),
+             not inside the component host. -->
+        <div class="lg:col-span-2">
+          <app-overdue-summary-widget />
+        </div>
       </div>
     </div>
   `,

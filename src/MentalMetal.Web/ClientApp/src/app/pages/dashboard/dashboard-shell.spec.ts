@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter } from '@angular/router';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { DashboardPage } from './dashboard.page';
+import { todayLocalIso } from './widget-shell';
 
 /**
  * Shell-level test: asserts the widget isolation contract. When the
@@ -30,8 +31,11 @@ describe('Dashboard shell (widget isolation)', () => {
 
   afterEach(() => http.verify());
 
+  /** Matches r.url exactly OR r.url with a query string — not prefix soups. */
   function flush(url: string, body: object | string | null, status = 200): void {
-    const req = http.match((r) => r.url === url || r.url.startsWith(url + '?'));
+    const req = http.match(
+      (r) => r.url === url || r.url.startsWith(url + '?'),
+    );
     for (const r of req) {
       if (status >= 400) {
         r.flush(body as string, { status, statusText: 'Error' });
@@ -66,7 +70,7 @@ describe('Dashboard shell (widget isolation)', () => {
 
     flush('/api/briefings/morning', { error: 'nope' }, 500);
     flush('/api/commitments', [
-      { id: 'c1', userId: 'u', description: 'Important thing', direction: 'MineToThem', personId: 'p', initiativeId: null, sourceCaptureId: null, dueDate: new Date().toISOString().slice(0, 10), status: 'Open', completedAt: null, notes: null, isOverdue: false, createdAt: '2026-04-01T00:00:00Z', updatedAt: '2026-04-01T00:00:00Z' },
+      { id: 'c1', userId: 'u', description: 'Important thing', direction: 'MineToThem', personId: 'p', initiativeId: null, sourceCaptureId: null, dueDate: todayLocalIso(), status: 'Open', completedAt: null, notes: null, isOverdue: false, createdAt: '2026-04-01T00:00:00Z', updatedAt: '2026-04-01T00:00:00Z' },
     ]);
     flush('/api/one-on-ones', []);
     flush('/api/people', []);
