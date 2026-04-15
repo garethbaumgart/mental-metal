@@ -94,5 +94,22 @@ describe('MorningBriefingWidgetComponent', () => {
 
     const html = fixture.nativeElement.innerHTML as string;
     expect(html).toContain('Failed to generate briefing');
+    // No settings link on generic 5xx
+    expect(html).not.toContain('Check AI provider settings');
+  });
+
+  it('renders server-provided message and settings link on 502 provider error', () => {
+    fixture.detectChanges();
+    httpMock.expectOne((r) => r.url === '/api/briefings/morning' && r.method === 'POST')
+      .flush(
+        { error: 'Gemini API error (BadRequest): invalid key' },
+        { status: 502, statusText: 'Bad Gateway' },
+      );
+    fixture.detectChanges();
+
+    const html = fixture.nativeElement.innerHTML as string;
+    expect(html).toContain('Gemini API error');
+    expect(html).toContain('Check AI provider settings');
+    expect(html).toContain('/settings');
   });
 });
