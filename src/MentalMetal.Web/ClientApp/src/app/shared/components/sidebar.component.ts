@@ -57,7 +57,7 @@ import { ThemeService } from '../services/theme.service';
       <span class="text-lg font-semibold">Mental Metal</span>
     </div>
 
-    <nav class="flex-1 overflow-y-auto p-3 flex flex-col gap-1">
+    <nav class="flex-1 overflow-y-auto p-3 flex flex-col gap-1" aria-label="Primary">
       <!-- Primary verbs -->
       <a routerLink="/dashboard" routerLinkActive="font-semibold sidebar-link-active"
          class="flex items-center gap-3 px-3 py-2 rounded-md text-sm"
@@ -213,12 +213,14 @@ export class SidebarComponent {
     { initialValue: this.router.url },
   );
 
+  // Match the group's root segment whether the URL is exact, nested,
+  // or carries a query string / fragment (e.g. /delegations?personId=...).
   private readonly workActive = computed(() =>
-    /^\/(my-queue|commitments|delegations|nudges|close-out)(\/|$)/.test(this.currentUrl()),
+    /^\/(my-queue|commitments|delegations|nudges|close-out)(\/|\?|#|$)/.test(this.currentUrl()),
   );
 
   private readonly moreActive = computed(() =>
-    /^\/(one-on-ones|observations|goals|interviews|briefings)(\/|$)/.test(this.currentUrl()),
+    /^\/(one-on-ones|observations|goals|interviews|briefings)(\/|\?|#|$)/.test(this.currentUrl()),
   );
 
   protected readonly workOpen = signal(false);
