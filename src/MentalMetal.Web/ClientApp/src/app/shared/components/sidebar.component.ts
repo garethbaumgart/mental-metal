@@ -54,6 +54,12 @@ import { ThemeService } from '../services/theme.service';
         <i class="pi pi-home"></i>
         <span>Dashboard</span>
       </a>
+      <a routerLink="/chat" routerLinkActive="font-semibold sidebar-link-active"
+         class="flex items-center gap-3 px-3 py-2 rounded-md text-sm"
+         (click)="navClick.emit()">
+        <i class="pi pi-sparkles"></i>
+        <span>Chat</span>
+      </a>
       <a routerLink="/capture" routerLinkActive="font-semibold sidebar-link-active"
          class="flex items-center gap-3 px-3 py-2 rounded-md text-sm"
          (click)="navClick.emit()">
@@ -120,6 +126,12 @@ import { ThemeService } from '../services/theme.service';
         <i class="pi pi-list-check"></i>
         <span>My Queue</span>
       </a>
+      <a routerLink="/briefings/weekly" routerLinkActive="font-semibold sidebar-link-active"
+         class="flex items-center gap-3 px-3 py-2 rounded-md text-sm"
+         (click)="navClick.emit()">
+        <i class="pi pi-calendar"></i>
+        <span>Weekly Briefing</span>
+      </a>
       <a routerLink="/close-out" routerLinkActive="font-semibold sidebar-link-active"
          class="flex items-center gap-3 px-3 py-2 rounded-md text-sm"
          (click)="navClick.emit()">
@@ -128,7 +140,13 @@ import { ThemeService } from '../services/theme.service';
       </a>
     </nav>
 
-    <div class="p-3 border-t sidebar-border">
+    <nav class="p-3 border-t sidebar-border flex flex-col gap-1" aria-label="Secondary">
+      <a routerLink="/settings" routerLinkActive="font-semibold sidebar-link-active"
+         class="flex items-center gap-3 px-3 py-2 rounded-md text-sm"
+         (click)="navClick.emit()">
+        <i class="pi pi-cog"></i>
+        <span>Settings</span>
+      </a>
       <button type="button"
         class="flex items-center gap-3 px-3 py-2 rounded-md text-sm w-full theme-toggle"
         (click)="themeService.toggle()"
@@ -136,7 +154,7 @@ import { ThemeService } from '../services/theme.service';
         <i [class]="themeService.isDark() ? 'pi pi-sun' : 'pi pi-moon'"></i>
         <span>{{ themeService.isDark() ? 'Light mode' : 'Dark mode' }}</span>
       </button>
-    </div>
+    </nav>
   `,
 })
 export class SidebarComponent {
