@@ -69,6 +69,7 @@ public sealed class MentalMetalWebApplicationFactory : WebApplicationFactory<Pro
                 "Observations",
                 "GoalCheckIns",
                 "Goals",
+                "Captures",
                 "RefreshTokens",
                 "Users"
             RESTART IDENTITY CASCADE;
