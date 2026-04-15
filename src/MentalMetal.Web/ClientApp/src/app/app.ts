@@ -5,13 +5,26 @@ import { filter, map, startWith } from 'rxjs/operators';
 import { SidebarComponent } from './shared/components/sidebar.component';
 import { GlobalChatLauncherComponent } from './shared/components/global-chat-launcher.component';
 import { GlobalChatSlideOverComponent } from './shared/components/global-chat-slide-over.component';
+import { QuickCaptureFabComponent } from './shared/components/quick-capture-fab.component';
+import { QuickCaptureShortcutDirective } from './shared/directives/quick-capture-shortcut.directive';
+import { QuickCaptureDialogComponent } from './pages/captures/quick-capture-dialog/quick-capture-dialog.component';
+import { QuickCaptureUiService } from './shared/services/quick-capture-ui.service';
+import { Capture } from './shared/models/capture.model';
 import { AuthService } from './shared/services/auth.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, SidebarComponent, GlobalChatLauncherComponent, GlobalChatSlideOverComponent],
+  imports: [
+    RouterOutlet,
+    SidebarComponent,
+    GlobalChatLauncherComponent,
+    GlobalChatSlideOverComponent,
+    QuickCaptureFabComponent,
+    QuickCaptureShortcutDirective,
+    QuickCaptureDialogComponent,
+  ],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
@@ -25,8 +38,14 @@ export class App {
 
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
+  protected readonly quickCapture = inject(QuickCaptureUiService);
 
   protected readonly sidebarOpen = signal(false);
+
+  /** Shell-level callback wired to the single global Quick Capture dialog. */
+  protected onQuickCaptureCreated(capture: Capture): void {
+    this.quickCapture.notifyCreated(capture);
+  }
 
   private readonly currentUrl = toSignal(
     this.router.events.pipe(

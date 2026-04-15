@@ -2,7 +2,7 @@
   <!-- Login route: full-screen with no shell chrome (#75 Bug 1) -->
   <router-outlet />
 } @else {
-  <div class="flex h-screen shell">
+  <div class="flex h-screen shell" appQuickCaptureShortcut>
 
     <!-- Sidebar: always visible on desktop -->
     <aside class="hidden lg:flex flex-col w-64 border-r shrink-0 shell-panel">
@@ -47,5 +47,12 @@
 
     <!-- Global chat slide-over: rendered once for the whole shell, controlled by GlobalChatStateService. -->
     <app-global-chat-slide-over />
+
+    <!-- Persistent Quick Capture: single dialog + FAB available from every authenticated page. -->
+    <app-quick-capture-fab />
+    <app-quick-capture-dialog
+      [(visible)]="quickCapture.visible"
+      (created)="onQuickCaptureCreated($event)"
+    />
   </div>
 }
