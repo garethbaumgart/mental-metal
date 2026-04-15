@@ -5,7 +5,7 @@ namespace MentalMetal.Application.Observations;
 public sealed record CreateObservationRequest(
     Guid PersonId,
     string Description,
-    ObservationTag Tag,
+    ObservationTag? Tag,
     DateOnly? OccurredAt = null,
     Guid? SourceCaptureId = null);
 

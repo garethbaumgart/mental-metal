@@ -13,7 +13,7 @@ public sealed class CreateCommitmentHandler(
         CreateCommitmentRequest request, CancellationToken cancellationToken)
     {
         if (request.Direction is null)
-            throw new ArgumentException("Direction is required.", nameof(request));
+            throw new ArgumentException("Direction is required.", nameof(request.Direction));
 
         var commitment = Commitment.Create(
             currentUserService.UserId,

@@ -1864,11 +1864,23 @@ app.MapPost("/api/observations", async (
     CreateObservationHandler handler,
     CancellationToken ct) =>
 {
-    if (!Enum.IsDefined(typeof(ObservationTag), request.Tag))
+    if (request.Tag is null)
     {
         return Results.Problem(
             statusCode: StatusCodes.Status400BadRequest,
-            title: $"Unknown observation tag '{(int)request.Tag}'.",
+            title: "Observation tag is required.",
+            extensions: new Dictionary<string, object?>
+            {
+                ["code"] = "observation.validation",
+                ["field"] = "tag",
+            });
+    }
+
+    if (!Enum.IsDefined(typeof(ObservationTag), request.Tag.Value))
+    {
+        return Results.Problem(
+            statusCode: StatusCodes.Status400BadRequest,
+            title: $"Unknown observation tag '{(int)request.Tag.Value}'.",
             extensions: new Dictionary<string, object?>
             {
                 ["code"] = "observation.invalidTag",

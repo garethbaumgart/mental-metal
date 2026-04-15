@@ -13,7 +13,7 @@ public sealed class CreateOneOnOneHandler(
         CreateOneOnOneRequest request, CancellationToken cancellationToken)
     {
         if (request.OccurredAt is null)
-            throw new ArgumentException("OccurredAt is required.", nameof(request));
+            throw new ArgumentException("OccurredAt is required.", nameof(request.OccurredAt));
 
         var oneOnOne = OneOnOne.Create(
             currentUserService.UserId,
