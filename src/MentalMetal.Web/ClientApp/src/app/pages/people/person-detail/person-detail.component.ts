@@ -198,14 +198,16 @@ import { OneOnOnePrepDialogComponent } from '../one-on-one-prep-dialog.component
         <!-- Profile & Details (read-only by default; expand to edit) -->
         <section class="flex flex-col gap-4 border-t pt-6">
           <div class="flex items-center justify-between">
-            <h2 class="text-xl font-semibold">Profile &amp; details</h2>
+            <h2 class="text-xl font-semibold" id="profile-details-heading">Profile &amp; details</h2>
             <p-button
               [label]="profileEditOpen() ? 'Close' : 'Edit'"
               [icon]="profileEditOpen() ? 'pi pi-times' : 'pi pi-pencil'"
               severity="secondary"
               [text]="true"
               size="small"
-              (onClick)="profileEditOpen.set(!profileEditOpen())"
+              [attr.aria-expanded]="profileEditOpen()"
+              aria-controls="profile-edit-panel"
+              (onClick)="toggleProfileEdit()"
             />
           </div>
 
@@ -237,7 +239,12 @@ import { OneOnOnePrepDialogComponent } from '../one-on-one-prep-dialog.component
 
           @if (profileEditOpen()) {
             <!-- Editable Profile -->
-            <div class="flex flex-col gap-4 pt-4 border-t">
+            <div
+              class="flex flex-col gap-4 pt-4 border-t"
+              id="profile-edit-panel"
+              role="region"
+              aria-labelledby="profile-details-heading"
+            >
               <h3 class="text-base font-semibold">Edit profile</h3>
 
               <div class="flex flex-col gap-2">
@@ -661,6 +668,24 @@ export class PersonDetailComponent implements OnInit {
     this.goalsService.getPersonEvidenceSummary(personId).subscribe({
       next: (s) => this.evidence.set(s),
     });
+  }
+
+  /**
+   * Toggles the Profile & details edit panel. When opening, re-populate the
+   * draft fields from the current person so stale edits from a previous
+   * "close without save" cycle don't persist. When closing, clear any type-
+   * change / pipeline draft state too.
+   */
+  protected toggleProfileEdit(): void {
+    const next = !this.profileEditOpen();
+    this.profileEditOpen.set(next);
+    if (next) {
+      const p = this.person();
+      if (p) this.populateFields(p);
+    } else {
+      this.newType = null;
+      this.newPipelineStatus = null;
+    }
   }
 
   private populateFields(person: Person): void {
