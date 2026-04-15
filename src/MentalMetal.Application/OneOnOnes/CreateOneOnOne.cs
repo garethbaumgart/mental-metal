@@ -12,10 +12,13 @@ public sealed class CreateOneOnOneHandler(
     public async Task<OneOnOneResponse> HandleAsync(
         CreateOneOnOneRequest request, CancellationToken cancellationToken)
     {
+        if (request.OccurredAt is null)
+            throw new ArgumentException("OccurredAt is required.", nameof(request));
+
         var oneOnOne = OneOnOne.Create(
             currentUserService.UserId,
             request.PersonId,
-            request.OccurredAt,
+            request.OccurredAt.Value,
             request.Notes,
             request.Topics,
             request.MoodRating);

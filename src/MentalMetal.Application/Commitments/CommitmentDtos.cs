@@ -4,7 +4,7 @@ namespace MentalMetal.Application.Commitments;
 
 public sealed record CreateCommitmentRequest(
     string Description,
-    CommitmentDirection Direction,
+    CommitmentDirection? Direction,
     Guid PersonId,
     DateOnly? DueDate = null,
     Guid? InitiativeId = null,
