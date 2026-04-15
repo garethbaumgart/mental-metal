@@ -116,7 +116,7 @@ import { Person } from '../../../shared/models/person.model';
           </div>
         </div>
         <ng-template #footer>
-          <p-button label="Cancel" [text]="true" (onClick)="showCreate.set(false)" />
+          <p-button label="Cancel" severity="secondary" (onClick)="showCreate.set(false)" />
           <p-button label="Create" (onClick)="submit()" [disabled]="!draftPersonId || !draftDate" />
         </ng-template>
       </p-dialog>

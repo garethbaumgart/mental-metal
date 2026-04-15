@@ -74,7 +74,7 @@ import { PasswordSettingsComponent } from './password-settings.component';
           <label for="theme" class="text-sm font-medium">Dark Mode</label>
           <p-toggleSwitch
             id="theme"
-            [(ngModel)]="darkMode"
+            [ngModel]="darkMode()"
             (ngModelChange)="onThemeChange($event)"
           />
         </div>
@@ -119,9 +119,12 @@ export class SettingsPage implements OnInit {
   readonly savingProfile = signal(false);
   readonly savingPreferences = signal(false);
 
+  // Mirrors the live theme state so the toggle always reflects the actual
+  // theme, not whatever was saved in the user's preferences last.
+  protected readonly darkMode = this.themeService.isDark;
+
   protected name = '';
   protected timezone = '';
-  protected darkMode = false;
   protected notificationsEnabled = true;
   protected briefingTime = '08:00';
   protected livingBriefAutoApply = false;
@@ -137,7 +140,6 @@ export class SettingsPage implements OnInit {
       this.email.set(user.email);
       this.name = user.name;
       this.timezone = user.timezone;
-      this.darkMode = user.preferences.theme === 'Dark';
       this.notificationsEnabled = user.preferences.notificationsEnabled;
       this.briefingTime = user.preferences.briefingTime;
       this.livingBriefAutoApply = user.preferences.livingBriefAutoApply;
@@ -181,7 +183,7 @@ export class SettingsPage implements OnInit {
     this.savingPreferences.set(true);
     this.userService
       .updatePreferences({
-        theme: this.darkMode ? 'Dark' : 'Light',
+        theme: this.darkMode() ? 'Dark' : 'Light',
         notificationsEnabled: this.notificationsEnabled,
         briefingTime: this.briefingTime,
         livingBriefAutoApply: this.livingBriefAutoApply,
