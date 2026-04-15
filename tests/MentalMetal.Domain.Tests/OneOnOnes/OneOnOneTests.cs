@@ -54,6 +54,24 @@ public class OneOnOneTests
     }
 
     [Theory]
+    [InlineData(1, 1, 1)]      // DateOnly.MinValue
+    [InlineData(1999, 12, 31)] // boundary-1
+    public void Create_OccurredAtBeforeMinimum_Throws(int year, int month, int day)
+    {
+        var bad = new DateOnly(year, month, day);
+        var ex = Assert.Throws<ArgumentException>(() =>
+            OneOnOne.Create(UserId, PersonId, bad));
+        Assert.Contains("OccurredAt", ex.Message);
+    }
+
+    [Fact]
+    public void Create_OccurredAtAtMinimum_Succeeds()
+    {
+        var o = OneOnOne.Create(UserId, PersonId, OneOnOne.MinimumOccurredAt);
+        Assert.Equal(OneOnOne.MinimumOccurredAt, o.OccurredAt);
+    }
+
+    [Theory]
     [InlineData(0)]
     [InlineData(6)]
     [InlineData(-1)]

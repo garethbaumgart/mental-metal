@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DatePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
@@ -22,7 +21,6 @@ import { Person } from '../../../shared/models/person.model';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
-    DatePipe,
     ButtonModule,
     DialogModule,
     InputTextModule,
@@ -62,7 +60,7 @@ import { Person } from '../../../shared/models/person.model';
           </ng-template>
           <ng-template #body let-row>
             <tr>
-              <td>{{ row.occurredAt | date: 'mediumDate' }}</td>
+              <td>{{ formatOccurredAt(row.occurredAt) }}</td>
               <td>{{ personName(row.personId) }}</td>
               <td>
                 @if (row.moodRating !== null) { {{ row.moodRating }} / 5 } @else { — }
@@ -145,6 +143,18 @@ export class OneOnOnesListComponent implements OnInit {
 
   protected personName(id: string): string {
     return this.people().find((p) => p.id === id)?.name ?? '(unknown)';
+  }
+
+  /**
+   * Defensively renders a 1:1 date. The API validates OccurredAt >= 2000-01-01,
+   * but legacy rows that bypassed validation can still exist; render them as
+   * an em dash rather than "Jan 1, 1" to avoid user confusion.
+   */
+  protected formatOccurredAt(raw: string | null | undefined): string {
+    if (!raw) return '—';
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime()) || d.getUTCFullYear() < 2000) return '—';
+    return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(d);
   }
 
   ngOnInit(): void {
