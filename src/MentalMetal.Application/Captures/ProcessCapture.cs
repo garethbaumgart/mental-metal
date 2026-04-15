@@ -95,7 +95,8 @@ public sealed class ProcessCaptureHandler(
 
     internal static AiExtraction ParseExtraction(string jsonContent)
     {
-        using var json = System.Text.Json.JsonDocument.Parse(jsonContent);
+        var stripped = JsonResponseParser.StripCodeFences(jsonContent);
+        using var json = System.Text.Json.JsonDocument.Parse(stripped);
         var root = json.RootElement;
 
         return new AiExtraction
