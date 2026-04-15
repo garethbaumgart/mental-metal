@@ -1,11 +1,19 @@
+/*
+ * Theme note: use PrimeNG *semantic* tokens (content.*, text.*, mask.*) so
+ * that the `.dark` class on <html> automatically flips colours. The palette
+ * tokens (--p-surface-0, --p-surface-200) do NOT flip between light/dark —
+ * surface-0 stays #ffffff in both modes — so using them for panels produced
+ * a permanently-white sidebar/header in dark mode (issue #86).
+ */
 .shell {
-  background-color: var(--p-surface-ground);
+  background-color: var(--p-content-background);
   color: var(--p-text-color);
 }
 
 .shell-panel {
-  background-color: var(--p-surface-0);
-  border-color: var(--p-surface-200);
+  background-color: var(--p-content-background);
+  border-color: var(--p-content-border-color);
+  color: var(--p-text-color);
 }
 
 .header-title {
