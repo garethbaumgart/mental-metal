@@ -19,7 +19,7 @@ import { CommitmentDialogComponent } from '../commitment-dialog/commitment-dialo
   providers: [MessageService],
   styles: [`
     .detail-row {
-      border-color: var(--p-surface-200);
+      border-color: var(--p-content-border-color);
     }
   `],
   template: `

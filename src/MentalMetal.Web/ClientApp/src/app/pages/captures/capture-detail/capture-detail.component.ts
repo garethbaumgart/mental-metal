@@ -40,11 +40,11 @@ import { Initiative } from '../../../shared/models/initiative.model';
   ],
   styles: [`
     .content-block {
-      border-color: var(--p-surface-200);
+      border-color: var(--p-content-border-color);
       background-color: var(--p-surface-50);
     }
     .extraction-section {
-      border-color: var(--p-surface-200);
+      border-color: var(--p-content-border-color);
       background-color: var(--p-surface-50);
     }
     .extraction-item {

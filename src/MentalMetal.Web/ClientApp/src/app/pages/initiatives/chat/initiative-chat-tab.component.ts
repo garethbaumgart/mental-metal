@@ -47,7 +47,7 @@ import { SourceReferenceChipComponent } from './source-reference-chip.component'
 
     <div class="grid grid-cols-12 gap-4 h-[600px]">
       <!-- Left rail -->
-      <aside class="col-span-4 flex flex-col gap-3 border rounded p-3" style="border-color: var(--p-surface-200)">
+      <aside class="col-span-4 flex flex-col gap-3 border rounded p-3" style="border-color: var(--p-content-border-color)">
         <div class="flex items-center justify-between">
           <h3 class="text-lg font-semibold">Threads</h3>
           <p-button
@@ -119,7 +119,7 @@ import { SourceReferenceChipComponent } from './source-reference-chip.component'
       </aside>
 
       <!-- Main panel -->
-      <section class="col-span-8 flex flex-col gap-3 border rounded p-3" style="border-color: var(--p-surface-200)">
+      <section class="col-span-8 flex flex-col gap-3 border rounded p-3" style="border-color: var(--p-content-border-color)">
         @if (!activeThread()) {
           <div class="flex items-center justify-center flex-1 text-sm text-muted-color">
             Select or start a thread.
@@ -220,7 +220,7 @@ import { SourceReferenceChipComponent } from './source-reference-chip.component'
       border-color: var(--p-primary-color);
     }
     .message-bubble {
-      border: 1px solid var(--p-surface-200);
+      border: 1px solid var(--p-content-border-color);
     }
     .bubble-capped {
       max-width: 80%;

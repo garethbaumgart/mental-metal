@@ -50,7 +50,7 @@ interface ThreadGroup { label: string; threads: ChatThreadSummary[]; }
     <p-toast />
     <div class="grid grid-cols-12 gap-4 h-[calc(100vh-7rem)]">
       <!-- Left rail -->
-      <aside class="col-span-12 md:col-span-4 lg:col-span-3 flex flex-col gap-3 border rounded p-3" style="border-color: var(--p-surface-200)">
+      <aside class="col-span-12 md:col-span-4 lg:col-span-3 flex flex-col gap-3 border rounded p-3" style="border-color: var(--p-content-border-color)">
         <div class="flex items-center justify-between">
           <h2 class="text-lg font-semibold">Threads</h2>
           <p-button icon="pi pi-plus" [text]="true" [loading]="startingThread()" (onClick)="startThread()" ariaLabel="New thread" />
@@ -120,7 +120,7 @@ interface ThreadGroup { label: string; threads: ChatThreadSummary[]; }
       </aside>
 
       <!-- Conversation pane -->
-      <section class="col-span-12 md:col-span-8 lg:col-span-9 flex flex-col gap-3 border rounded p-3" style="border-color: var(--p-surface-200)">
+      <section class="col-span-12 md:col-span-8 lg:col-span-9 flex flex-col gap-3 border rounded p-3" style="border-color: var(--p-content-border-color)">
         @if (!state.activeThread()) {
           <div class="flex items-center justify-center flex-1 text-sm text-muted-color">
             Select or start a thread.
@@ -186,7 +186,7 @@ interface ThreadGroup { label: string; threads: ChatThreadSummary[]; }
     .thread-row { border: 1px solid transparent; }
     .thread-row:hover { background: var(--p-surface-100); }
     .thread-row.selected { background: var(--p-surface-100); border-color: var(--p-primary-color); }
-    .message-bubble { border: 1px solid var(--p-surface-200); }
+    .message-bubble { border: 1px solid var(--p-content-border-color); }
     .user-bubble { background: var(--p-primary-50); }
     .assistant-bubble { background: var(--p-surface-50); }
   `],

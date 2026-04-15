@@ -16,7 +16,7 @@ import { ThemeService } from '../services/theme.service';
     }
 
     .sidebar-border {
-      border-color: var(--p-surface-200);
+      border-color: var(--p-content-border-color);
     }
 
     .sidebar-brand {

@@ -40,7 +40,7 @@ import { InitiativeChatTabComponent } from '../chat/initiative-chat-tab.componen
   ],
   styles: [`
     .milestone-card, .milestone-form {
-      border-color: var(--p-surface-200);
+      border-color: var(--p-content-border-color);
     }
   `],
   providers: [MessageService, ConfirmationService],
