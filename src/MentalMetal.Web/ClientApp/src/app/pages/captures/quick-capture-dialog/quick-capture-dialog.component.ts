@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, model, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, effect, inject, model, output, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
+import { PanelModule } from 'primeng/panel';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { CapturesService } from '../../../shared/services/captures.service';
@@ -14,7 +15,16 @@ import { Capture, CaptureType } from '../../../shared/models/capture.model';
   selector: 'app-quick-capture-dialog',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, ButtonModule, DialogModule, InputTextModule, TextareaModule, SelectModule, ToastModule],
+  imports: [
+    FormsModule,
+    ButtonModule,
+    DialogModule,
+    InputTextModule,
+    TextareaModule,
+    SelectModule,
+    PanelModule,
+    ToastModule,
+  ],
   providers: [MessageService],
   template: `
     <p-toast />
@@ -25,32 +35,46 @@ import { Capture, CaptureType } from '../../../shared/models/capture.model';
       [modal]="true"
       [style]="{ width: '32rem' }"
     >
-      <div class="flex flex-col gap-4 pt-4">
+      <!-- keydown captured at dialog level so Cmd/Ctrl+Enter submits even when -->
+      <!-- focus is inside a primeng control that swallows the textarea's Enter -->
+      <div class="flex flex-col gap-4 pt-4" (keydown)="onDialogKeydown($event)">
         <div class="flex flex-col gap-2">
           <label for="captureContent" class="text-sm font-medium text-muted-color">Content *</label>
-          <textarea pTextarea id="captureContent" [(ngModel)]="rawContent" [rows]="6" class="w-full" placeholder="Paste text, meeting notes, or a quick thought..."></textarea>
-        </div>
-
-        <div class="flex flex-col gap-2">
-          <label for="captureType" class="text-sm font-medium text-muted-color">Type *</label>
-          <p-select
-            id="captureType"
-            [options]="typeOptions"
-            [(ngModel)]="selectedType"
-            placeholder="Select type"
+          <textarea
+            #contentField
+            pTextarea
+            id="captureContent"
+            [(ngModel)]="rawContent"
+            (keydown)="onTextareaKeydown($event)"
+            [rows]="6"
             class="w-full"
-          />
+            placeholder="Paste text, meeting notes, or a quick thought…"
+          ></textarea>
         </div>
 
-        <div class="flex flex-col gap-2">
-          <label for="captureTitle" class="text-sm font-medium text-muted-color">Title (optional)</label>
-          <input pInputText id="captureTitle" [(ngModel)]="title" class="w-full" />
-        </div>
+        <p-panel header="Advanced" [toggleable]="true" [collapsed]="true">
+          <div class="flex flex-col gap-4">
+            <div class="flex flex-col gap-2">
+              <label for="captureType" class="text-sm font-medium text-muted-color">Type</label>
+              <p-select
+                id="captureType"
+                [options]="typeOptions"
+                [(ngModel)]="selectedType"
+                class="w-full"
+              />
+            </div>
 
-        <div class="flex flex-col gap-2">
-          <label for="captureSource" class="text-sm font-medium text-muted-color">Source (optional)</label>
-          <input pInputText id="captureSource" [(ngModel)]="source" class="w-full" placeholder="e.g. weekly 1:1, standup" />
-        </div>
+            <div class="flex flex-col gap-2">
+              <label for="captureTitle" class="text-sm font-medium text-muted-color">Title (optional)</label>
+              <input pInputText id="captureTitle" [(ngModel)]="title" class="w-full" />
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <label for="captureSource" class="text-sm font-medium text-muted-color">Source (optional)</label>
+              <input pInputText id="captureSource" [(ngModel)]="source" class="w-full" placeholder="e.g. weekly 1:1, standup" />
+            </div>
+          </div>
+        </p-panel>
       </div>
 
       <ng-template #footer>
@@ -75,9 +99,12 @@ export class QuickCaptureDialogComponent {
   readonly visible = model(false);
   readonly created = output<Capture>();
 
+  private readonly contentField = viewChild<ElementRef<HTMLTextAreaElement>>('contentField');
+
   protected readonly submitting = signal(false);
   protected rawContent = '';
-  protected selectedType: CaptureType | null = null;
+  /** Defaults to QuickNote so the happy path requires no categorization (see capture-text spec). */
+  protected selectedType: CaptureType = 'QuickNote';
   protected title = '';
   protected source = '';
 
@@ -87,12 +114,43 @@ export class QuickCaptureDialogComponent {
     { label: 'Meeting Notes', value: 'MeetingNotes' as CaptureType },
   ];
 
+  constructor() {
+    // Autofocus the content textarea when the dialog opens so the user can
+    // start typing immediately without an extra click (brief: "typing-plus-
+    // Enter fast on the happy path").
+    effect(() => {
+      if (this.visible()) {
+        queueMicrotask(() => this.contentField()?.nativeElement.focus());
+      }
+    });
+  }
+
   protected isValid(): boolean {
-    return this.rawContent.trim().length > 0 && this.selectedType !== null;
+    return this.rawContent.trim().length > 0;
+  }
+
+  protected onTextareaKeydown(event: KeyboardEvent): void {
+    // Plain Enter submits; Shift+Enter inserts a newline as normal.
+    if (event.key === 'Enter' && !event.shiftKey && !event.metaKey && !event.ctrlKey) {
+      if (this.isValid()) {
+        event.preventDefault();
+        this.onSubmit();
+      }
+    }
+  }
+
+  protected onDialogKeydown(event: KeyboardEvent): void {
+    // Cmd/Ctrl+Enter submits from any field inside the dialog.
+    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+      if (this.isValid()) {
+        event.preventDefault();
+        this.onSubmit();
+      }
+    }
   }
 
   protected onSubmit(): void {
-    if (!this.isValid() || !this.selectedType) return;
+    if (!this.isValid()) return;
 
     this.submitting.set(true);
     this.capturesService.create({
@@ -104,10 +162,7 @@ export class QuickCaptureDialogComponent {
       next: (capture) => {
         this.submitting.set(false);
         this.created.emit(capture);
-        this.rawContent = '';
-        this.selectedType = null;
-        this.title = '';
-        this.source = '';
+        this.resetDraft();
         this.visible.set(false);
       },
       error: () => {
@@ -115,5 +170,12 @@ export class QuickCaptureDialogComponent {
         this.messageService.add({ severity: 'error', summary: 'Failed to create capture' });
       },
     });
+  }
+
+  private resetDraft(): void {
+    this.rawContent = '';
+    this.selectedType = 'QuickNote';
+    this.title = '';
+    this.source = '';
   }
 }

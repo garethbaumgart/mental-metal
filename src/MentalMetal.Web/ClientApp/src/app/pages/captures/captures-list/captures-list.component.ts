@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
@@ -7,20 +7,21 @@ import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { CapturesService } from '../../../shared/services/captures.service';
+import { QuickCaptureUiService } from '../../../shared/services/quick-capture-ui.service';
 import { Capture, CaptureType, ProcessingStatus } from '../../../shared/models/capture.model';
-import { QuickCaptureDialogComponent } from '../quick-capture-dialog/quick-capture-dialog.component';
 import { CaptureRecorderComponent } from '../audio-recorder/capture-recorder.component';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-captures-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, DatePipe, ButtonModule, SelectModule, TableModule, TagModule, QuickCaptureDialogComponent, CaptureRecorderComponent],
+  imports: [FormsModule, DatePipe, ButtonModule, SelectModule, TableModule, TagModule, CaptureRecorderComponent],
   template: `
     <div class="flex flex-col gap-6">
       <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold">Captures</h1>
-        <p-button label="New Capture" icon="pi pi-plus" (onClick)="showCreateDialog.set(true)" />
+        <p-button label="New Capture" icon="pi pi-plus" (onClick)="quickCapture.open()" />
       </div>
 
       <app-capture-recorder (uploaded)="onCaptureCreated($event)" />
@@ -90,20 +91,17 @@ import { CaptureRecorderComponent } from '../audio-recorder/capture-recorder.com
         </p-table>
       }
 
-      <app-quick-capture-dialog
-        [(visible)]="showCreateDialog"
-        (created)="onCaptureCreated($event)"
-      />
     </div>
   `,
 })
 export class CapturesListComponent implements OnInit {
   private readonly capturesService = inject(CapturesService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  protected readonly quickCapture = inject(QuickCaptureUiService);
 
   readonly captures = signal<Capture[]>([]);
   readonly loading = signal(true);
-  readonly showCreateDialog = signal(false);
   readonly selectedType = signal<CaptureType | null>(null);
   readonly selectedStatus = signal<ProcessingStatus | null>(null);
 
@@ -122,6 +120,10 @@ export class CapturesListComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadCaptures();
+    // Refresh when captures are authored from anywhere in the app (FAB / Cmd+K / etc.).
+    this.quickCapture.captureCreated$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.loadCaptures();
+    });
   }
 
   protected onFilterChange(): void {
