@@ -12,6 +12,7 @@ export interface Goal {
   id: string;
   userId: string;
   personId: string;
+  personName: string | null;
   title: string;
   description: string | null;
   goalType: GoalType;

@@ -33,6 +33,7 @@ public sealed class PeopleLensEndpointsTests(PostgresFixture postgres) : Integra
         Guid Id,
         Guid UserId,
         Guid PersonId,
+        string? PersonName,
         string Title,
         string? Description,
         string GoalType,
@@ -312,6 +313,38 @@ public sealed class PeopleLensEndpointsTests(PostgresFixture postgres) : Integra
         var after = (await ReadJsonAsync<GoalBody>(resp))!;
         Assert.Equal("Deferred", after.Status);
         Assert.Equal("Reprioritized to Q3", after.DeferralReason);
+    }
+
+    private sealed record PersonBody(Guid Id);
+
+    [Fact]
+    public async Task ListGoals_ForLinkedPerson_PopulatesPersonName()
+    {
+        var client = await AuthedClientAsync();
+
+        var personResp = await client.PostAsJsonAsync("/api/people", new
+        {
+            name = "Goal Test Person",
+            type = "DirectReport",
+        });
+        Assert.Equal(HttpStatusCode.Created, personResp.StatusCode);
+        var person = (await ReadJsonAsync<PersonBody>(personResp))!;
+
+        var createResp = await client.PostAsJsonAsync("/api/goals", new
+        {
+            personId = person.Id,
+            title = "Ship roadmap",
+            goalType = "Performance",
+        });
+        Assert.Equal(HttpStatusCode.Created, createResp.StatusCode);
+        var created = (await ReadJsonAsync<GoalBody>(createResp))!;
+        Assert.Equal("Goal Test Person", created.PersonName);
+
+        var listResp = await client.GetAsync("/api/goals");
+        Assert.Equal(HttpStatusCode.OK, listResp.StatusCode);
+        var list = (await ReadJsonAsync<List<GoalBody>>(listResp))!;
+        var match = Assert.Single(list, g => g.Id == created.Id);
+        Assert.Equal("Goal Test Person", match.PersonName);
     }
 
     [Fact]
