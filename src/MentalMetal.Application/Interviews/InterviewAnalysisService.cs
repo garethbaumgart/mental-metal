@@ -122,17 +122,8 @@ public sealed class InterviewAnalysisService(
 
     private static (string Summary, InterviewDecision? Decision, IReadOnlyList<string> Signals, string? Warning) ParseResponse(string content)
     {
-        var trimmed = content.Trim();
         // Tolerate markdown-fenced output even though the system prompt forbids it.
-        if (trimmed.StartsWith("```", StringComparison.Ordinal))
-        {
-            var firstNewline = trimmed.IndexOf('\n');
-            if (firstNewline > 0)
-                trimmed = trimmed[(firstNewline + 1)..];
-            if (trimmed.EndsWith("```", StringComparison.Ordinal))
-                trimmed = trimmed[..^3];
-            trimmed = trimmed.Trim();
-        }
+        var trimmed = JsonResponseParser.StripCodeFences(content);
 
         AnalysisPayload? payload;
         try

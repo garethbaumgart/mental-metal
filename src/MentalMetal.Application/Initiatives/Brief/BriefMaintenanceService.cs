@@ -199,7 +199,8 @@ public sealed class BriefMaintenanceService(
 
     internal static BriefUpdateProposal ParseProposal(string jsonContent, IReadOnlyList<Guid> sourceCaptureIds)
     {
-        using var doc = JsonDocument.Parse(jsonContent);
+        var stripped = JsonResponseParser.StripCodeFences(jsonContent);
+        using var doc = JsonDocument.Parse(stripped);
         var root = doc.RootElement;
 
         return new BriefUpdateProposal
