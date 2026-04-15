@@ -435,6 +435,18 @@ app.MapPost("/api/people", async (
     CreatePersonHandler handler,
     CancellationToken cancellationToken) =>
 {
+    if (string.IsNullOrWhiteSpace(request.Name))
+    {
+        return Results.Problem(
+            statusCode: StatusCodes.Status400BadRequest,
+            title: "Name is required.",
+            extensions: new Dictionary<string, object?>
+            {
+                ["code"] = "person.validation",
+                ["field"] = "name",
+            });
+    }
+
     try
     {
         var response = await handler.HandleAsync(request, cancellationToken);
@@ -443,6 +455,33 @@ app.MapPost("/api/people", async (
     catch (InvalidOperationException ex)
     {
         return Results.Conflict(new { error = ex.Message });
+    }
+    catch (ArgumentException)
+    {
+        // Defensive: domain guard clauses (e.g. name/type invariants) fall here.
+        // Return a sanitized 400 rather than leaking internal argument names or
+        // stack traces from the exception message.
+        return Results.Problem(
+            statusCode: StatusCodes.Status400BadRequest,
+            title: "Invalid person data.",
+            extensions: new Dictionary<string, object?>
+            {
+                ["code"] = "person.validation",
+                ["field"] = "name",
+            });
+    }
+    catch (Microsoft.EntityFrameworkCore.DbUpdateException)
+    {
+        // Defensive: EF constraint / translation failures can leak Npgsql/LINQ
+        // details through the default error handler. Fold them into a clean 400.
+        return Results.Problem(
+            statusCode: StatusCodes.Status400BadRequest,
+            title: "Invalid person data.",
+            extensions: new Dictionary<string, object?>
+            {
+                ["code"] = "person.validation",
+                ["field"] = "name",
+            });
     }
 }).RequireAuthorization();
 
@@ -1021,6 +1060,18 @@ app.MapPost("/api/commitments", async (
     CreateCommitmentHandler handler,
     CancellationToken cancellationToken) =>
 {
+    if (request.Direction is null)
+    {
+        return Results.Problem(
+            statusCode: StatusCodes.Status400BadRequest,
+            title: "Direction is required.",
+            extensions: new Dictionary<string, object?>
+            {
+                ["code"] = "commitment.validation",
+                ["field"] = "direction",
+            });
+    }
+
     try
     {
         var response = await handler.HandleAsync(request, cancellationToken);
@@ -1028,7 +1079,13 @@ app.MapPost("/api/commitments", async (
     }
     catch (ArgumentException ex)
     {
-        return Results.BadRequest(new { error = ex.Message });
+        return Results.Problem(
+            statusCode: StatusCodes.Status400BadRequest,
+            title: ex.Message,
+            extensions: new Dictionary<string, object?>
+            {
+                ["code"] = "commitment.validation",
+            });
     }
 }).RequireAuthorization();
 
@@ -1655,14 +1712,41 @@ app.MapPost("/api/chat/threads/{threadId:guid}/unarchive", async (
 app.MapPost("/api/one-on-ones", async (
     CreateOneOnOneRequest request,
     CreateOneOnOneHandler handler,
+    TimeProvider timeProvider,
     CancellationToken ct) =>
 {
+    IResult OccurredAtValidation(string title) => Results.Problem(
+        statusCode: StatusCodes.Status400BadRequest,
+        title: title,
+        extensions: new Dictionary<string, object?>
+        {
+            ["code"] = "oneOnOne.validation",
+            ["field"] = "occurredAt",
+        });
+
+    if (request.OccurredAt is null)
+        return OccurredAtValidation("OccurredAt is required.");
+
+    var occurredAt = request.OccurredAt.Value;
+    var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+    if (occurredAt < new DateOnly(2000, 1, 1) || occurredAt > today.AddDays(1))
+        return OccurredAtValidation("OccurredAt must be on or after 2000-01-01 and not more than one day in the future.");
+
     try
     {
         var response = await handler.HandleAsync(request, ct);
         return Results.Created($"/api/one-on-ones/{response.Id}", response);
     }
-    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+    catch (ArgumentException ex)
+    {
+        return Results.Problem(
+            statusCode: StatusCodes.Status400BadRequest,
+            title: ex.Message,
+            extensions: new Dictionary<string, object?>
+            {
+                ["code"] = "oneOnOne.validation",
+            });
+    }
 }).RequireAuthorization();
 
 app.MapGet("/api/one-on-ones", async (
@@ -1780,12 +1864,45 @@ app.MapPost("/api/observations", async (
     CreateObservationHandler handler,
     CancellationToken ct) =>
 {
+    if (request.Tag is null)
+    {
+        return Results.Problem(
+            statusCode: StatusCodes.Status400BadRequest,
+            title: "Observation tag is required.",
+            extensions: new Dictionary<string, object?>
+            {
+                ["code"] = "observation.validation",
+                ["field"] = "tag",
+            });
+    }
+
+    if (!Enum.IsDefined(typeof(ObservationTag), request.Tag.Value))
+    {
+        return Results.Problem(
+            statusCode: StatusCodes.Status400BadRequest,
+            title: $"Unknown observation tag '{(int)request.Tag.Value}'.",
+            extensions: new Dictionary<string, object?>
+            {
+                ["code"] = "observation.invalidTag",
+                ["field"] = "tag",
+            });
+    }
+
     try
     {
         var response = await handler.HandleAsync(request, ct);
         return Results.Created($"/api/observations/{response.Id}", response);
     }
-    catch (ArgumentException ex) { return Results.BadRequest(new { error = ex.Message }); }
+    catch (ArgumentException ex)
+    {
+        return Results.Problem(
+            statusCode: StatusCodes.Status400BadRequest,
+            title: ex.Message,
+            extensions: new Dictionary<string, object?>
+            {
+                ["code"] = "observation.validation",
+            });
+    }
 }).RequireAuthorization();
 
 app.MapGet("/api/observations", async (

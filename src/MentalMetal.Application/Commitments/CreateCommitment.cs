@@ -12,10 +12,13 @@ public sealed class CreateCommitmentHandler(
     public async Task<CommitmentResponse> HandleAsync(
         CreateCommitmentRequest request, CancellationToken cancellationToken)
     {
+        if (request.Direction is null)
+            throw new ArgumentException("Direction is required.", nameof(request.Direction));
+
         var commitment = Commitment.Create(
             currentUserService.UserId,
             request.Description,
-            request.Direction,
+            request.Direction.Value,
             request.PersonId,
             request.DueDate,
             request.InitiativeId,

@@ -12,11 +12,14 @@ public sealed class CreateObservationHandler(
     public async Task<ObservationResponse> HandleAsync(
         CreateObservationRequest request, CancellationToken cancellationToken)
     {
+        if (request.Tag is null)
+            throw new ArgumentException("Tag is required.", nameof(request.Tag));
+
         var observation = Observation.Create(
             currentUserService.UserId,
             request.PersonId,
             request.Description,
-            request.Tag,
+            request.Tag.Value,
             request.OccurredAt,
             request.SourceCaptureId);
 

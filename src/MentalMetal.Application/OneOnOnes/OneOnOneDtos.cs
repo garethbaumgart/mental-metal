@@ -4,7 +4,7 @@ namespace MentalMetal.Application.OneOnOnes;
 
 public sealed record CreateOneOnOneRequest(
     Guid PersonId,
-    DateOnly OccurredAt,
+    DateOnly? OccurredAt,
     string? Notes = null,
     IReadOnlyList<string>? Topics = null,
     int? MoodRating = null);
