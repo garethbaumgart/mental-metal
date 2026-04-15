@@ -70,134 +70,8 @@ import { OneOnOnePrepDialogComponent } from '../one-on-one-prep-dialog.component
           (visibleChange)="prepDialogOpen.set($event)"
         />
 
-        <!-- Profile Section -->
-        <section class="flex flex-col gap-4">
-          <h2 class="text-xl font-semibold">Profile</h2>
-
-          <div class="flex flex-col gap-2">
-            <label for="name" class="text-sm font-medium text-muted-color">Name</label>
-            <input pInputText id="name" [(ngModel)]="name" class="w-full" />
-          </div>
-
-          <div class="flex flex-col gap-2">
-            <label for="email" class="text-sm font-medium text-muted-color">Email</label>
-            <input pInputText id="email" [(ngModel)]="email" class="w-full" />
-          </div>
-
-          <div class="flex flex-col gap-2">
-            <label for="role" class="text-sm font-medium text-muted-color">Role</label>
-            <input pInputText id="role" [(ngModel)]="role" class="w-full" />
-          </div>
-
-          <div class="flex flex-col gap-2">
-            <label for="team" class="text-sm font-medium text-muted-color">Team</label>
-            <input pInputText id="team" [(ngModel)]="team" class="w-full" />
-          </div>
-
-          <div class="flex flex-col gap-2">
-            <label for="notes" class="text-sm font-medium text-muted-color">Notes</label>
-            <textarea pTextarea id="notes" [(ngModel)]="notes" [rows]="4" class="w-full"></textarea>
-          </div>
-
-          <p-button label="Save Profile" (onClick)="saveProfile()" [loading]="savingProfile()" />
-        </section>
-
-        <!-- Type Change Section -->
-        <section class="flex flex-col gap-4">
-          <h2 class="text-xl font-semibold">Change Type</h2>
-          <div class="flex items-end gap-4">
-            <div class="flex flex-col gap-2 flex-1">
-              <label for="newType" class="text-sm font-medium text-muted-color">New Type</label>
-              <p-select
-                id="newType"
-                [options]="typeOptions"
-                [(ngModel)]="newType"
-                placeholder="Select new type"
-                class="w-full"
-              />
-            </div>
-            <p-button
-              label="Change"
-              severity="warn"
-              (onClick)="changeType()"
-              [loading]="changingType()"
-              [disabled]="!newType || newType === person()!.type"
-            />
-          </div>
-        </section>
-
-        <!-- Career Details (DirectReport only) -->
-        @if (person()!.type === 'DirectReport') {
-          <section class="flex flex-col gap-4">
-            <h2 class="text-xl font-semibold">Career Details</h2>
-
-            <div class="flex flex-col gap-2">
-              <label for="level" class="text-sm font-medium text-muted-color">Level</label>
-              <input pInputText id="level" [(ngModel)]="careerLevel" class="w-full" />
-            </div>
-
-            <div class="flex flex-col gap-2">
-              <label for="aspirations" class="text-sm font-medium text-muted-color">Aspirations</label>
-              <textarea pTextarea id="aspirations" [(ngModel)]="careerAspirations" [rows]="3" class="w-full"></textarea>
-            </div>
-
-            <div class="flex flex-col gap-2">
-              <label for="growthAreas" class="text-sm font-medium text-muted-color">Growth Areas</label>
-              <textarea pTextarea id="growthAreas" [(ngModel)]="careerGrowthAreas" [rows]="3" class="w-full"></textarea>
-            </div>
-
-            <p-button label="Save Career Details" (onClick)="saveCareerDetails()" [loading]="savingCareer()" />
-          </section>
-        }
-
-        <!-- Candidate Details (Candidate only) -->
-        @if (person()!.type === 'Candidate') {
-          <section class="flex flex-col gap-4">
-            <h2 class="text-xl font-semibold">Candidate Details</h2>
-
-            <div class="flex items-center gap-3">
-              <span class="text-sm font-medium text-muted-color">Pipeline Status:</span>
-              <p-tag
-                [value]="person()!.candidateDetails?.pipelineStatus ?? 'New'"
-                [severity]="pipelineSeverity(person()!.candidateDetails?.pipelineStatus ?? 'New')"
-              />
-            </div>
-
-            <div class="flex items-end gap-4">
-              <div class="flex flex-col gap-2 flex-1">
-                <label for="pipelineStatus" class="text-sm font-medium text-muted-color">Advance to</label>
-                <p-select
-                  id="pipelineStatus"
-                  [options]="pipelineOptions"
-                  [(ngModel)]="newPipelineStatus"
-                  placeholder="Select status"
-                  class="w-full"
-                />
-              </div>
-              <p-button
-                label="Advance"
-                (onClick)="advancePipeline()"
-                [loading]="advancingPipeline()"
-                [disabled]="!newPipelineStatus"
-              />
-            </div>
-
-            <div class="flex flex-col gap-2">
-              <label for="cvNotes" class="text-sm font-medium text-muted-color">CV Notes</label>
-              <textarea pTextarea id="cvNotes" [(ngModel)]="cvNotes" [rows]="3" class="w-full"></textarea>
-            </div>
-
-            <div class="flex flex-col gap-2">
-              <label for="sourceChannel" class="text-sm font-medium text-muted-color">Source Channel</label>
-              <input pInputText id="sourceChannel" [(ngModel)]="sourceChannel" class="w-full" />
-            </div>
-
-            <p-button label="Save Candidate Details" (onClick)="saveCandidateDetails()" [loading]="savingCandidate()" />
-          </section>
-        }
-
-        <!-- People-Lens Sections -->
-        <section class="flex flex-col gap-3 border-t pt-6">
+        <!-- People-Lens Sections (prep-focused; shown first so 1:1 prep is instant) -->
+        <section class="flex flex-col gap-3">
           <h2 class="text-xl font-semibold">Recent 1:1s</h2>
           @if (recentOneOnOnes().length === 0) {
             <p class="text-muted-color text-sm">No one-on-ones recorded.</p>
@@ -321,6 +195,180 @@ import { OneOnOnePrepDialogComponent } from '../one-on-one-prep-dialog.component
           }
         </section>
 
+        <!-- Profile & Details (read-only by default; expand to edit) -->
+        <section class="flex flex-col gap-4 border-t pt-6">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-semibold" id="profile-details-heading">Profile &amp; details</h2>
+            <p-button
+              [label]="profileEditOpen() ? 'Close' : 'Edit'"
+              [icon]="profileEditOpen() ? 'pi pi-times' : 'pi pi-pencil'"
+              severity="secondary"
+              [text]="true"
+              size="small"
+              [attr.aria-expanded]="profileEditOpen()"
+              aria-controls="profile-edit-panel"
+              (onClick)="toggleProfileEdit()"
+            />
+          </div>
+
+          <!-- Read-only summary (always visible) -->
+          <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            <div>
+              <dt class="text-xs text-muted-color">Name</dt>
+              <dd>{{ person()!.name }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-muted-color">Email</dt>
+              <dd>{{ person()!.email || '—' }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-muted-color">Role</dt>
+              <dd>{{ person()!.role || '—' }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs text-muted-color">Team</dt>
+              <dd>{{ person()!.team || '—' }}</dd>
+            </div>
+            @if (person()!.notes) {
+              <div class="sm:col-span-2">
+                <dt class="text-xs text-muted-color">Notes</dt>
+                <dd class="whitespace-pre-wrap">{{ person()!.notes }}</dd>
+              </div>
+            }
+          </dl>
+
+          @if (profileEditOpen()) {
+            <!-- Editable Profile -->
+            <div
+              class="flex flex-col gap-4 pt-4 border-t"
+              id="profile-edit-panel"
+              role="region"
+              aria-labelledby="profile-details-heading"
+            >
+              <h3 class="text-base font-semibold">Edit profile</h3>
+
+              <div class="flex flex-col gap-2">
+                <label for="name" class="text-sm font-medium text-muted-color">Name</label>
+                <input pInputText id="name" [(ngModel)]="name" class="w-full" />
+              </div>
+
+              <div class="flex flex-col gap-2">
+                <label for="email" class="text-sm font-medium text-muted-color">Email</label>
+                <input pInputText id="email" [(ngModel)]="email" class="w-full" />
+              </div>
+
+              <div class="flex flex-col gap-2">
+                <label for="role" class="text-sm font-medium text-muted-color">Role</label>
+                <input pInputText id="role" [(ngModel)]="role" class="w-full" />
+              </div>
+
+              <div class="flex flex-col gap-2">
+                <label for="team" class="text-sm font-medium text-muted-color">Team</label>
+                <input pInputText id="team" [(ngModel)]="team" class="w-full" />
+              </div>
+
+              <div class="flex flex-col gap-2">
+                <label for="notes" class="text-sm font-medium text-muted-color">Notes</label>
+                <textarea pTextarea id="notes" [(ngModel)]="notes" [rows]="4" class="w-full"></textarea>
+              </div>
+
+              <p-button label="Save Profile" (onClick)="saveProfile()" [loading]="savingProfile()" />
+            </div>
+
+            <!-- Type Change -->
+            <div class="flex flex-col gap-4 pt-4 border-t">
+              <h3 class="text-base font-semibold">Change type</h3>
+              <div class="flex items-end gap-4">
+                <div class="flex flex-col gap-2 flex-1">
+                  <label for="newType" class="text-sm font-medium text-muted-color">New Type</label>
+                  <p-select
+                    id="newType"
+                    [options]="typeOptions"
+                    [(ngModel)]="newType"
+                    placeholder="Select new type"
+                    class="w-full"
+                  />
+                </div>
+                <p-button
+                  label="Change"
+                  severity="warn"
+                  (onClick)="changeType()"
+                  [loading]="changingType()"
+                  [disabled]="!newType || newType === person()!.type"
+                />
+              </div>
+            </div>
+
+            @if (person()!.type === 'DirectReport') {
+              <div class="flex flex-col gap-4 pt-4 border-t">
+                <h3 class="text-base font-semibold">Career details</h3>
+
+                <div class="flex flex-col gap-2">
+                  <label for="level" class="text-sm font-medium text-muted-color">Level</label>
+                  <input pInputText id="level" [(ngModel)]="careerLevel" class="w-full" />
+                </div>
+
+                <div class="flex flex-col gap-2">
+                  <label for="aspirations" class="text-sm font-medium text-muted-color">Aspirations</label>
+                  <textarea pTextarea id="aspirations" [(ngModel)]="careerAspirations" [rows]="3" class="w-full"></textarea>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                  <label for="growthAreas" class="text-sm font-medium text-muted-color">Growth Areas</label>
+                  <textarea pTextarea id="growthAreas" [(ngModel)]="careerGrowthAreas" [rows]="3" class="w-full"></textarea>
+                </div>
+
+                <p-button label="Save Career Details" (onClick)="saveCareerDetails()" [loading]="savingCareer()" />
+              </div>
+            }
+
+            @if (person()!.type === 'Candidate') {
+              <div class="flex flex-col gap-4 pt-4 border-t">
+                <h3 class="text-base font-semibold">Candidate details</h3>
+
+                <div class="flex items-center gap-3">
+                  <span class="text-sm font-medium text-muted-color">Pipeline Status:</span>
+                  <p-tag
+                    [value]="person()!.candidateDetails?.pipelineStatus ?? 'New'"
+                    [severity]="pipelineSeverity(person()!.candidateDetails?.pipelineStatus ?? 'New')"
+                  />
+                </div>
+
+                <div class="flex items-end gap-4">
+                  <div class="flex flex-col gap-2 flex-1">
+                    <label for="pipelineStatus" class="text-sm font-medium text-muted-color">Advance to</label>
+                    <p-select
+                      id="pipelineStatus"
+                      [options]="pipelineOptions"
+                      [(ngModel)]="newPipelineStatus"
+                      placeholder="Select status"
+                      class="w-full"
+                    />
+                  </div>
+                  <p-button
+                    label="Advance"
+                    (onClick)="advancePipeline()"
+                    [loading]="advancingPipeline()"
+                    [disabled]="!newPipelineStatus"
+                  />
+                </div>
+
+                <div class="flex flex-col gap-2">
+                  <label for="cvNotes" class="text-sm font-medium text-muted-color">CV Notes</label>
+                  <textarea pTextarea id="cvNotes" [(ngModel)]="cvNotes" [rows]="3" class="w-full"></textarea>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                  <label for="sourceChannel" class="text-sm font-medium text-muted-color">Source Channel</label>
+                  <input pInputText id="sourceChannel" [(ngModel)]="sourceChannel" class="w-full" />
+                </div>
+
+                <p-button label="Save Candidate Details" (onClick)="saveCandidateDetails()" [loading]="savingCandidate()" />
+              </div>
+            }
+          }
+        </section>
+
         <!-- Archive -->
         <section class="flex flex-col gap-4 border-t pt-6">
           <p-button
@@ -356,6 +404,7 @@ export class PersonDetailComponent implements OnInit {
   readonly advancingPipeline = signal(false);
 
   readonly prepDialogOpen = signal(false);
+  readonly profileEditOpen = signal(false);
 
   readonly recentOneOnOnes = signal<OneOnOne[]>([]);
   readonly observations = signal<Observation[]>([]);
@@ -619,6 +668,24 @@ export class PersonDetailComponent implements OnInit {
     this.goalsService.getPersonEvidenceSummary(personId).subscribe({
       next: (s) => this.evidence.set(s),
     });
+  }
+
+  /**
+   * Toggles the Profile & details edit panel. When opening, re-populate the
+   * draft fields from the current person so stale edits from a previous
+   * "close without save" cycle don't persist. When closing, clear any type-
+   * change / pipeline draft state too.
+   */
+  protected toggleProfileEdit(): void {
+    const next = !this.profileEditOpen();
+    this.profileEditOpen.set(next);
+    if (next) {
+      const p = this.person();
+      if (p) this.populateFields(p);
+    } else {
+      this.newType = null;
+      this.newPipelineStatus = null;
+    }
   }
 
   private populateFields(person: Person): void {
