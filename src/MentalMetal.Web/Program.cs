@@ -448,11 +448,11 @@ app.MapPost("/api/people", async (
 
 app.MapGet("/api/people", async (
     PersonType? type,
-    bool includeArchived,
+    bool? includeArchived,
     GetPeopleHandler handler,
     CancellationToken cancellationToken) =>
 {
-    var list = await handler.HandleAsync(type, includeArchived, cancellationToken);
+    var list = await handler.HandleAsync(type, includeArchived ?? false, cancellationToken);
     return Results.Ok(list);
 }).RequireAuthorization();
 
