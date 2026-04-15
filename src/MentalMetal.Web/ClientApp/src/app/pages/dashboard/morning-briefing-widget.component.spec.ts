@@ -99,16 +99,16 @@ describe('MorningBriefingWidgetComponent', () => {
   });
 
   it('renders server-provided message and settings link on 502 provider error', () => {
+    // Matches the sanitized message returned by the AiErrorMiddleware in
+    // Program.cs — briefing 502s never expose the raw provider exception.
+    const sanitized = 'AI provider request failed. Please try again or check your provider configuration.';
     fixture.detectChanges();
     httpMock.expectOne((r) => r.url === '/api/briefings/morning' && r.method === 'POST')
-      .flush(
-        { error: 'Gemini API error (BadRequest): invalid key' },
-        { status: 502, statusText: 'Bad Gateway' },
-      );
+      .flush({ error: sanitized }, { status: 502, statusText: 'Bad Gateway' });
     fixture.detectChanges();
 
     const html = fixture.nativeElement.innerHTML as string;
-    expect(html).toContain('Gemini API error');
+    expect(html).toContain('AI provider request failed');
     expect(html).toContain('Check AI provider settings');
     expect(html).toContain('/settings');
   });

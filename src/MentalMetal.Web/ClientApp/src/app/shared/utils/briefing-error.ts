@@ -2,9 +2,14 @@ import { HttpErrorResponse } from '@angular/common/http';
 
 /**
  * Canonical states for a briefing-generation failure. Both the morning
- * briefing widget and the weekly briefing page use this so users get the
- * same diagnostic information (server-provided message + a settings link)
- * when the underlying AI provider fails.
+ * briefing widget and the weekly briefing page use this so they render
+ * the same error affordances (server message + a settings link) when the
+ * AI provider fails or the user is rate-limited.
+ *
+ * Note: the briefing endpoints are fronted by a middleware in Program.cs
+ * that sanitizes `502 Bad Gateway` responses to a fixed user-safe message
+ * (we do not expose raw provider exceptions). `message` is therefore the
+ * backend's pre-sanitized string, not the underlying provider error.
  */
 export type BriefingErrorState =
   | { kind: 'notConfigured' }
@@ -16,8 +21,8 @@ const DEFAULT_GENERIC = 'Failed to generate briefing.';
 
 /**
  * Classify an HTTP error from the briefing endpoints into an actionable
- * state. Surfaces the backend's `error` field when the AI provider itself
- * failed, so the user sees *why* rather than a generic message.
+ * state so callers can decide which hint to render (e.g. settings link
+ * for provider/rate-limit failures).
  */
 export function classifyBriefingError(err: unknown): BriefingErrorState {
   if (!(err instanceof HttpErrorResponse)) {

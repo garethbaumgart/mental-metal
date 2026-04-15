@@ -11,14 +11,17 @@ describe('classifyBriefingError', () => {
     expect(classifyBriefingError(err)).toEqual({ kind: 'notConfigured' });
   });
 
-  it('returns providerError on 502 with server message', () => {
+  it('returns providerError on 502 with the backend-sanitized message', () => {
+    // The AI error middleware in Program.cs always returns this exact
+    // message on 502 (it never exposes raw provider exceptions).
+    const sanitized = 'AI provider request failed. Please try again or check your provider configuration.';
     const err = new HttpErrorResponse({
       status: 502,
-      error: { error: 'Gemini API error (BadRequest): invalid key' },
+      error: { error: sanitized },
     });
     expect(classifyBriefingError(err)).toEqual({
       kind: 'providerError',
-      message: 'Gemini API error (BadRequest): invalid key',
+      message: sanitized,
     });
   });
 
