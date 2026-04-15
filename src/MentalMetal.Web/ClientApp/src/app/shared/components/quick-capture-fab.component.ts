@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { QuickCaptureUiService } from '../services/quick-capture-ui.service';
+import { isMac } from '../utils/platform';
 
 /**
  * Persistent Floating Action Button for Quick Capture. Rendered once at
@@ -23,7 +24,7 @@ import { QuickCaptureUiService } from '../services/quick-capture-ui.service';
       [raised]="true"
       severity="primary"
       class="fixed bottom-6 right-6 z-40"
-      [pTooltip]="'Quick capture (' + shortcutLabel() + ')'"
+      [pTooltip]="'Quick capture (' + shortcutGlyph() + ')'"
       tooltipPosition="left"
       [attr.aria-label]="'Quick capture (' + shortcutLabel() + ')'"
       (click)="ui.open()"
@@ -33,14 +34,13 @@ import { QuickCaptureUiService } from '../services/quick-capture-ui.service';
 export class QuickCaptureFabComponent {
   protected readonly ui = inject(QuickCaptureUiService);
 
-  /** macOS uses Cmd, everything else uses Ctrl. */
-  protected readonly shortcutLabel = computed(() => (isMac() ? '⌘K' : 'Ctrl+K'));
-}
+  /** Short glyph for the visible tooltip ("⌘K" / "Ctrl+K"). */
+  protected readonly shortcutGlyph = computed(() => (isMac() ? '⌘K' : 'Ctrl+K'));
 
-export function isMac(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  const platform = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform
-    ?? navigator.platform
-    ?? navigator.userAgent;
-  return /mac/i.test(platform);
+  /**
+   * Spelled-out label for the aria-label. Screen readers announce
+   * "Cmd + K" more reliably than the glyph "⌘K", so we keep the
+   * accessible name as plain text even when the tooltip shows the glyph.
+   */
+  protected readonly shortcutLabel = computed(() => (isMac() ? 'Cmd+K' : 'Ctrl+K'));
 }

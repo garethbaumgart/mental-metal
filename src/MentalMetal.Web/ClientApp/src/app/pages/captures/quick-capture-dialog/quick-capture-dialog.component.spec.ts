@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { describe, it, expect, beforeEach, beforeAll } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll, afterEach } from 'vitest';
 import { QuickCaptureDialogComponent } from './quick-capture-dialog.component';
 
 describe('QuickCaptureDialogComponent', () => {
@@ -95,6 +95,3 @@ describe('QuickCaptureDialogComponent', () => {
     httpMock.expectOne('/api/captures').flush({ id: 'c1' });
   });
 });
-
-// vitest uses globalThis.afterEach from the testing framework; TS needs the hint.
-declare function afterEach(fn: () => void): void;

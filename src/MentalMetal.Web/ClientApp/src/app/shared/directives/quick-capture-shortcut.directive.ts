@@ -1,6 +1,6 @@
 import { Directive, HostListener, inject } from '@angular/core';
 import { QuickCaptureUiService } from '../services/quick-capture-ui.service';
-import { isMac } from '../components/quick-capture-fab.component';
+import { isMac } from '../utils/platform';
 
 /**
  * Host-level keyboard shortcut for opening Quick Capture from anywhere in
@@ -9,7 +9,8 @@ import { isMac } from '../components/quick-capture-fab.component';
  *   - Other: Ctrl+K
  *
  * Applied to the authenticated shell so login/signup pages are unaffected.
- * Swallows the event to stop the browser's location-bar behaviour.
+ * Calls preventDefault() on the matched keystroke to stop the browser's
+ * default handler (e.g. Chrome's address-bar focus) from firing.
  */
 @Directive({
   selector: '[appQuickCaptureShortcut]',
