@@ -260,7 +260,7 @@ The frontend SHALL register a global keyboard shortcut that opens the Quick Capt
 
 #### Scenario: Shortcut opens dialog on macOS
 
-- **WHEN** an authenticated user on macOS presses Cmd+K on any authenticated page other than the one hosting the capture list
+- **WHEN** an authenticated user on macOS presses Cmd+K on any authenticated page
 - **THEN** the Quick Capture dialog opens with focus in the content textarea
 
 #### Scenario: Shortcut opens dialog on Windows/Linux

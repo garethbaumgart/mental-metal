@@ -20,7 +20,7 @@ Caching and staleness rules:
 Facts assembly: the system SHALL assemble `MorningBriefingFacts` deterministically from the user's own data, scoped to UserId:
 
 - `topCommitmentsDueToday` — up to `BriefingOptions.TopItemsPerSection` open commitments with `DueDate` equal to the user-local today OR `IsOverdue = true`, sorted by (overdue desc, dueDate asc, id asc).
-- `oneOnOnesToday` — every OneOnOne with `OccurredOnUtc` (or scheduled date equivalent) whose local calendar date equals today.
+- `oneOnOnesToday` — every OneOnOne with `OccurredAt` (or scheduled date equivalent) whose local calendar date equals today.
 - `overdueDelegations` — up to `TopItemsPerSection` delegations with `IsOverdue = true`, sorted by daysOverdue desc.
 - `recentCaptures` — up to `TopItemsPerSection` captures `CapturedAtUtc >= now - 24h`, sorted by CapturedAtUtc desc.
 - `peopleNeedingAttention` — up to `TopItemsPerSection` people whose last OneOnOne was more than 14 days ago (or never) and who have at least one open commitment or delegation.
@@ -241,7 +241,7 @@ The shell SHALL NOT introduce a shared data-fetch facade: each widget SHALL be a
 
 Every widget on the dashboard SHALL be independently resilient: its data fetch, rendering, and error handling MUST be self-contained. A failure (any HTTP error, network failure, or rendering exception) in any one widget MUST NOT prevent any other widget from rendering.
 
-Each widget SHALL render one of four local states: `loading`, `error`, `empty`, or `data`. The `error` state SHALL name the data source that failed so the user can locate it on its full route (for example, "Couldn't load commitments — try the Commitments page"). Widgets MUST NOT share mutable state; actions taken in one widget (for example, marking a commitment complete) MUST refetch only that widget's data.
+Each widget SHALL render one of four local states: `loading`, `error`, `empty`, or `data`. The `error` state SHALL name the data source that failed so the user can locate it on its full route (for example, "Couldn't load commitments — try the Commitments page"). Actions taken in one widget (for example, marking a commitment complete) MUST refetch only that widget's data. Widgets MAY read from shared singleton services (such as `MyQueueService`) but MUST treat that state as read-only; the widget is responsible for triggering its own load/refresh.
 
 #### Scenario: Briefing fails, other widgets still render
 
@@ -251,7 +251,7 @@ Each widget SHALL render one of four local states: `loading`, `error`, `empty`, 
 #### Scenario: One sibling widget fails, others still render
 
 - **WHEN** `GET /api/delegations` returns HTTP 500 while the dashboard is loading
-- **THEN** the overdue-summary widget renders "Couldn't load delegations" for the delegations segment, but the commitments, 1:1s, and top-of-queue widgets render their live data and the briefing widget renders its markdown
+- **THEN** the overdue-summary widget renders "— delegations stale" for the delegations segment, but the commitments, 1:1s, and top-of-queue widgets render their live data and the briefing widget renders its markdown
 
 #### Scenario: Quick action on one widget does not reload others
 
@@ -332,9 +332,9 @@ When no 1:1s are scheduled today, the widget SHALL render an empty-state message
 
 ### Requirement: Top of queue widget
 
-The dashboard SHALL include a "Top of queue" widget that fetches `GET /api/my-queue` and renders the top 5 items in the queue's existing priority order (as defined by the `my-queue` capability). Each row SHALL show the item's summary and its queue-rank label, and SHALL link to the item's detail route. The widget SHALL provide a "View all" link to `/my-queue`.
+The dashboard SHALL include a "Top of queue" widget that fetches `GET /api/my-queue` and renders the top 5 items in the queue's existing priority order (as defined by the `my-queue` capability). Each row SHALL show the item type badge and title. The widget SHALL provide a "View all" link to `/my-queue`.
 
-When the queue is empty, the widget SHALL render an empty-state message ("Queue is empty.").
+When the queue is empty, the widget SHALL render an empty-state message ("Queue is empty. Nice work.").
 
 #### Scenario: Widget shows top 5 queue items
 
@@ -344,7 +344,7 @@ When the queue is empty, the widget SHALL render an empty-state message ("Queue 
 #### Scenario: Empty queue
 
 - **WHEN** the queue has no items
-- **THEN** the widget renders "Queue is empty."
+- **THEN** the widget renders "Queue is empty. Nice work."
 
 ### Requirement: Overdue summary widget
 
