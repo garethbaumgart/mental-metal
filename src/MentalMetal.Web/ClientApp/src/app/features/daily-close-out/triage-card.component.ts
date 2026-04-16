@@ -18,7 +18,7 @@ export type TriageAction = 'confirm' | 'discard' | 'reassign' | 'quick-discard' 
             <h3 class="text-base font-semibold truncate">{{ capture().title }}</h3>
           }
           <div class="flex items-center gap-2 flex-wrap">
-            <p-tag [value]="capture().processingStatus" [severity]="statusSeverity()" />
+            <p-tag [value]="displayedStatus()" [severity]="statusSeverity()" />
             @if (capture().extractionStatus !== 'None') {
               <p-tag [value]="capture().extractionStatus" severity="secondary" />
             }
@@ -105,10 +105,26 @@ export class TriageCardComponent {
   }
 
   protected canProcess(): boolean {
-    return this.capture().processingStatus === 'Raw';
+    return this.capture().processingStatus === 'Raw' && !this.processing();
+  }
+
+  /**
+   * Prefer "Processing" while a mutation is in flight from either the
+   * per-row button or the bulk runner — the server-side status is still
+   * `Raw` until it writes back the transition, so derive an optimistic
+   * label here so the badge reflects what the user just clicked.
+   */
+  protected displayedStatus(): string {
+    if (this.processing() && this.capture().processingStatus === 'Raw') {
+      return 'Processing';
+    }
+    return this.capture().processingStatus;
   }
 
   protected statusSeverity(): 'info' | 'warn' | 'danger' | 'success' | 'secondary' {
+    if (this.processing() && this.capture().processingStatus === 'Raw') {
+      return 'warn';
+    }
     switch (this.capture().processingStatus) {
       case 'Raw':
         return 'info';

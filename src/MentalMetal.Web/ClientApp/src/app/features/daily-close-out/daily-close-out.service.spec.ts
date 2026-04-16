@@ -101,6 +101,57 @@ describe('DailyCloseOutService', () => {
       expect(result.providerNotConfigured).toBe(false);
     });
 
+    it('clamps non-positive parallelism up to 1 so all captures still run', async () => {
+      const ids = ['a', 'b'];
+      const promise = service.processAllRaw(ids, 0);
+
+      await tick();
+      httpMock.expectOne('/api/captures/a/process').flush({});
+      await tick();
+      httpMock.expectOne('/api/captures/b/process').flush({});
+
+      const result = await promise;
+      expect(result.attempted).toBe(2);
+      expect(result.succeeded).toBe(2);
+    });
+
+    it('onItemDone fires after each success/failure for per-card refresh', async () => {
+      const ids = ['a', 'b'];
+      const seen: string[] = [];
+      const promise = service.processAllRaw(ids, 1, (id) => seen.push(id));
+
+      await tick();
+      httpMock.expectOne('/api/captures/a/process').flush({});
+      await tick();
+      httpMock.expectOne('/api/captures/b/process').flush('boom', { status: 500, statusText: 'X' });
+
+      await promise;
+      expect(seen).toEqual(['a', 'b']);
+    });
+
+    it('with parallelism > 1, stops dispatching NEW work after provider-not-configured (in-flight may still complete)', async () => {
+      const ids = ['a', 'b', 'c', 'd'];
+      const promise = service.processAllRaw(ids, 2);
+
+      await tick();
+      // Both workers have dispatched a and b.
+      httpMock.expectOne('/api/captures/a/process').flush(
+        { code: 'ai_provider_not_configured', error: 'not configured' },
+        { status: 409, statusText: 'Conflict' },
+      );
+      await tick();
+      // b is already in flight; complete it so Promise.all resolves.
+      httpMock.expectOne('/api/captures/b/process').flush({});
+
+      const result = await promise;
+      expect(result.providerNotConfigured).toBe(true);
+      // c and d were never dispatched.
+      httpMock.expectNone('/api/captures/c/process');
+      httpMock.expectNone('/api/captures/d/process');
+      // attempted is 2 (a and b), not 4.
+      expect(result.attempted).toBe(2);
+    });
+
     it('short-circuits on ai_provider_not_configured', async () => {
       const ids = ['a', 'b', 'c'];
       const promise = service.processAllRaw(ids, 1);

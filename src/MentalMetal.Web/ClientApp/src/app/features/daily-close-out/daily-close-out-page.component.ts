@@ -178,6 +178,11 @@ export class DailyCloseOutPageComponent implements OnInit {
   }
 
   private processOne(id: string): void {
+    // A prior per-row or bulk attempt may have surfaced the
+    // provider-not-configured block. Clear it before retrying so the
+    // block doesn't remain on-screen after the user (presumably)
+    // opened /settings and fixed their key.
+    this.providerNotConfigured.set(false);
     this.markProcessing(id, true);
     this.capturesService.process(id).subscribe({
       next: () => {
@@ -221,7 +226,17 @@ export class DailyCloseOutPageComponent implements OnInit {
     });
 
     try {
-      const result = await this.service.processAllRaw(rawIds);
+      const result = await this.service.processAllRaw(
+        rawIds,
+        3,
+        // Refresh the queue after each item so the card's status badge
+        // and the progress counts (Raw/Processing/Processed/Failed)
+        // flip live during a long batch — not just at the end.
+        (id) => {
+          this.markProcessing(id, false);
+          this.store.refreshQueue();
+        },
+      );
       if (result.providerNotConfigured) {
         this.providerNotConfigured.set(true);
       } else {

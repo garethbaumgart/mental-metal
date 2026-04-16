@@ -35,12 +35,19 @@ export class DailyCloseOutService {
    * the caller receives a summary with success / failure counts.
    *
    * If any capture fails with the well-known
-   * `ai_provider_not_configured` code, we short-circuit: no more work
-   * is dispatched and the caller routes the user to /settings.
+   * `ai_provider_not_configured` code, the worker pool stops dispatching
+   * new work. Note: requests already in flight at the moment the flag
+   * flips will still complete — the guarantee is "no more requests are
+   * started," not "pending requests are cancelled."
+   *
+   * The optional `onItemDone` callback fires after each capture
+   * completes (success or failure) so callers can refresh per-card
+   * state during a long-running batch.
    */
   async processAllRaw(
     captureIds: string[],
     parallelism = 3,
+    onItemDone?: (id: string) => void,
   ): Promise<ProcessAllRawResult> {
     const result: ProcessAllRawResult = {
       attempted: 0,
@@ -49,6 +56,10 @@ export class DailyCloseOutService {
       providerNotConfigured: false,
     };
     if (captureIds.length === 0) return result;
+
+    // Clamp so callers passing 0 / negative don't accidentally create an
+    // empty worker pool and leave every capture un-processed.
+    const workerCount = Math.max(1, Math.min(parallelism, captureIds.length));
 
     let cursor = 0;
     const worker = async (): Promise<void> => {
@@ -65,18 +76,16 @@ export class DailyCloseOutService {
             (err.error as { code?: string } | null)?.code === 'ai_provider_not_configured'
           ) {
             result.providerNotConfigured = true;
+            onItemDone?.(id);
             return;
           }
           result.failed++;
         }
+        onItemDone?.(id);
       }
     };
 
-    const workers = Array.from(
-      { length: Math.min(parallelism, captureIds.length) },
-      () => worker(),
-    );
-    await Promise.all(workers);
+    await Promise.all(Array.from({ length: workerCount }, () => worker()));
     return result;
   }
 
