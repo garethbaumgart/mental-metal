@@ -26,7 +26,7 @@ public sealed class ImportCaptureFromFileHandler(
     public async Task<ImportCaptureResponse> HandleAsync(
         ImportCaptureFromFileRequest request, CancellationToken cancellationToken)
     {
-        var ext = Path.GetExtension(request.FileName).ToLower();
+        var ext = Path.GetExtension(request.FileName ?? "").ToLowerInvariant();
         if (!SupportedExtensions.Contains(ext) && !SupportedContentTypes.Contains(request.ContentType))
             throw new UnsupportedMediaTypeException(
                 $"Unsupported file type: {request.ContentType} / {ext}");
@@ -45,7 +45,7 @@ public sealed class ImportCaptureFromFileHandler(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            throw new ArgumentException($"Failed to parse file: {ex.Message}");
+            throw new ArgumentException($"Failed to parse file: {ex.Message}", ex);
         }
 
         if (string.IsNullOrWhiteSpace(content))

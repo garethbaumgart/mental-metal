@@ -21,7 +21,7 @@ public sealed class PatAuthenticationHandler(
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         var authHeader = Request.Headers.Authorization.ToString();
-        if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer ", StringComparison.Ordinal))
+        if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
             return AuthenticateResult.NoResult();
 
         var token = authHeader["Bearer ".Length..].Trim();

@@ -5,7 +5,7 @@ namespace MentalMetal.Infrastructure.Parsers;
 public sealed class PlainTextTranscriptParser : ITranscriptFileParser
 {
     public bool CanHandle(string contentType, string fileName) =>
-        contentType == "text/plain" ||
+        contentType.StartsWith("text/plain", StringComparison.OrdinalIgnoreCase) ||
         Path.GetExtension(fileName).Equals(".txt", StringComparison.OrdinalIgnoreCase);
 
     public async Task<string> ExtractTextAsync(Stream stream, CancellationToken cancellationToken)

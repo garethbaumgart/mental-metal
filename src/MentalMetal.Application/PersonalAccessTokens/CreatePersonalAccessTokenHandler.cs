@@ -14,7 +14,7 @@ public sealed class CreatePersonalAccessTokenHandler(
     public async Task<PatCreatedResponse> HandleAsync(CreatePatRequest request, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Name, nameof(request.Name));
-        if (request.Scopes.Count == 0)
+        if (request.Scopes is null || request.Scopes.Count == 0)
             throw new ArgumentException("At least one scope is required.");
 
         var (isValid, unsupported) = PatScopeValidator.Validate(request.Scopes);

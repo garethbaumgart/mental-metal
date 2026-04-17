@@ -23,7 +23,7 @@ public sealed class DocxTranscriptParser : ITranscriptFileParser
             return Task.FromResult(string.Empty);
 
         var sb = new StringBuilder();
-        foreach (var paragraph in body.Elements<Paragraph>())
+        foreach (var paragraph in body.Descendants<Paragraph>())
         {
             sb.AppendLine(paragraph.InnerText);
         }

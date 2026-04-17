@@ -12,7 +12,7 @@ public sealed class ResolvePatBearerService(
 {
     public async Task<PatResolution?> ResolveAsync(string plaintext, CancellationToken cancellationToken)
     {
-        var (hash, prefix) = hasher.HashToken(plaintext);
+        var (computedHash, prefix) = hasher.HashToken(plaintext);
 
         var candidates = await repository.GetByLookupPrefixAsync(prefix, cancellationToken);
         if (candidates.Count == 0)
@@ -20,7 +20,8 @@ public sealed class ResolvePatBearerService(
 
         foreach (var candidate in candidates)
         {
-            if (!hasher.Verify(plaintext, candidate.TokenHash))
+            if (!System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
+                    computedHash, candidate.TokenHash))
                 continue;
 
             if (!candidate.IsActive)

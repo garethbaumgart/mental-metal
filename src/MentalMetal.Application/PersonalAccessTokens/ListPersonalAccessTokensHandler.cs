@@ -13,7 +13,7 @@ public sealed class ListPersonalAccessTokensHandler(
         return tokens.Select(t => new PatSummaryResponse(
             t.Id,
             t.Name,
-            t.Scopes,
+            new HashSet<string>(t.Scopes),
             t.CreatedAt,
             t.LastUsedAt,
             t.RevokedAt)).ToList();

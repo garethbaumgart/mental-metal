@@ -6,7 +6,7 @@ public sealed record FormatDetectionResult(string NormalizedContent, bool IsMeet
 
 public static partial class TranscriptFormatDetector
 {
-    [GeneratedRegex(@"^[A-Z][A-Za-z '\u2019\-]{1,40}:\s", RegexOptions.Multiline)]
+    [GeneratedRegex(@"^\p{Lu}[\p{L} '\u2019\-]{1,40}:\s", RegexOptions.Multiline)]
     private static partial Regex SpeakerPattern();
 
     [GeneratedRegex(@"^(Summary|Transcript)\s*$", RegexOptions.Multiline | RegexOptions.IgnoreCase)]
