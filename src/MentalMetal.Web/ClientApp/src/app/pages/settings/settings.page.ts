@@ -11,6 +11,7 @@ import { UserService } from '../../shared/services/user.service';
 import { ThemeService } from '../../shared/services/theme.service';
 import { AiProviderSettingsComponent } from './ai-provider-settings.component';
 import { PasswordSettingsComponent } from './password-settings.component';
+import { BookmarkletInstallerComponent } from './bookmarklet-installer.component';
 import { PersonalAccessTokensComponent } from './personal-access-tokens.component';
 
 @Component({
@@ -25,6 +26,7 @@ import { PersonalAccessTokensComponent } from './personal-access-tokens.componen
     ToggleSwitchModule,
     ToastModule,
     AiProviderSettingsComponent,
+    BookmarkletInstallerComponent,
     PasswordSettingsComponent,
     PersonalAccessTokensComponent,
   ],
@@ -108,6 +110,9 @@ import { PersonalAccessTokensComponent } from './personal-access-tokens.componen
 
       <!-- Personal Access Tokens Section -->
       <app-personal-access-tokens />
+
+      <!-- Bookmarklet Section -->
+      <app-bookmarklet-installer />
 
       <!-- AI Provider Section -->
       <app-ai-provider-settings />
