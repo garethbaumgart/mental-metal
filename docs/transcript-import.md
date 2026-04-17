@@ -47,7 +47,7 @@ When imported content matches the Google Meet transcript format (speaker-labelle
 
 ### One-Click: Bookmarklet
 
-The fastest way to import transcripts. Works on any Google Doc — no extension, no OAuth, no file download.
+The fastest way to import transcripts. Works on any Google Doc in a desktop browser — no extension, no OAuth, no file download. (Mobile browsers do not support bookmarklets; use the file-drop method instead.)
 
 **Setup (once, ~30 seconds):**
 

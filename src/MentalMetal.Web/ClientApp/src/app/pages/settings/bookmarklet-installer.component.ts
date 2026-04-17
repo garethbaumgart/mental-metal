@@ -1,7 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
+import { MessageService } from 'primeng/api';
+import { of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import {
   PersonalAccessTokensService,
   PatSummary,
@@ -18,9 +23,17 @@ import { generateBookmarkletUrl } from './bookmarklet-template';
       <h2 class="text-xl font-semibold">Bookmarklet</h2>
       <p class="text-sm text-muted-color">
         Import Google Docs transcripts into Mental Metal with one click — no extension or OAuth needed.
+        Desktop browsers only.
       </p>
 
-      @if (!hasActiveTokens()) {
+      @if (loadError()) {
+        <div
+          class="p-4 rounded-lg text-sm"
+          style="background: var(--p-surface-100); border: 1px solid var(--p-content-border-color)"
+        >
+          <p class="font-medium" style="color: var(--p-red-500)">Failed to load tokens. Check your connection and refresh the page.</p>
+        </div>
+      } @else if (!hasActiveTokens()) {
         <div
           class="p-4 rounded-lg text-sm"
           style="background: var(--p-surface-100); border: 1px solid var(--p-content-border-color)"
@@ -51,12 +64,12 @@ import { generateBookmarkletUrl } from './bookmarklet-template';
           </div>
 
           <!-- Step 2: Drag bookmarklet -->
-          @if (bookmarkletUrl()) {
+          @if (bookmarkletSafeUrl()) {
             <div class="flex flex-col gap-2">
               <label class="text-sm font-medium text-muted-color">2. Drag this to your bookmarks bar</label>
               <div class="flex items-center gap-3">
                 <a
-                  [href]="bookmarkletUrl()"
+                  [href]="bookmarkletSafeUrl()"
                   class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-grab no-underline"
                   style="background: var(--p-primary-color); color: var(--p-primary-contrast-color)"
                   (click)="$event.preventDefault()"
@@ -68,6 +81,9 @@ import { generateBookmarkletUrl } from './bookmarklet-template';
                 </a>
                 <span class="text-xs text-muted-color italic">drag, don't click</span>
               </div>
+              <p class="text-xs text-muted-color mt-1">
+                Your token is embedded in the bookmark. If you revoke the token, you'll need to regenerate and re-drag.
+              </p>
             </div>
 
             <!-- Step 3: Instructions -->
@@ -83,26 +99,34 @@ import { generateBookmarkletUrl } from './bookmarklet-template';
     </section>
   `,
 })
-export class BookmarkletInstallerComponent implements OnInit {
+export class BookmarkletInstallerComponent {
   private readonly patService = inject(PersonalAccessTokensService);
+  private readonly sanitizer = inject(DomSanitizer);
+  private readonly messageService = inject(MessageService);
   private readonly instanceUrl = window.location.origin;
 
-  private readonly tokens = signal<PatSummary[]>([]);
+  readonly loadError = signal(false);
+
+  private readonly tokens = toSignal(
+    this.patService.list().pipe(
+      catchError(() => {
+        this.loadError.set(true);
+        return of([] as PatSummary[]);
+      })
+    ),
+    { initialValue: [] as PatSummary[] }
+  );
+
   protected readonly patInput = signal('');
 
   protected readonly hasActiveTokens = computed(() =>
     this.tokens().some((t) => !t.revokedAt && t.scopes.includes('captures:write'))
   );
 
-  protected readonly bookmarkletUrl = computed(() => {
+  protected readonly bookmarkletSafeUrl = computed((): SafeUrl | null => {
     const pat = this.patInput().trim();
     if (!pat || !pat.startsWith('mm_pat_')) return null;
-    return generateBookmarkletUrl(this.instanceUrl, pat);
+    const url = generateBookmarkletUrl(this.instanceUrl, pat);
+    return this.sanitizer.bypassSecurityTrustUrl(url);
   });
-
-  ngOnInit(): void {
-    this.patService.list().subscribe({
-      next: (tokens) => this.tokens.set(tokens),
-    });
-  }
 }

@@ -2,7 +2,7 @@
 
 ### Requirement: Bookmarklet extracts Google Doc text and imports to Mental Metal
 
-The bookmarklet SHALL, when clicked on a Google Docs page, extract the document ID from the current URL (supporting both `/document/d/<ID>/` and `/document/u/<N>/d/<ID>/` patterns), fetch the document's plain text via the Google Docs export URL (`/document/d/<ID>/export?format=txt`) using the user's existing browser session, and POST the content as JSON to the user's Mental Metal instance at `POST /api/captures/import` with `Authorization: Bearer <PAT>`, `Content-Type: application/json`, and body `{ "type": "Transcript", "content": "<text>", "title": "<doc-title>", "sourceUrl": "<doc-url>" }`. The document title SHALL have the ` - Google Docs` suffix stripped before use.
+The bookmarklet SHALL, when clicked on a page with hostname `docs.google.com`, extract the document ID from the current URL (supporting both `/document/d/<ID>/` and `/document/u/<N>/d/<ID>/` patterns), fetch the document's plain text via the Google Docs export URL (`/document/d/<ID>/export?format=txt`) using the user's existing browser session, and POST the content as JSON to the user's Mental Metal instance at `POST /api/captures/import` with `Authorization: Bearer <PAT>`, `Content-Type: application/json`, and body `{ "type": "Transcript", "content": "<text>", "title": "<doc-title>", "sourceUrl": "<doc-url>" }`. The document title SHALL have the ` - Google Docs` suffix stripped before use.
 
 #### Scenario: Import a Google Doc transcript
 
@@ -16,7 +16,7 @@ The bookmarklet SHALL, when clicked on a Google Docs page, extract the document 
 
 #### Scenario: Non-Google-Doc page shows error
 
-- **WHEN** a user clicks the bookmarklet on a page whose URL does not contain `/document/d/` or `/document/u/<N>/d/`
+- **WHEN** a user clicks the bookmarklet on a page whose hostname is not `docs.google.com` or whose URL does not contain `/document/d/` or `/document/u/<N>/d/`
 - **THEN** the bookmarklet shows an error toast "Not a Google Doc" and makes no network requests
 
 #### Scenario: Export fetch failure shows error
@@ -31,7 +31,7 @@ The bookmarklet SHALL, when clicked on a Google Docs page, extract the document 
 
 ### Requirement: Bookmarklet shows visual feedback via injected toast
 
-The bookmarklet SHALL inject a fixed-position toast element into the Google Docs page DOM showing the result of the import operation. The toast SHALL use inline styles (no external CSS) to avoid interference with Google Docs' stylesheets. The toast SHALL auto-dismiss after 4 seconds. On success, the toast SHALL include a link to the created capture in the user's Mental Metal instance (opening in a new tab). On error, the toast SHALL show the error reason.
+The bookmarklet SHALL inject a fixed-position toast element into the Google Docs page DOM showing the result of the import operation. The toast SHALL use inline styles (no external CSS) to avoid interference with Google Docs' stylesheets. Success toasts SHALL auto-dismiss after 4 seconds; error toasts SHALL auto-dismiss after 6 seconds. On success, the toast SHALL include a link to the created capture in the user's Mental Metal instance (opening in a new tab). On error, the toast SHALL show the error reason.
 
 #### Scenario: Success toast with capture link
 
@@ -59,16 +59,16 @@ The bookmarklet SHALL be a single `javascript:` URL with no external script depe
 
 ### Requirement: Settings page bookmarklet installer
 
-The Settings page SHALL include a "Bookmarklet" section (below the Personal Access Tokens section) that allows a user to generate and install the bookmarklet. The section SHALL display the Mental Metal instance URL (auto-detected from `window.location.origin`). The section SHALL allow the user to select an existing PAT with `captures:write` scope from a dropdown. When a PAT is selected, the section SHALL display a draggable link element styled as a button containing the generated `javascript:` URL, with the label "Import to Mental Metal". The section SHALL include brief usage instructions.
+The Settings page SHALL include a "Bookmarklet" section (below the Personal Access Tokens section) that allows a user to generate and install the bookmarklet. The section SHALL display the Mental Metal instance URL (auto-detected from `window.location.origin`). The section SHALL allow the user to paste their PAT (shown once at creation) into a text field. When a valid PAT (starting with `mm_pat_`) is entered, the section SHALL display a draggable link element styled as a button containing the generated `javascript:` URL, with the label "Import to Mental Metal". The section SHALL include brief usage instructions.
 
 #### Scenario: Auto-detect instance URL
 
 - **WHEN** a user navigates to the Settings bookmarklet section
 - **THEN** the instance URL is pre-filled with the current `window.location.origin`
 
-#### Scenario: Select PAT and generate bookmarklet
+#### Scenario: Paste PAT and generate bookmarklet
 
-- **WHEN** a user selects a PAT from the dropdown
+- **WHEN** a user pastes a valid PAT (starting with `mm_pat_`) into the text field
 - **THEN** the draggable bookmarklet link appears with the PAT and instance URL baked in
 
 #### Scenario: No PATs available
