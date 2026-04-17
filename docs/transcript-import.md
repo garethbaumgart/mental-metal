@@ -45,6 +45,21 @@ curl -X POST https://your-instance/api/captures/import \
 
 When imported content matches the Google Meet transcript format (speaker-labelled turns like `Alice: text`), the system preserves the speaker labels so the existing speaker-to-Person mapping UI works without extra handling.
 
-## Coming Next
+### One-Click: Bookmarklet
 
-- **`transcript-bookmarklet`**: A one-click bookmarklet that exports the current Google Doc's text and POSTs it directly to Mental Metal via your PAT. No extension install required.
+The fastest way to import transcripts. Works on any Google Doc in a desktop browser — no extension, no OAuth, no file download. (Mobile browsers do not support bookmarklets; use the file-drop method instead.)
+
+**Setup (once, ~30 seconds):**
+
+1. Go to **Settings → Personal Access Tokens** and generate a token (copy it — it's shown only once).
+2. Scroll down to **Settings → Bookmarklet**.
+3. Paste your token into the field.
+4. Drag the **"Import to Mental Metal"** button to your browser's bookmarks bar.
+
+**Daily use:**
+
+1. Open a Google Doc transcript (from Drive or a calendar event link).
+2. Click the bookmarklet in your bookmarks bar.
+3. A green toast confirms the import. Click "View capture" to see it in Mental Metal.
+
+The bookmarklet uses Google Docs' export URL to fetch the document text (same-origin, uses your existing Google session) and POSTs it to Mental Metal via your PAT. No data passes through any third party. If the bookmarklet stops working (e.g., you revoked the token), generate a new PAT and re-install from Settings.
