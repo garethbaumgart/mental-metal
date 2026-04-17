@@ -13,6 +13,7 @@ using MentalMetal.Domain.Nudges;
 using MentalMetal.Domain.Observations;
 using MentalMetal.Domain.OneOnOnes;
 using MentalMetal.Domain.People;
+using MentalMetal.Domain.PersonalAccessTokens;
 using MentalMetal.Domain.Users;
 using MentalMetal.Infrastructure.Ai;
 using MentalMetal.Infrastructure.Auth;
@@ -41,6 +42,7 @@ public sealed class MentalMetalDbContext(
     public DbSet<Briefing> Briefings => Set<Briefing>();
     public DbSet<Interview> Interviews => Set<Interview>();
     public DbSet<Nudge> Nudges => Set<Nudge>();
+    public DbSet<PersonalAccessToken> PersonalAccessTokens => Set<PersonalAccessToken>();
 
     public void DiscardPendingChanges() => ChangeTracker.Clear();
 
@@ -63,5 +65,6 @@ public sealed class MentalMetalDbContext(
         modelBuilder.Entity<Briefing>().HasQueryFilter(b => b.UserId == currentUserService.UserId);
         modelBuilder.Entity<Interview>().HasQueryFilter(i => i.UserId == currentUserService.UserId);
         modelBuilder.Entity<Nudge>().HasQueryFilter(n => n.UserId == currentUserService.UserId);
+        modelBuilder.Entity<PersonalAccessToken>().HasQueryFilter(t => t.UserId == currentUserService.UserId);
     }
 }

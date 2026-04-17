@@ -72,6 +72,13 @@ export class CapturesService {
     return this.http.post<Capture>(`${this.baseUrl}/${id}/unlink-initiative`, { initiativeId });
   }
 
+  importFile(file: File, type?: CaptureType): Observable<{ id: string }> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    if (type) form.append('type', type);
+    return this.http.post<{ id: string }>(`${this.baseUrl}/import`, form);
+  }
+
   uploadAudio(blob: Blob, durationSeconds: number, title?: string, source?: string): Observable<Capture> {
     const form = new FormData();
     // Preserve MIME on the file part — the backend reads `file.ContentType`.

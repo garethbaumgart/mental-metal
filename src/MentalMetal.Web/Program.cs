@@ -35,6 +35,7 @@ using Google.Cloud.Storage.V1;
 using MentalMetal.Infrastructure;
 using MentalMetal.Infrastructure.Auth;
 using MentalMetal.Web.Auth;
+using MentalMetal.Web.Features.PersonalAccessTokens;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
@@ -121,7 +122,9 @@ builder.Services.AddAuthentication(options =>
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret))
         };
     })
-    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme);
+    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddScheme<PatAuthenticationSchemeOptions, PatAuthenticationHandler>(
+        PatAuthenticationHandler.SchemeName, _ => { });
 
 var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
 if (!string.IsNullOrEmpty(googleClientId))
@@ -135,7 +138,29 @@ if (!string.IsNullOrEmpty(googleClientId))
         });
 }
 
-builder.Services.AddAuthorization();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, ScopeRequirementHandler>();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireCapturesWriteScope", policy =>
+    {
+        policy.AddAuthenticationSchemes(
+            JwtBearerDefaults.AuthenticationScheme,
+            PatAuthenticationHandler.SchemeName);
+        policy.RequireAuthenticatedUser();
+        policy.Requirements.Add(new ScopeRequirement("captures:write"));
+    });
+});
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("ImportIngestFromGoogle", policy =>
+    {
+        policy.WithOrigins("https://docs.google.com", "https://calendar.google.com")
+            .WithMethods("POST")
+            .WithHeaders("Authorization", "Content-Type")
+            .DisallowCredentials();
+    });
+});
 
 var app = builder.Build();
 
@@ -152,6 +177,7 @@ if (!app.Environment.IsDevelopment())
 
 app.UseStaticFiles();
 
+app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -2097,6 +2123,8 @@ app.MapGet("/api/people/{personId:guid}/evidence-summary", async (
 }).RequireAuthorization();
 
 app.MapAudioCaptureEndpoints();
+app.MapImportCaptureEndpoints();
+app.MapPersonalAccessTokenEndpoints();
 app.MapDailyCloseOutEndpoints();
 app.MapMyQueueEndpoints();
 app.MapBriefingEndpoints();

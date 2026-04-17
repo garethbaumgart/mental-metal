@@ -1,5 +1,6 @@
 using MentalMetal.Application.Briefings;
 using MentalMetal.Application.Captures;
+using MentalMetal.Application.Captures.ImportCapture;
 using MentalMetal.Application.DailyCloseOut;
 using MentalMetal.Application.Chat.Global;
 using MentalMetal.Application.Initiatives.Chat;
@@ -17,6 +18,7 @@ using MentalMetal.Application.Nudges;
 using MentalMetal.Application.Observations;
 using MentalMetal.Application.OneOnOnes;
 using MentalMetal.Application.People;
+using MentalMetal.Application.PersonalAccessTokens;
 using MentalMetal.Application.PeopleLens;
 using MentalMetal.Application.Users;
 using MentalMetal.Domain.Briefings;
@@ -29,6 +31,7 @@ using MentalMetal.Domain.Initiatives;
 using MentalMetal.Domain.Initiatives.LivingBrief;
 using MentalMetal.Domain.Interviews;
 using MentalMetal.Domain.Nudges;
+using MentalMetal.Domain.PersonalAccessTokens;
 using MentalMetal.Domain.Observations;
 using MentalMetal.Domain.OneOnOnes;
 using MentalMetal.Domain.People;
@@ -37,6 +40,7 @@ using MentalMetal.Infrastructure.Ai;
 using MentalMetal.Infrastructure.Auth;
 using MentalMetal.Infrastructure.Persistence;
 using MentalMetal.Infrastructure.Repositories;
+using MentalMetal.Infrastructure.Parsers;
 using MentalMetal.Infrastructure.Storage;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -103,6 +107,7 @@ public static class DependencyInjection
         services.AddScoped<IBriefingRepository, BriefingRepository>();
         services.AddScoped<IInterviewRepository, InterviewRepository>();
         services.AddScoped<INudgeRepository, NudgeRepository>();
+        services.AddScoped<IPersonalAccessTokenRepository, PersonalAccessTokenRepository>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 
@@ -322,6 +327,20 @@ public static class DependencyInjection
         services.AddScoped<PauseNudgeHandler>();
         services.AddScoped<ResumeNudgeHandler>();
         services.AddScoped<DeleteNudgeHandler>();
+
+        // Personal Access Token handlers
+        services.AddSingleton<IPatTokenHasher, PatTokenHasher>();
+        services.AddScoped<CreatePersonalAccessTokenHandler>();
+        services.AddScoped<ListPersonalAccessTokensHandler>();
+        services.AddScoped<RevokePersonalAccessTokenHandler>();
+        services.AddScoped<ResolvePatBearerService>();
+
+        // Capture import handlers and parsers
+        services.AddSingleton<ITranscriptFileParser, PlainTextTranscriptParser>();
+        services.AddSingleton<ITranscriptFileParser, HtmlTranscriptParser>();
+        services.AddSingleton<ITranscriptFileParser, DocxTranscriptParser>();
+        services.AddScoped<ImportCaptureFromJsonHandler>();
+        services.AddScoped<ImportCaptureFromFileHandler>();
 
         // Daily close-out handlers
         services.AddScoped<GetCloseOutQueueHandler>();

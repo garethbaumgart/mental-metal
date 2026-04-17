@@ -11,6 +11,7 @@ import { UserService } from '../../shared/services/user.service';
 import { ThemeService } from '../../shared/services/theme.service';
 import { AiProviderSettingsComponent } from './ai-provider-settings.component';
 import { PasswordSettingsComponent } from './password-settings.component';
+import { PersonalAccessTokensComponent } from './personal-access-tokens.component';
 
 @Component({
   selector: 'app-settings',
@@ -25,6 +26,7 @@ import { PasswordSettingsComponent } from './password-settings.component';
     ToastModule,
     AiProviderSettingsComponent,
     PasswordSettingsComponent,
+    PersonalAccessTokensComponent,
   ],
   providers: [MessageService],
   template: `
@@ -103,6 +105,9 @@ import { PasswordSettingsComponent } from './password-settings.component';
 
       <!-- Password Section -->
       <app-password-settings />
+
+      <!-- Personal Access Tokens Section -->
+      <app-personal-access-tokens />
 
       <!-- AI Provider Section -->
       <app-ai-provider-settings />
