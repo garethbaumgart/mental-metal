@@ -31,7 +31,7 @@ public sealed class ImportCaptureFromFileHandler(
             throw new UnsupportedMediaTypeException(
                 $"Unsupported file type: {request.ContentType} / {ext}");
 
-        if (request.FileStream.Length > MaxFileSizeBytes)
+        if (request.FileLength > MaxFileSizeBytes)
             throw new PayloadTooLargeException("File exceeds the maximum allowed size of 10 MB.");
 
         var parser = parsers.FirstOrDefault(p => p.CanHandle(request.ContentType, request.FileName))
@@ -54,6 +54,8 @@ public sealed class ImportCaptureFromFileHandler(
         var detected = TranscriptFormatDetector.Detect(content);
 
         var captureType = request.Type ?? InferType(ext);
+        if (captureType is not (CaptureType.Transcript or CaptureType.QuickNote))
+            throw new ArgumentException($"Unsupported capture type for file import: {captureType}");
 
         var capture = Capture.Create(
             currentUserService.UserId,

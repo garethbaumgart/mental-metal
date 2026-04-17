@@ -243,17 +243,21 @@ export class QuickCaptureDialogComponent {
         }
       }
       this.submitting.set(true);
-      this.capturesService.importFile(file, this.selectedType).subscribe({
+      this.capturesService.importFile(
+        file,
+        this.selectedType,
+        this.title.trim() || undefined,
+        this.source.trim() || undefined,
+      ).subscribe({
         next: (result) => {
           this.submitting.set(false);
           this.messageService.add({
             severity: 'success',
-            summary: 'File imported',
-            detail: 'Click to view capture',
-            life: 5000,
+            summary: 'File imported successfully',
           });
           this.resetDraft();
           this.visible.set(false);
+          this.router.navigate(['/capture', result.id]);
         },
         error: (err) => {
           this.submitting.set(false);

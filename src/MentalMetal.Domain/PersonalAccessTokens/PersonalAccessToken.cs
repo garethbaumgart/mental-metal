@@ -40,9 +40,9 @@ public sealed class PersonalAccessToken : AggregateRoot, IUserScoped
             Id = Guid.NewGuid(),
             UserId = userId,
             Name = name.Trim(),
-            Scopes = scopes,
-            TokenHash = tokenHash,
-            TokenLookupPrefix = tokenLookupPrefix,
+            Scopes = new HashSet<string>(scopes),
+            TokenHash = (byte[])tokenHash.Clone(),
+            TokenLookupPrefix = (byte[])tokenLookupPrefix.Clone(),
             CreatedAt = DateTimeOffset.UtcNow,
         };
 

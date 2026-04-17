@@ -18,6 +18,11 @@ public static class ImportCaptureEndpoints
                 if (httpRequest.HasFormContentType)
                     return await HandleMultipartAsync(httpRequest, fileHandler, cancellationToken);
 
+                if (!httpRequest.HasJsonContentType())
+                    return Results.Problem(
+                        detail: "Expected application/json or multipart/form-data.",
+                        statusCode: StatusCodes.Status415UnsupportedMediaType);
+
                 return await HandleJsonAsync(httpRequest, jsonHandler, cancellationToken);
             }
             catch (UnsupportedMediaTypeException ex)
@@ -61,8 +66,7 @@ public static class ImportCaptureEndpoints
             captureType,
             body.Content ?? "",
             body.SourceUrl,
-            body.Title,
-            body.MeetingAt);
+            body.Title);
 
         var result = await handler.HandleAsync(request, cancellationToken);
         return Results.Created($"/api/captures/{result.Id}", result);
@@ -92,10 +96,10 @@ public static class ImportCaptureEndpoints
             stream,
             file.ContentType,
             file.FileName,
+            file.Length,
             captureType,
             form["sourceUrl"].FirstOrDefault(),
-            form["title"].FirstOrDefault(),
-            null);
+            form["title"].FirstOrDefault());
 
         var result = await handler.HandleAsync(request, cancellationToken);
         return Results.Created($"/api/captures/{result.Id}", result);
@@ -105,6 +109,5 @@ public static class ImportCaptureEndpoints
         string? Type,
         string? Content,
         string? SourceUrl,
-        string? Title,
-        DateTimeOffset? MeetingAt);
+        string? Title);
 }
