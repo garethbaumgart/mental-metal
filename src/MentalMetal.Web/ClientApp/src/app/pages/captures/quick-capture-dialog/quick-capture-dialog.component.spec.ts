@@ -74,7 +74,7 @@ describe('QuickCaptureDialogComponent', () => {
       type: 'QuickNote',
     });
     expect(req.request.body.title).toBeUndefined();
-    expect(req.request.body.source).toBeUndefined();
+    expect(req.request.body.source).toBe('Typed');
     req.flush({ id: 'c1' });
   });
 
