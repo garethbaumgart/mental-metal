@@ -146,6 +146,21 @@ public sealed class Capture : AggregateRoot, IUserScoped
         RaiseDomainEvent(new CaptureLinkedToInitiative(Id, initiativeId));
     }
 
+    /// <summary>
+    /// Replaces the AI extraction on an already-processed capture (e.g. after manual resolution).
+    /// </summary>
+    public void UpdateExtraction(AiExtraction extraction)
+    {
+        ArgumentNullException.ThrowIfNull(extraction, nameof(extraction));
+
+        if (ProcessingStatus != ProcessingStatus.Processed)
+            throw new InvalidOperationException(
+                $"Cannot update extraction from '{ProcessingStatus}' status. Must be 'Processed'.");
+
+        AiExtraction = extraction;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
     public void UpdateMetadata(string? title)
     {
         Title = title?.Trim();

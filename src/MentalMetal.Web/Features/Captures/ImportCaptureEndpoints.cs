@@ -1,3 +1,4 @@
+using MentalMetal.Application.Captures.AutoExtract;
 using MentalMetal.Application.Captures.ImportCapture;
 using MentalMetal.Domain.Captures;
 
@@ -11,19 +12,38 @@ public static class ImportCaptureEndpoints
             HttpRequest httpRequest,
             ImportCaptureFromJsonHandler jsonHandler,
             ImportCaptureFromFileHandler fileHandler,
+            AutoExtractCaptureHandler extractHandler,
             CancellationToken cancellationToken) =>
         {
             try
             {
-                if (httpRequest.HasFormContentType)
-                    return await HandleMultipartAsync(httpRequest, fileHandler, cancellationToken);
+                IResult result;
+                Guid? captureId = null;
 
-                if (!httpRequest.HasJsonContentType())
+                if (httpRequest.HasFormContentType)
+                {
+                    var (res, id) = await HandleMultipartAsync(httpRequest, fileHandler, cancellationToken);
+                    result = res;
+                    captureId = id;
+                }
+                else if (!httpRequest.HasJsonContentType())
+                {
                     return Results.Problem(
                         detail: "Expected application/json or multipart/form-data.",
                         statusCode: StatusCodes.Status415UnsupportedMediaType);
+                }
+                else
+                {
+                    var (res, id) = await HandleJsonAsync(httpRequest, jsonHandler, cancellationToken);
+                    result = res;
+                    captureId = id;
+                }
 
-                return await HandleJsonAsync(httpRequest, jsonHandler, cancellationToken);
+                // Auto-trigger extraction (best-effort, skip if no capture was created)
+                if (captureId.HasValue && captureId.Value != Guid.Empty)
+                    await extractHandler.HandleAsync(captureId.Value, cancellationToken);
+
+                return result;
             }
             catch (UnsupportedMediaTypeException ex)
             {
@@ -49,18 +69,18 @@ public static class ImportCaptureEndpoints
         return app;
     }
 
-    private static async Task<IResult> HandleJsonAsync(
+    private static async Task<(IResult Result, Guid CaptureId)> HandleJsonAsync(
         HttpRequest httpRequest,
         ImportCaptureFromJsonHandler handler,
         CancellationToken cancellationToken)
     {
         var body = await httpRequest.ReadFromJsonAsync<ImportJsonBody>(cancellationToken);
         if (body is null)
-            return Results.BadRequest(new { error = "Invalid JSON body." });
+            return (Results.BadRequest(new { error = "Invalid JSON body." }), Guid.Empty);
 
         if (!Enum.TryParse<CaptureType>(body.Type, ignoreCase: true, out var captureType)
             || captureType is not (CaptureType.Transcript or CaptureType.QuickNote))
-            return Results.BadRequest(new { error = $"Unsupported type: {body.Type}. Must be 'Transcript' or 'QuickNote'." });
+            return (Results.BadRequest(new { error = $"Unsupported type: {body.Type}. Must be 'Transcript' or 'QuickNote'." }), Guid.Empty);
 
         var request = new ImportCaptureFromJsonRequest(
             captureType,
@@ -69,10 +89,10 @@ public static class ImportCaptureEndpoints
             body.Title);
 
         var result = await handler.HandleAsync(request, cancellationToken);
-        return Results.Created($"/api/captures/{result.Id}", result);
+        return (Results.Created($"/api/captures/{result.Id}", result), result.Id);
     }
 
-    private static async Task<IResult> HandleMultipartAsync(
+    private static async Task<(IResult Result, Guid CaptureId)> HandleMultipartAsync(
         HttpRequest httpRequest,
         ImportCaptureFromFileHandler handler,
         CancellationToken cancellationToken)
@@ -80,14 +100,14 @@ public static class ImportCaptureEndpoints
         var form = await httpRequest.ReadFormAsync(cancellationToken);
         var file = form.Files.GetFile("file");
         if (file is null || file.Length == 0)
-            return Results.BadRequest(new { error = "Missing 'file' field." });
+            return (Results.BadRequest(new { error = "Missing 'file' field." }), Guid.Empty);
 
         CaptureType? captureType = null;
         var typeStr = form["type"].FirstOrDefault();
         if (!string.IsNullOrEmpty(typeStr))
         {
             if (!Enum.TryParse<CaptureType>(typeStr, ignoreCase: true, out var parsed))
-                return Results.BadRequest(new { error = $"Unsupported type: {typeStr}." });
+                return (Results.BadRequest(new { error = $"Unsupported type: {typeStr}." }), Guid.Empty);
             captureType = parsed;
         }
 
@@ -102,7 +122,7 @@ public static class ImportCaptureEndpoints
             form["title"].FirstOrDefault());
 
         var result = await handler.HandleAsync(request, cancellationToken);
-        return Results.Created($"/api/captures/{result.Id}", result);
+        return (Results.Created($"/api/captures/{result.Id}", result), result.Id);
     }
 
     private sealed record ImportJsonBody(

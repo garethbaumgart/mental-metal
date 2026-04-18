@@ -1,4 +1,5 @@
 using MentalMetal.Application.Captures;
+using MentalMetal.Application.Captures.AutoExtract;
 using MentalMetal.Application.Captures.ImportCapture;
 using MentalMetal.Application.Commitments;
 using MentalMetal.Application.Common;
@@ -145,6 +146,13 @@ public static class DependencyInjection
         services.AddScoped<ListPersonalAccessTokensHandler>();
         services.AddScoped<RevokePersonalAccessTokenHandler>();
         services.AddScoped<ResolvePatBearerService>();
+
+        // Auto-extraction pipeline
+        services.AddScoped<AutoExtractCaptureHandler>();
+        services.AddScoped<NameResolutionService>();
+        services.AddScoped<InitiativeTaggingService>();
+        services.AddScoped<ResolvePersonMentionHandler>();
+        services.AddScoped<ResolveInitiativeTagHandler>();
 
         // Capture import handlers and parsers
         services.AddSingleton<ITranscriptFileParser, PlainTextTranscriptParser>();

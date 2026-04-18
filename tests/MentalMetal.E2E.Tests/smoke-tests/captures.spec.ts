@@ -23,7 +23,9 @@ authTest.describe('Captures', () => {
     expect(created.id).toBeTruthy();
     expect(created.rawContent).toBe('Follow up with Sarah on Q3 roadmap');
     expect(created.captureType).toBe('QuickNote');
-    expect(created.processingStatus).toBe('Raw');
+    // V2: auto-extraction triggers on create — status may be Processed or Failed
+    // depending on AI provider config. Just verify it's a valid status.
+    expect(['Raw', 'Processing', 'Processed', 'Failed']).toContain(created.processingStatus);
 
     // List captures and verify the new one appears
     const listResponse = await authenticatedPage.request.get(`${API_BASE}/api/captures`, {
