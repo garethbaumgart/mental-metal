@@ -24,6 +24,13 @@ public sealed class ResolvePersonMentionHandler(
         if (capture.AiExtraction is null)
             throw new InvalidOperationException("Capture has no AI extraction to resolve.");
 
+        // Validate that rawName matches an existing PeopleMentioned entry
+        var mentionExists = capture.AiExtraction.PeopleMentioned
+            .Any(p => string.Equals(p.RawName, request.RawName, StringComparison.OrdinalIgnoreCase));
+        if (!mentionExists)
+            throw new InvalidOperationException(
+                $"No person mention with raw name '{request.RawName}' found in extraction.");
+
         var person = await personRepository.GetByIdAsync(request.PersonId, cancellationToken)
             ?? throw new InvalidOperationException($"Person not found: {request.PersonId}");
 

@@ -39,8 +39,8 @@ public static class ImportCaptureEndpoints
                     captureId = id;
                 }
 
-                // Auto-trigger extraction (best-effort)
-                if (captureId.HasValue)
+                // Auto-trigger extraction (best-effort, skip if no capture was created)
+                if (captureId.HasValue && captureId.Value != Guid.Empty)
                     await extractHandler.HandleAsync(captureId.Value, cancellationToken);
 
                 return result;

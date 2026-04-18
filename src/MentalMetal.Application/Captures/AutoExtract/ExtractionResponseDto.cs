@@ -41,7 +41,7 @@ internal sealed record CommitmentDto
     public string Description { get; init; } = string.Empty;
 
     [JsonPropertyName("direction")]
-    public string Direction { get; init; } = "MineToThem";
+    public string? Direction { get; init; }
 
     [JsonPropertyName("person_raw_name")]
     public string? PersonRawName { get; init; }
@@ -50,7 +50,7 @@ internal sealed record CommitmentDto
     public string? DueDate { get; init; }
 
     [JsonPropertyName("confidence")]
-    public string Confidence { get; init; } = "Low";
+    public string? Confidence { get; init; }
 }
 
 internal sealed record InitiativeTagDto

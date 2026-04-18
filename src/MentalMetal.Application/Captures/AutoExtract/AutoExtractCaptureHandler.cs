@@ -113,8 +113,14 @@ public sealed class AutoExtractCaptureHandler(
             var extractedCommitments = new List<ExtractedCommitment>();
             foreach (var c in dto.Commitments)
             {
-                var confidence = ParseConfidence(c.Confidence);
-                var direction = ParseDirection(c.Direction);
+                if (!TryParseConfidence(c.Confidence, out var confidence)
+                    || !TryParseDirection(c.Direction, out var direction))
+                {
+                    logger.LogWarning(
+                        "Skipping commitment with invalid Direction={Direction} or Confidence={Confidence}",
+                        c.Direction, c.Confidence);
+                    continue;
+                }
                 var personId = !string.IsNullOrWhiteSpace(c.PersonRawName)
                     ? nameResolutions.GetValueOrDefault(c.PersonRawName.Trim())
                     : null;
@@ -130,22 +136,15 @@ public sealed class AutoExtractCaptureHandler(
                         ? DateOnly.FromDateTime(dueDate.Value.UtcDateTime)
                         : (DateOnly?)null;
 
-                    // Find matching initiative for this commitment
-                    Guid? commitmentInitiativeId = null;
-                    if (initiativeResolutions.Values.Any(v => v.HasValue))
-                    {
-                        // Use the first resolved initiative as a reasonable default
-                        commitmentInitiativeId = initiativeResolutions.Values
-                            .FirstOrDefault(v => v.HasValue);
-                    }
-
+                    // Initiative linking is handled via the capture's linked initiatives;
+                    // don't guess which initiative a commitment belongs to.
                     var commitment = Commitment.Create(
                         userId,
                         c.Description,
                         direction,
                         personId.Value,
                         dueDateOnly,
-                        commitmentInitiativeId,
+                        initiativeId: null,
                         capture.Id,
                         confidence);
 
@@ -204,28 +203,48 @@ public sealed class AutoExtractCaptureHandler(
             unitOfWork.DiscardPendingChanges();
 
             // Re-load the capture fresh (it was saved as Processing earlier)
-            var freshCapture = (await captureRepository.GetByIdAsync(captureId, cancellationToken))!;
+            var freshCapture = (await captureRepository.GetByIdAsync(captureId, CancellationToken.None))!;
             freshCapture.FailProcessing(ex.Message);
-            await unitOfWork.SaveChangesAsync(cancellationToken);
+            await unitOfWork.SaveChangesAsync(CancellationToken.None);
 
             return CaptureResponse.From(freshCapture);
         }
     }
 
-    private static CommitmentConfidence ParseConfidence(string value) =>
-        value switch
+    private static bool TryParseConfidence(string? value, out CommitmentConfidence result)
+    {
+        switch (value)
         {
-            "High" => CommitmentConfidence.High,
-            "Medium" => CommitmentConfidence.Medium,
-            _ => CommitmentConfidence.Low
-        };
+            case "High":
+                result = CommitmentConfidence.High;
+                return true;
+            case "Medium":
+                result = CommitmentConfidence.Medium;
+                return true;
+            case "Low":
+                result = CommitmentConfidence.Low;
+                return true;
+            default:
+                result = default;
+                return false;
+        }
+    }
 
-    private static CommitmentDirection ParseDirection(string value) =>
-        value switch
+    private static bool TryParseDirection(string? value, out CommitmentDirection result)
+    {
+        switch (value)
         {
-            "TheirsToMe" => CommitmentDirection.TheirsToMe,
-            _ => CommitmentDirection.MineToThem
-        };
+            case "MineToThem":
+                result = CommitmentDirection.MineToThem;
+                return true;
+            case "TheirsToMe":
+                result = CommitmentDirection.TheirsToMe;
+                return true;
+            default:
+                result = default;
+                return false;
+        }
+    }
 
     private static DateTimeOffset? ParseDueDate(string? value)
     {
