@@ -25,11 +25,12 @@ public sealed class ResolvePersonMentionHandler(
             throw new InvalidOperationException("Capture has no AI extraction to resolve.");
 
         // Validate that rawName matches an existing PeopleMentioned entry
+        var trimmedName = request.RawName.Trim();
         var mentionExists = capture.AiExtraction.PeopleMentioned
-            .Any(p => string.Equals(p.RawName, request.RawName, StringComparison.OrdinalIgnoreCase));
+            .Any(p => string.Equals(p.RawName, trimmedName, StringComparison.OrdinalIgnoreCase));
         if (!mentionExists)
             throw new InvalidOperationException(
-                $"No person mention with raw name '{request.RawName}' found in extraction.");
+                $"No person mention with raw name '{trimmedName}' found in extraction.");
 
         var person = await personRepository.GetByIdAsync(request.PersonId, cancellationToken)
             ?? throw new InvalidOperationException($"Person not found: {request.PersonId}");
@@ -37,17 +38,20 @@ public sealed class ResolvePersonMentionHandler(
         if (person.UserId != userId)
             throw new InvalidOperationException($"Person not found: {request.PersonId}");
 
-        // Add the raw name as an alias (idempotent — AddAlias throws on dup)
-        var trimmedName = request.RawName.Trim();
+        // Add the raw name as an alias (idempotent — skip if already this person's name/alias)
         if (!string.Equals(person.Name, trimmedName, StringComparison.OrdinalIgnoreCase)
             && !person.Aliases.Any(a => string.Equals(a, trimmedName, StringComparison.OrdinalIgnoreCase)))
         {
+            // Ensure alias isn't already used by another person
+            if (await personRepository.AliasExistsForOtherPersonAsync(userId, trimmedName, person.Id, cancellationToken))
+                throw new InvalidOperationException($"Alias '{trimmedName}' is already used by another person.");
+
             person.AddAlias(trimmedName);
         }
 
         // Update the extraction with resolved PersonId
         var updatedPeople = capture.AiExtraction.PeopleMentioned.Select(p =>
-            string.Equals(p.RawName, request.RawName, StringComparison.OrdinalIgnoreCase)
+            string.Equals(p.RawName, trimmedName, StringComparison.OrdinalIgnoreCase)
                 ? p with { PersonId = request.PersonId }
                 : p).ToList();
 

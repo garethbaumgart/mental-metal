@@ -25,11 +25,12 @@ public sealed class ResolveInitiativeTagHandler(
             throw new InvalidOperationException("Capture has no AI extraction to resolve.");
 
         // Validate that rawName matches an existing InitiativeTag entry
+        var trimmedName = request.RawName.Trim();
         var tagExists = capture.AiExtraction.InitiativeTags
-            .Any(t => string.Equals(t.RawName, request.RawName, StringComparison.OrdinalIgnoreCase));
+            .Any(t => string.Equals(t.RawName, trimmedName, StringComparison.OrdinalIgnoreCase));
         if (!tagExists)
             throw new InvalidOperationException(
-                $"No initiative tag with raw name '{request.RawName}' found in extraction.");
+                $"No initiative tag with raw name '{trimmedName}' found in extraction.");
 
         var initiative = await initiativeRepository.GetByIdAsync(request.InitiativeId, cancellationToken)
             ?? throw new InvalidOperationException($"Initiative not found: {request.InitiativeId}");
@@ -39,7 +40,7 @@ public sealed class ResolveInitiativeTagHandler(
 
         // Update the extraction with resolved InitiativeId
         var updatedTags = capture.AiExtraction.InitiativeTags.Select(t =>
-            string.Equals(t.RawName, request.RawName, StringComparison.OrdinalIgnoreCase)
+            string.Equals(t.RawName, trimmedName, StringComparison.OrdinalIgnoreCase)
                 ? t with { InitiativeId = request.InitiativeId }
                 : t).ToList();
 

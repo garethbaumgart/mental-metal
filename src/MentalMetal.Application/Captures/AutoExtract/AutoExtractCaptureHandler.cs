@@ -27,6 +27,8 @@ public sealed class AutoExtractCaptureHandler(
     IAiCompletionService aiCompletionService,
     ITasteBudgetService tasteBudgetService,
     ICurrentUserService currentUserService,
+    NameResolutionService nameResolution,
+    InitiativeTaggingService initiativeTagging,
     IUnitOfWork unitOfWork,
     ILogger<AutoExtractCaptureHandler> logger)
 {
@@ -34,9 +36,6 @@ public sealed class AutoExtractCaptureHandler(
     {
         PropertyNameCaseInsensitive = true
     };
-
-    private readonly NameResolutionService _nameResolution = new();
-    private readonly InitiativeTaggingService _initiativeTagging = new();
 
     /// <summary>
     /// Runs the full extraction pipeline for the given capture.
@@ -87,11 +86,11 @@ public sealed class AutoExtractCaptureHandler(
                 .Select(c => c.PersonRawName!)
                 .ToList();
             var allNames = rawNames.Union(commitmentPersonNames, StringComparer.OrdinalIgnoreCase).ToList();
-            var nameResolutions = _nameResolution.Resolve(allNames, people);
+            var nameResolutions = nameResolution.Resolve(allNames, people);
 
             // 4. Resolve initiative tags
             var rawInitiativeNames = dto.InitiativeTags.Select(t => t.RawName).ToList();
-            var initiativeResolutions = _initiativeTagging.Resolve(rawInitiativeNames, initiatives);
+            var initiativeResolutions = initiativeTagging.Resolve(rawInitiativeNames, initiatives);
 
             // 5. Build PersonMention list with resolved IDs
             var peopleMentioned = dto.PeopleMentioned.Select(p => new PersonMention
@@ -251,7 +250,7 @@ public sealed class AutoExtractCaptureHandler(
         if (string.IsNullOrWhiteSpace(value))
             return null;
 
-        return DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out var result)
+        return DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var result)
             ? result
             : null;
     }

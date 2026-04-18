@@ -38,7 +38,9 @@ public class AutoExtractCaptureHandlerTests
 
         _sut = new AutoExtractCaptureHandler(
             _captureRepo, _personRepo, _initiativeRepo, _commitmentRepo,
-            _aiService, _tasteBudget, _currentUser, _unitOfWork, _logger);
+            _aiService, _tasteBudget, _currentUser,
+            new NameResolutionService(), new InitiativeTaggingService(),
+            _unitOfWork, _logger);
     }
 
     private Capture CreateRawCapture(string content = "Test meeting notes")
