@@ -1,17 +1,8 @@
 using MentalMetal.Application.Common;
-using MentalMetal.Domain.Briefings;
 using MentalMetal.Domain.Captures;
-using MentalMetal.Domain.ChatThreads;
 using MentalMetal.Domain.Commitments;
 using MentalMetal.Domain.Common;
-using MentalMetal.Domain.Delegations;
-using MentalMetal.Domain.Goals;
 using MentalMetal.Domain.Initiatives;
-using MentalMetal.Domain.Initiatives.LivingBrief;
-using MentalMetal.Domain.Interviews;
-using MentalMetal.Domain.Nudges;
-using MentalMetal.Domain.Observations;
-using MentalMetal.Domain.OneOnOnes;
 using MentalMetal.Domain.People;
 using MentalMetal.Domain.PersonalAccessTokens;
 using MentalMetal.Domain.Users;
@@ -32,16 +23,7 @@ public sealed class MentalMetalDbContext(
     public DbSet<Initiative> Initiatives => Set<Initiative>();
     public DbSet<Capture> Captures => Set<Capture>();
     public DbSet<Commitment> Commitments => Set<Commitment>();
-    public DbSet<Delegation> Delegations => Set<Delegation>();
     public DbSet<AiTasteBudget> AiTasteBudgets => Set<AiTasteBudget>();
-    public DbSet<PendingBriefUpdate> PendingBriefUpdates => Set<PendingBriefUpdate>();
-    public DbSet<ChatThread> ChatThreads => Set<ChatThread>();
-    public DbSet<OneOnOne> OneOnOnes => Set<OneOnOne>();
-    public DbSet<Observation> Observations => Set<Observation>();
-    public DbSet<Goal> Goals => Set<Goal>();
-    public DbSet<Briefing> Briefings => Set<Briefing>();
-    public DbSet<Interview> Interviews => Set<Interview>();
-    public DbSet<Nudge> Nudges => Set<Nudge>();
     public DbSet<PersonalAccessToken> PersonalAccessTokens => Set<PersonalAccessToken>();
 
     public void DiscardPendingChanges() => ChangeTracker.Clear();
@@ -56,15 +38,6 @@ public sealed class MentalMetalDbContext(
         modelBuilder.Entity<Initiative>().HasQueryFilter(i => i.UserId == currentUserService.UserId);
         modelBuilder.Entity<Capture>().HasQueryFilter(c => c.UserId == currentUserService.UserId);
         modelBuilder.Entity<Commitment>().HasQueryFilter(c => c.UserId == currentUserService.UserId);
-        modelBuilder.Entity<Delegation>().HasQueryFilter(d => d.UserId == currentUserService.UserId);
-        modelBuilder.Entity<PendingBriefUpdate>().HasQueryFilter(p => p.UserId == currentUserService.UserId);
-        modelBuilder.Entity<ChatThread>().HasQueryFilter(t => t.UserId == currentUserService.UserId);
-        modelBuilder.Entity<OneOnOne>().HasQueryFilter(o => o.UserId == currentUserService.UserId);
-        modelBuilder.Entity<Observation>().HasQueryFilter(o => o.UserId == currentUserService.UserId);
-        modelBuilder.Entity<Goal>().HasQueryFilter(g => g.UserId == currentUserService.UserId);
-        modelBuilder.Entity<Briefing>().HasQueryFilter(b => b.UserId == currentUserService.UserId);
-        modelBuilder.Entity<Interview>().HasQueryFilter(i => i.UserId == currentUserService.UserId);
-        modelBuilder.Entity<Nudge>().HasQueryFilter(n => n.UserId == currentUserService.UserId);
         modelBuilder.Entity<PersonalAccessToken>().HasQueryFilter(t => t.UserId == currentUserService.UserId);
     }
 }

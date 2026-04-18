@@ -1,24 +1,20 @@
 using System.Globalization;
 using MentalMetal.Application.Common;
-using MentalMetal.Application.Initiatives.Brief;
 using MentalMetal.Domain.Captures;
+using MentalMetal.Domain.Users;
 using MentalMetal.Domain.Commitments;
-using MentalMetal.Domain.Delegations;
 using MentalMetal.Domain.People;
 using MentalMetal.Domain.Initiatives;
-using MentalMetal.Domain.Users;
 
 namespace MentalMetal.Application.Captures;
 
 public sealed class ConfirmExtractionHandler(
     ICaptureRepository captureRepository,
     ICommitmentRepository commitmentRepository,
-    IDelegationRepository delegationRepository,
     IPersonRepository personRepository,
     IInitiativeRepository initiativeRepository,
     ICurrentUserService currentUserService,
-    IUnitOfWork unitOfWork,
-    IBriefMaintenanceService? briefMaintenanceService = null)
+    IUnitOfWork unitOfWork)
 {
     public async Task<ConfirmExtractionResponse> HandleAsync(Guid captureId, CancellationToken cancellationToken)
     {
@@ -58,25 +54,6 @@ public sealed class ConfirmExtractionHandler(
             capture.RecordSpawnedCommitment(commitment.Id);
         }
 
-        // Spawn delegations
-        foreach (var ed in extraction.Delegations)
-        {
-            var personId = MatchPerson(ed.PersonHint, people);
-            if (personId == Guid.Empty)
-            {
-                var hint = string.IsNullOrWhiteSpace(ed.PersonHint) ? "(none)" : ed.PersonHint;
-                warnings.Add($"Delegation skipped — no matching person for \"{hint}\": {ed.Description}");
-                continue;
-            }
-
-            DateOnly? dueDate = ParseIsoDate(ed.DueDate);
-
-            var delegation = Delegation.Create(userId, ed.Description, personId, dueDate,
-                sourceCaptureId: capture.Id);
-            await delegationRepository.AddAsync(delegation, cancellationToken);
-            capture.RecordSpawnedDelegation(delegation.Id);
-        }
-
         // Auto-link matched people
         foreach (var personHint in extraction.SuggestedPersonLinks)
         {
@@ -94,15 +71,6 @@ public sealed class ConfirmExtractionHandler(
         }
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        // Trigger a debounced living-brief refresh for each linked initiative belonging to this user.
-        if (briefMaintenanceService is not null)
-        {
-            foreach (var linkedInitiativeId in capture.LinkedInitiativeIds)
-            {
-                briefMaintenanceService.EnqueueRefresh(userId, linkedInitiativeId);
-            }
-        }
 
         return new ConfirmExtractionResponse(CaptureResponse.From(capture), warnings.AsReadOnly());
     }

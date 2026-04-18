@@ -8,7 +8,6 @@ public sealed class UserRepository(MentalMetalDbContext dbContext) : IUserReposi
 {
     public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
         await dbContext.Users
-            .Include(u => u.DailyCloseOutLogs)
             .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
 
     public async Task<User?> GetByExternalAuthIdAsync(string externalAuthId, CancellationToken cancellationToken) =>

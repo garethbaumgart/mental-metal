@@ -88,22 +88,5 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(u => u.CreatedAt);
         builder.Property(u => u.LastLoginAt);
-
-        builder.Navigation(u => u.DailyCloseOutLogs)
-            .HasField("_dailyCloseOutLogs")
-            .UsePropertyAccessMode(PropertyAccessMode.Field);
-
-        builder.OwnsMany(u => u.DailyCloseOutLogs, log =>
-        {
-            log.ToTable("DailyCloseOutLogs");
-            log.WithOwner().HasForeignKey("UserId");
-            log.HasKey(l => l.Id);
-            log.Property(l => l.Date).IsRequired();
-            log.Property(l => l.ClosedAtUtc).IsRequired();
-            log.Property(l => l.ConfirmedCount).IsRequired();
-            log.Property(l => l.DiscardedCount).IsRequired();
-            log.Property(l => l.RemainingCount).IsRequired();
-            log.HasIndex("UserId", nameof(DailyCloseOutLog.Date)).IsUnique();
-        });
     }
 }

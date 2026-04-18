@@ -3,6 +3,7 @@ using System;
 using MentalMetal.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MentalMetal.Infrastructure.Migrations
 {
     [DbContext(typeof(MentalMetalDbContext))]
-    partial class MentalMetalDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260418101642_V2_DropKilledAggregates")]
+    partial class V2_DropKilledAggregates
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
