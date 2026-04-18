@@ -7,7 +7,8 @@ public sealed record CreatePersonRequest(
     PersonType Type,
     string? Email = null,
     string? Role = null,
-    string? Team = null);
+    string? Team = null,
+    List<string>? Aliases = null);
 
 public sealed record UpdatePersonRequest(
     string Name,
@@ -18,16 +19,9 @@ public sealed record UpdatePersonRequest(
 
 public sealed record ChangeTypeRequest(PersonType NewType);
 
-public sealed record CareerDetailsRequest(
-    string? Level = null,
-    string? Aspirations = null,
-    string? GrowthAreas = null);
+public sealed record SetAliasesRequest(List<string> Aliases);
 
-public sealed record CandidateDetailsRequest(
-    string? CvNotes = null,
-    string? SourceChannel = null);
-
-public sealed record AdvancePipelineRequest(PipelineStatus NewStatus);
+public sealed record AddAliasRequest(string Alias);
 
 public sealed record PersonResponse(
     Guid Id,
@@ -38,8 +32,7 @@ public sealed record PersonResponse(
     string? Role,
     string? Team,
     string? Notes,
-    CareerDetailsResponse? CareerDetails,
-    CandidateDetailsResponse? CandidateDetails,
+    List<string> Aliases,
     bool IsArchived,
     DateTimeOffset? ArchivedAt,
     DateTimeOffset CreatedAt,
@@ -54,30 +47,9 @@ public sealed record PersonResponse(
         person.Role,
         person.Team,
         person.Notes,
-        person.CareerDetails is not null
-            ? new CareerDetailsResponse(
-                person.CareerDetails.Level,
-                person.CareerDetails.Aspirations,
-                person.CareerDetails.GrowthAreas)
-            : null,
-        person.CandidateDetails is not null
-            ? new CandidateDetailsResponse(
-                person.CandidateDetails.PipelineStatus,
-                person.CandidateDetails.CvNotes,
-                person.CandidateDetails.SourceChannel)
-            : null,
+        person.Aliases.ToList(),
         person.IsArchived,
         person.ArchivedAt,
         person.CreatedAt,
         person.UpdatedAt);
 }
-
-public sealed record CareerDetailsResponse(
-    string? Level,
-    string? Aspirations,
-    string? GrowthAreas);
-
-public sealed record CandidateDetailsResponse(
-    PipelineStatus PipelineStatus,
-    string? CvNotes,
-    string? SourceChannel);

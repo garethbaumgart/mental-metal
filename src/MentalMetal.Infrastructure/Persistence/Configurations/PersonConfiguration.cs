@@ -33,37 +33,10 @@ public sealed class PersonConfiguration : IEntityTypeConfiguration<Person>
         builder.Property(p => p.Notes)
             .HasMaxLength(4000);
 
-        builder.OwnsOne(p => p.CareerDetails, career =>
-        {
-            career.Property(c => c.Level)
-                .HasColumnName("CareerDetails_Level")
-                .HasMaxLength(100);
-
-            career.Property(c => c.Aspirations)
-                .HasColumnName("CareerDetails_Aspirations")
-                .HasMaxLength(2000);
-
-            career.Property(c => c.GrowthAreas)
-                .HasColumnName("CareerDetails_GrowthAreas")
-                .HasMaxLength(2000);
-        });
-
-        builder.OwnsOne(p => p.CandidateDetails, candidate =>
-        {
-            candidate.Property(c => c.PipelineStatus)
-                .HasColumnName("CandidateDetails_PipelineStatus")
-                .HasConversion<string>()
-                .IsRequired()
-                .HasMaxLength(20);
-
-            candidate.Property(c => c.CvNotes)
-                .HasColumnName("CandidateDetails_CvNotes")
-                .HasMaxLength(4000);
-
-            candidate.Property(c => c.SourceChannel)
-                .HasColumnName("CandidateDetails_SourceChannel")
-                .HasMaxLength(200);
-        });
+        builder.PrimitiveCollection(p => p.Aliases)
+            .HasColumnName("Aliases")
+            .HasField("_aliases")
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
 
         builder.Property(p => p.IsArchived)
             .HasDefaultValue(false);
@@ -77,8 +50,5 @@ public sealed class PersonConfiguration : IEntityTypeConfiguration<Person>
             .IsRequired();
 
         builder.HasIndex(p => p.UserId);
-
-        // Case-insensitive unique index defined in migration using lower("Name")
-        // See AddPerson migration for the raw SQL index
     }
 }

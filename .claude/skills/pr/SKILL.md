@@ -172,7 +172,7 @@ If CI fails:
 
 ### 5b. Monitor for Reviews
 
-Poll for reviewer comments every 2 minutes. You must complete **5 consecutive clean cycles** (no new actionable comments) before declaring the PR ready. Each cycle runs all three commands below and compares the results against the previous cycle:
+Poll for reviewer comments every 5 minutes. You must complete **2 consecutive clean cycles** (no new actionable comments) before declaring the PR ready. Each cycle runs all three commands below and compares the results against the previous cycle:
 
 ```bash
 gh api repos/{owner}/{repo}/pulls/$PR_NUMBER/comments --jq '.[] | "[\(.user.login)] \(.path) L\(.line // "?"): \(.body[0:300])"'
@@ -185,9 +185,9 @@ gh api repos/{owner}/{repo}/issues/$PR_NUMBER/comments --jq '.[] | "[\(.user.log
 - **Actionable** means any comment requiring a code/content change OR a reply — this includes nitpicks and trivial suggestions (per Step 5c)
 - A cycle is **clean** if no new actionable review comments appeared since the previous cycle
 - If a new actionable comment appears, address it (Step 5c), push fixes (Step 5d), and **reset the counter to 0**
-- Only after 5 consecutive clean cycles may you report the PR as ready to merge
+- Only after 2 consecutive clean cycles may you report the PR as ready to merge
 - Track and report the cycle count to the user (e.g., "Clean cycle 3/5, no new comments")
-- **All PRs — including docs-only / markdown-only — must complete the 5 clean cycles.** Review bots (Copilot, CodeRabbit, Sourcery) regularly post substantive comments on markdown files (OpenSpec proposals, design docs, specs), and merging before those land loses valuable feedback. Do not shortcut this step based on file types.
+- **All PRs — including docs-only / markdown-only — must complete the 2 clean cycles.** Review bots (Copilot, CodeRabbit, Sourcery) regularly post substantive comments on markdown files (OpenSpec proposals, design docs, specs), and merging before those land loses valuable feedback. Do not shortcut this step based on file types.
 
 ### 5c. Address Review Comments
 
@@ -237,4 +237,4 @@ The review loop stops when one of these conditions is met:
 | PR already exists for branch | Update the existing PR body instead of creating a duplicate. |
 | No OpenSpec spec found | Omit the Spec line from the PR body. Proceed normally. |
 | CI fails after PR creation | Read logs, fix issues, push fixes, re-monitor. |
-| Review polling incomplete (< 5 clean cycles) | Do not declare the PR ready. Continue polling or ask the user whether to keep waiting. |
+| Review polling incomplete (< 2 clean cycles) | Do not declare the PR ready. Continue polling or ask the user whether to keep waiting. |

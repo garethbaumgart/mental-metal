@@ -21,35 +21,9 @@ public sealed class InitiativeConfiguration : IEntityTypeConfiguration<Initiativ
             .IsRequired()
             .HasMaxLength(20);
 
-        builder.Navigation(i => i.Milestones)
-            .HasField("_milestones")
-            .UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.Property(i => i.AutoSummary);
 
-        builder.OwnsMany(i => i.Milestones, milestone =>
-        {
-            milestone.ToTable("InitiativeMilestones");
-
-            milestone.WithOwner().HasForeignKey("InitiativeId");
-
-            milestone.HasKey(m => m.Id);
-
-            milestone.Property(m => m.Title)
-                .IsRequired()
-                .HasMaxLength(300);
-
-            milestone.Property(m => m.TargetDate);
-
-            milestone.Property(m => m.Description)
-                .HasMaxLength(2000);
-
-            milestone.Property(m => m.IsCompleted)
-                .HasDefaultValue(false);
-        });
-
-        builder.PrimitiveCollection(i => i.LinkedPersonIds)
-            .HasColumnName("LinkedPersonIds")
-            .HasField("_linkedPersonIds")
-            .UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.Property(i => i.LastSummaryRefreshedAt);
 
         builder.Property(i => i.CreatedAt);
         builder.Property(i => i.UpdatedAt);

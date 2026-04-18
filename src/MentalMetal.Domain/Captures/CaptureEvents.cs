@@ -37,32 +37,7 @@ public sealed record CaptureLinkedToInitiative(Guid CaptureId, Guid InitiativeId
     public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
 }
 
-public sealed record CaptureUnlinkedFromPerson(Guid CaptureId, Guid PersonId) : IDomainEvent
-{
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
-}
-
-public sealed record CaptureUnlinkedFromInitiative(Guid CaptureId, Guid InitiativeId) : IDomainEvent
-{
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
-}
-
 public sealed record CaptureMetadataUpdated(Guid CaptureId) : IDomainEvent
-{
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
-}
-
-public sealed record CaptureExtractionConfirmed(Guid CaptureId) : IDomainEvent
-{
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
-}
-
-public sealed record CaptureExtractionDiscarded(Guid CaptureId) : IDomainEvent
-{
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
-}
-
-public sealed record CaptureQuickDiscarded(Guid CaptureId) : IDomainEvent
 {
     public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
 }

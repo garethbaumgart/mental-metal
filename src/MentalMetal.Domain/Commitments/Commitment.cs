@@ -10,9 +10,11 @@ public sealed class Commitment : AggregateRoot, IUserScoped
     public Guid PersonId { get; private set; }
     public Guid? InitiativeId { get; private set; }
     public Guid? SourceCaptureId { get; private set; }
+    public CommitmentConfidence Confidence { get; private set; }
     public DateOnly? DueDate { get; private set; }
     public CommitmentStatus Status { get; private set; }
     public DateTimeOffset? CompletedAt { get; private set; }
+    public DateTimeOffset? DismissedAt { get; private set; }
     public string? Notes { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
@@ -31,7 +33,8 @@ public sealed class Commitment : AggregateRoot, IUserScoped
         Guid personId,
         DateOnly? dueDate = null,
         Guid? initiativeId = null,
-        Guid? sourceCaptureId = null)
+        Guid? sourceCaptureId = null,
+        CommitmentConfidence confidence = CommitmentConfidence.High)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(description, nameof(description));
 
@@ -52,6 +55,7 @@ public sealed class Commitment : AggregateRoot, IUserScoped
             PersonId = personId,
             InitiativeId = initiativeId,
             SourceCaptureId = sourceCaptureId,
+            Confidence = confidence,
             DueDate = dueDate,
             Status = CommitmentStatus.Open,
             CreatedAt = now,
@@ -65,6 +69,10 @@ public sealed class Commitment : AggregateRoot, IUserScoped
 
     public void Complete(string? notes = null)
     {
+        if (Status == CommitmentStatus.Dismissed)
+            throw new InvalidOperationException(
+                "Cannot complete a dismissed commitment. Reopen it first.");
+
         if (Status != CommitmentStatus.Open)
             throw new InvalidOperationException(
                 $"Cannot complete a commitment with status '{Status}'. Must be 'Open'.");
@@ -94,6 +102,30 @@ public sealed class Commitment : AggregateRoot, IUserScoped
         RaiseDomainEvent(new CommitmentCancelled(Id, reason));
     }
 
+    /// <summary>
+    /// Dismisses a commitment as a false positive from AI extraction.
+    /// Cannot dismiss if already completed.
+    /// </summary>
+    public void Dismiss()
+    {
+        if (Status == CommitmentStatus.Completed)
+            throw new InvalidOperationException(
+                "Cannot dismiss a completed commitment.");
+
+        if (Status == CommitmentStatus.Dismissed)
+            return; // idempotent
+
+        Status = CommitmentStatus.Dismissed;
+        DismissedAt = DateTimeOffset.UtcNow;
+        UpdatedAt = DateTimeOffset.UtcNow;
+
+        RaiseDomainEvent(new CommitmentDismissed(Id));
+    }
+
+    /// <summary>
+    /// Reopens a completed, cancelled, or dismissed commitment.
+    /// Clears CompletedAt and DismissedAt.
+    /// </summary>
     public void Reopen()
     {
         if (Status == CommitmentStatus.Open)
@@ -102,6 +134,7 @@ public sealed class Commitment : AggregateRoot, IUserScoped
 
         Status = CommitmentStatus.Open;
         CompletedAt = null;
+        DismissedAt = null;
         UpdatedAt = DateTimeOffset.UtcNow;
 
         RaiseDomainEvent(new CommitmentReopened(Id));

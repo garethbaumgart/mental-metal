@@ -102,9 +102,8 @@ public static class DependencyInjection
         services.AddScoped<GetPeopleHandler>();
         services.AddScoped<UpdatePersonProfileHandler>();
         services.AddScoped<ChangePersonTypeHandler>();
-        services.AddScoped<UpdateCareerDetailsHandler>();
-        services.AddScoped<UpdateCandidateDetailsHandler>();
-        services.AddScoped<AdvanceCandidatePipelineHandler>();
+        services.AddScoped<SetAliasesHandler>();
+        services.AddScoped<AddAliasHandler>();
         services.AddScoped<ArchivePersonHandler>();
 
         // Initiative handlers
@@ -113,37 +112,21 @@ public static class DependencyInjection
         services.AddScoped<GetInitiativesHandler>();
         services.AddScoped<UpdateInitiativeTitleHandler>();
         services.AddScoped<ChangeInitiativeStatusHandler>();
-        services.AddScoped<AddMilestoneHandler>();
-        services.AddScoped<UpdateMilestoneHandler>();
-        services.AddScoped<RemoveMilestoneHandler>();
-        services.AddScoped<CompleteMilestoneHandler>();
-        services.AddScoped<LinkPersonHandler>();
-        services.AddScoped<UnlinkPersonHandler>();
+        services.AddScoped<RefreshSummaryHandler>();
 
         // Commitment handlers
-        services.AddScoped<CreateCommitmentHandler>();
         services.AddScoped<GetCommitmentByIdHandler>();
         services.AddScoped<GetUserCommitmentsHandler>();
-        services.AddScoped<UpdateCommitmentHandler>();
         services.AddScoped<CompleteCommitmentHandler>();
-        services.AddScoped<CancelCommitmentHandler>();
+        services.AddScoped<DismissCommitmentHandler>();
         services.AddScoped<ReopenCommitmentHandler>();
-        services.AddScoped<UpdateCommitmentDueDateHandler>();
-        services.AddScoped<LinkCommitmentToInitiativeHandler>();
 
         // Capture handlers
         services.AddScoped<CreateCaptureHandler>();
         services.AddScoped<GetCaptureByIdHandler>();
         services.AddScoped<GetUserCapturesHandler>();
         services.AddScoped<UpdateCaptureMetadataHandler>();
-        services.AddScoped<LinkCaptureToPersonHandler>();
-        services.AddScoped<LinkCaptureToInitiativeHandler>();
-        services.AddScoped<UnlinkCaptureFromPersonHandler>();
-        services.AddScoped<UnlinkCaptureFromInitiativeHandler>();
-        services.AddScoped<ProcessCaptureHandler>();
         services.AddScoped<RetryProcessingHandler>();
-        services.AddScoped<ConfirmExtractionHandler>();
-        services.AddScoped<DiscardExtractionHandler>();
 
         // Audio capture.
         // NOTE: IAudioTranscriptionProvider is intentionally NOT registered here — callers

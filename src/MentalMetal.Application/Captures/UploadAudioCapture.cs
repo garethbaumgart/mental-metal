@@ -11,7 +11,7 @@ public sealed record UploadAudioCaptureRequest(
     string MimeType,
     double DurationSeconds,
     string? Title = null,
-    string? Source = null);
+    CaptureSource? Source = null);
 
 public sealed class UploadAudioCaptureHandler(
     ICaptureRepository captureRepository,

@@ -17,27 +17,7 @@ public sealed record InitiativeStatusChanged(Guid InitiativeId, InitiativeStatus
     public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
 }
 
-public sealed record MilestoneSet(Guid InitiativeId, Guid MilestoneId) : IDomainEvent
-{
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
-}
-
-public sealed record MilestoneRemoved(Guid InitiativeId, Guid MilestoneId) : IDomainEvent
-{
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
-}
-
-public sealed record MilestoneCompleted(Guid InitiativeId, Guid MilestoneId) : IDomainEvent
-{
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
-}
-
-public sealed record PersonLinkedToInitiative(Guid InitiativeId, Guid PersonId) : IDomainEvent
-{
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
-}
-
-public sealed record PersonUnlinkedFromInitiative(Guid InitiativeId, Guid PersonId) : IDomainEvent
+public sealed record InitiativeSummaryRefreshed(Guid InitiativeId) : IDomainEvent
 {
     public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
 }

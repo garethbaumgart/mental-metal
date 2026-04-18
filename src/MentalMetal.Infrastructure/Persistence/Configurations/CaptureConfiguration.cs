@@ -20,6 +20,10 @@ public sealed class CaptureConfiguration : IEntityTypeConfiguration<Capture>
             .IsRequired()
             .HasMaxLength(30);
 
+        builder.Property(c => c.CaptureSource)
+            .HasConversion<string>()
+            .HasMaxLength(20);
+
         builder.Property(c => c.ProcessingStatus)
             .HasConversion<string>()
             .IsRequired()
@@ -28,24 +32,15 @@ public sealed class CaptureConfiguration : IEntityTypeConfiguration<Capture>
         builder.OwnsOne(c => c.AiExtraction, extraction =>
         {
             extraction.ToJson();
+            extraction.OwnsMany(e => e.PeopleMentioned);
             extraction.OwnsMany(e => e.Commitments);
-            extraction.OwnsMany(e => e.Delegations);
-            extraction.OwnsMany(e => e.Observations);
+            extraction.OwnsMany(e => e.InitiativeTags);
         });
-
-        builder.Property(c => c.ExtractionStatus)
-            .HasConversion<string>()
-            .IsRequired()
-            .HasMaxLength(20)
-            .HasDefaultValue(ExtractionStatus.None);
 
         builder.Property(c => c.FailureReason)
             .HasMaxLength(2000);
 
         builder.Property(c => c.Title)
-            .HasMaxLength(500);
-
-        builder.Property(c => c.Source)
             .HasMaxLength(500);
 
         builder.PrimitiveCollection(c => c.LinkedPersonIds)
@@ -63,31 +58,14 @@ public sealed class CaptureConfiguration : IEntityTypeConfiguration<Capture>
             .HasField("_spawnedCommitmentIds")
             .UsePropertyAccessMode(PropertyAccessMode.Field);
 
-        builder.PrimitiveCollection(c => c.SpawnedDelegationIds)
-            .HasColumnName("SpawnedDelegationIds")
-            .HasField("_spawnedDelegationIds")
-            .UsePropertyAccessMode(PropertyAccessMode.Field);
-
-        builder.PrimitiveCollection(c => c.SpawnedObservationIds)
-            .HasColumnName("SpawnedObservationIds")
-            .HasField("_spawnedObservationIds")
-            .UsePropertyAccessMode(PropertyAccessMode.Field);
-
         builder.Property(c => c.CapturedAt);
         builder.Property(c => c.ProcessedAt);
         builder.Property(c => c.UpdatedAt);
-
-        builder.Property(c => c.Triaged)
-            .HasDefaultValue(false);
-        builder.Property(c => c.TriagedAtUtc);
-        builder.Property(c => c.ExtractionResolved)
-            .HasDefaultValue(false);
 
         builder.Property(c => c.UserId)
             .IsRequired();
 
         builder.HasIndex(c => c.UserId);
-        builder.HasIndex(c => new { c.UserId, c.Triaged });
 
         // --- Audio / transcription fields ---
         builder.Property(c => c.AudioBlobRef).HasMaxLength(500);

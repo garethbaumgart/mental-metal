@@ -50,6 +50,19 @@ public sealed class PersonRepository(MentalMetalDbContext dbContext) : IPersonRe
         return await query.AnyAsync(cancellationToken);
     }
 
+    public async Task<bool> AliasExistsForOtherPersonAsync(
+        Guid userId, string alias, Guid excludePersonId, CancellationToken cancellationToken)
+    {
+        // Note: This is a simple implementation. For production, a more efficient
+        // query against the JSONB aliases column would be used.
+        var people = await dbContext.People
+            .Where(p => p.UserId == userId && p.Id != excludePersonId && !p.IsArchived)
+            .ToListAsync(cancellationToken);
+
+        return people.Any(p => p.Aliases.Any(a =>
+            string.Equals(a, alias.Trim(), StringComparison.OrdinalIgnoreCase)));
+    }
+
     public async Task AddAsync(Person person, CancellationToken cancellationToken) =>
         await dbContext.People.AddAsync(person, cancellationToken);
 }

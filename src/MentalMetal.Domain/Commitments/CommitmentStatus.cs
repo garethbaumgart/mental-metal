@@ -4,5 +4,6 @@ public enum CommitmentStatus
 {
     Open,
     Completed,
-    Cancelled
+    Cancelled,
+    Dismissed
 }

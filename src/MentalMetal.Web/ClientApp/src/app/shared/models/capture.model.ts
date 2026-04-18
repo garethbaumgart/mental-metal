@@ -1,5 +1,7 @@
 export type CaptureType = 'QuickNote' | 'Transcript' | 'MeetingNotes' | 'AudioRecording';
 
+export type CaptureSource = 'Upload' | 'Bookmarklet' | 'AudioCapture' | 'Typed' | 'Voice';
+
 export type ProcessingStatus = 'Raw' | 'Processing' | 'Processed' | 'Failed';
 
 export type TranscriptionStatus =
@@ -8,6 +10,10 @@ export type TranscriptionStatus =
   | 'InProgress'
   | 'Transcribed'
   | 'Failed';
+
+export type CommitmentConfidence = 'High' | 'Medium' | 'Low';
+
+export type CommitmentDirection = 'MineToThem' | 'TheirsToMe';
 
 export interface TranscriptSegment {
   startSeconds: number;
@@ -32,37 +38,35 @@ export interface UpdateCaptureSpeakersRequest {
   mappings: SpeakerMapping[];
 }
 
-export type ExtractionStatus = 'None' | 'Pending' | 'Confirmed' | 'Discarded';
+export interface PersonMention {
+  rawName: string;
+  personId: string | null;
+  context: string | null;
+}
 
 export interface ExtractedCommitment {
   description: string;
-  direction: 'MineToThem' | 'TheirsToMe';
-  personHint: string | null;
+  direction: CommitmentDirection;
+  personId: string | null;
   dueDate: string | null;
+  confidence: CommitmentConfidence;
+  spawnedCommitmentId: string | null;
 }
 
-export interface ExtractedDelegation {
-  description: string;
-  personHint: string | null;
-  dueDate: string | null;
-}
-
-export interface ExtractedObservation {
-  description: string;
-  personHint: string | null;
-  tag: string | null;
+export interface InitiativeTag {
+  rawName: string;
+  initiativeId: string | null;
+  context: string | null;
 }
 
 export interface AiExtraction {
   summary: string;
+  peopleMentioned: PersonMention[];
   commitments: ExtractedCommitment[];
-  delegations: ExtractedDelegation[];
-  observations: ExtractedObservation[];
   decisions: string[];
-  risksIdentified: string[];
-  suggestedPersonLinks: string[];
-  suggestedInitiativeLinks: string[];
-  confidenceScore: number;
+  risks: string[];
+  initiativeTags: InitiativeTag[];
+  extractedAt: string;
 }
 
 export interface Capture {
@@ -70,43 +74,26 @@ export interface Capture {
   userId: string;
   rawContent: string;
   captureType: CaptureType;
+  captureSource: CaptureSource | null;
   processingStatus: ProcessingStatus;
-  extractionStatus: ExtractionStatus;
   aiExtraction: AiExtraction | null;
   failureReason: string | null;
   linkedPersonIds: string[];
   linkedInitiativeIds: string[];
   spawnedCommitmentIds: string[];
-  spawnedDelegationIds: string[];
-  spawnedObservationIds: string[];
   title: string | null;
   capturedAt: string;
   processedAt: string | null;
-  source: string | null;
   updatedAt: string;
 }
 
 export interface CreateCaptureRequest {
   rawContent: string;
   type: CaptureType;
+  source?: CaptureSource;
   title?: string;
-  source?: string;
 }
 
 export interface UpdateCaptureMetadataRequest {
   title: string | null;
-  source: string | null;
-}
-
-export interface LinkPersonRequest {
-  personId: string;
-}
-
-export interface LinkInitiativeRequest {
-  initiativeId: string;
-}
-
-export interface ConfirmExtractionResponse {
-  capture: Capture;
-  warnings: string[];
 }

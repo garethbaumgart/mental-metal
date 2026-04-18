@@ -18,7 +18,7 @@ public sealed class UpdateCaptureMetadataHandler(
         if (capture.UserId != currentUserService.UserId)
             throw new InvalidOperationException("Capture not found.");
 
-        capture.UpdateMetadata(request.Title, request.Source);
+        capture.UpdateMetadata(request.Title);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 

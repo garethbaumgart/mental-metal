@@ -1,88 +1,70 @@
 using MentalMetal.Domain.Captures;
+using MentalMetal.Domain.Commitments;
 
 namespace MentalMetal.Application.Captures;
 
-public sealed record CreateCaptureRequest(string RawContent, CaptureType Type, string? Title = null, string? Source = null);
+public sealed record CreateCaptureRequest(string RawContent, CaptureType Type, CaptureSource? Source = null, string? Title = null);
 
-public sealed record UpdateCaptureMetadataRequest(string? Title, string? Source);
-
-public sealed record LinkPersonRequest(Guid PersonId);
-
-public sealed record LinkInitiativeRequest(Guid InitiativeId);
+public sealed record UpdateCaptureMetadataRequest(string? Title);
 
 public sealed record AiExtractionResponse(
     string Summary,
+    List<PersonMentionResponse> PeopleMentioned,
     List<ExtractedCommitmentResponse> Commitments,
-    List<ExtractedDelegationResponse> Delegations,
-    List<ExtractedObservationResponse> Observations,
     List<string> Decisions,
-    List<string> RisksIdentified,
-    List<string> SuggestedPersonLinks,
-    List<string> SuggestedInitiativeLinks,
-    decimal ConfidenceScore)
+    List<string> Risks,
+    List<InitiativeTagResponse> InitiativeTags,
+    DateTimeOffset ExtractedAt)
 {
     public static AiExtractionResponse? From(AiExtraction? extraction) =>
         extraction is null ? null : new(
             extraction.Summary,
-            extraction.Commitments.Select(c => new ExtractedCommitmentResponse(c.Description, c.Direction.ToString(), c.PersonHint, c.DueDate)).ToList(),
-            extraction.Delegations.Select(d => new ExtractedDelegationResponse(d.Description, d.PersonHint, d.DueDate)).ToList(),
-            extraction.Observations.Select(o => new ExtractedObservationResponse(o.Description, o.PersonHint, o.Tag)).ToList(),
+            extraction.PeopleMentioned.Select(p => new PersonMentionResponse(p.RawName, p.PersonId, p.Context)).ToList(),
+            extraction.Commitments.Select(c => new ExtractedCommitmentResponse(
+                c.Description, c.Direction, c.PersonId, c.DueDate, c.Confidence, c.SpawnedCommitmentId)).ToList(),
             extraction.Decisions.ToList(),
-            extraction.RisksIdentified.ToList(),
-            extraction.SuggestedPersonLinks.ToList(),
-            extraction.SuggestedInitiativeLinks.ToList(),
-            extraction.ConfidenceScore);
+            extraction.Risks.ToList(),
+            extraction.InitiativeTags.Select(t => new InitiativeTagResponse(t.RawName, t.InitiativeId, t.Context)).ToList(),
+            extraction.ExtractedAt);
 }
 
-public sealed record ExtractedCommitmentResponse(string Description, string Direction, string? PersonHint, string? DueDate);
-public sealed record ExtractedDelegationResponse(string Description, string? PersonHint, string? DueDate);
-public sealed record ExtractedObservationResponse(string Description, string? PersonHint, string? Tag);
-
-public sealed record ConfirmExtractionResponse(CaptureResponse Capture, IReadOnlyList<string> Warnings);
+public sealed record PersonMentionResponse(string RawName, Guid? PersonId, string? Context);
+public sealed record ExtractedCommitmentResponse(
+    string Description, CommitmentDirection Direction, Guid? PersonId,
+    DateTimeOffset? DueDate, CommitmentConfidence Confidence, Guid? SpawnedCommitmentId);
+public sealed record InitiativeTagResponse(string RawName, Guid? InitiativeId, string? Context);
 
 public sealed record CaptureResponse(
     Guid Id,
     Guid UserId,
     string RawContent,
     CaptureType CaptureType,
+    CaptureSource? CaptureSource,
     ProcessingStatus ProcessingStatus,
-    ExtractionStatus ExtractionStatus,
     AiExtractionResponse? AiExtraction,
     string? FailureReason,
     List<Guid> LinkedPersonIds,
     List<Guid> LinkedInitiativeIds,
     List<Guid> SpawnedCommitmentIds,
-    List<Guid> SpawnedDelegationIds,
-    List<Guid> SpawnedObservationIds,
     string? Title,
     DateTimeOffset CapturedAt,
     DateTimeOffset? ProcessedAt,
-    string? Source,
-    DateTimeOffset UpdatedAt,
-    bool Triaged,
-    DateTimeOffset? TriagedAtUtc,
-    bool ExtractionResolved)
+    DateTimeOffset UpdatedAt)
 {
     public static CaptureResponse From(Capture capture) => new(
         capture.Id,
         capture.UserId,
         capture.RawContent,
         capture.CaptureType,
+        capture.CaptureSource,
         capture.ProcessingStatus,
-        capture.ExtractionStatus,
         AiExtractionResponse.From(capture.AiExtraction),
         capture.FailureReason,
         capture.LinkedPersonIds.ToList(),
         capture.LinkedInitiativeIds.ToList(),
         capture.SpawnedCommitmentIds.ToList(),
-        capture.SpawnedDelegationIds.ToList(),
-        capture.SpawnedObservationIds.ToList(),
         capture.Title,
         capture.CapturedAt,
         capture.ProcessedAt,
-        capture.Source,
-        capture.UpdatedAt,
-        capture.Triaged,
-        capture.TriagedAtUtc,
-        capture.ExtractionResolved);
+        capture.UpdatedAt);
 }

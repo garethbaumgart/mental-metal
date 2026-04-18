@@ -80,11 +80,8 @@ public sealed class PeopleEndpointsTests(PostgresFixture postgres) : Integration
         Assert.True(bodyIncludeArchived![0].IsArchived);
     }
 
-    // Regression for issue #120: the New Interview dialog now calls
-    // `GET /api/people?type=Candidate`. The filter must return only Candidate-typed
-    // people and must not regress the implicit-includeArchived=false behaviour (#88).
     [Fact]
-    public async Task GetPeople_FilterByCandidateType_ReturnsOnlyCandidates()
+    public async Task GetPeople_FilterByPeerType_ReturnsOnlyPeers()
     {
         var client = await AuthedClientAsync();
 
@@ -102,20 +99,20 @@ public sealed class PeopleEndpointsTests(PostgresFixture postgres) : Integration
         });
         Assert.Equal(HttpStatusCode.Created, stakeholder.StatusCode);
 
-        var candidate = await client.PostAsJsonAsync("/api/people", new
+        var peer = await client.PostAsJsonAsync("/api/people", new
         {
-            name = "Alex Candidate",
-            type = "Candidate",
+            name = "Alex Peer",
+            type = "Peer",
         });
-        Assert.Equal(HttpStatusCode.Created, candidate.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, peer.StatusCode);
 
-        var resp = await client.GetAsync("/api/people?type=Candidate");
+        var resp = await client.GetAsync("/api/people?type=Peer");
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
 
         var body = await ReadJsonAsync<List<PersonBody>>(resp);
         Assert.NotNull(body);
         Assert.Single(body!);
-        Assert.Equal("Alex Candidate", body![0].Name);
-        Assert.Equal("Candidate", body![0].Type);
+        Assert.Equal("Alex Peer", body![0].Name);
+        Assert.Equal("Peer", body![0].Type);
     }
 }

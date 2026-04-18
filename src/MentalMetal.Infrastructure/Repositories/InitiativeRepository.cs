@@ -8,7 +8,6 @@ public sealed class InitiativeRepository(MentalMetalDbContext dbContext) : IInit
 {
     public async Task<Initiative?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
         await dbContext.Initiatives
-            .Include(i => i.Milestones)
             .FirstOrDefaultAsync(i => i.Id == id, cancellationToken);
 
     public async Task<IReadOnlyList<Initiative>> GetByIdsAsync(
@@ -29,7 +28,6 @@ public sealed class InitiativeRepository(MentalMetalDbContext dbContext) : IInit
         Guid userId, InitiativeStatus? statusFilter, CancellationToken cancellationToken)
     {
         var query = dbContext.Initiatives
-            .Include(i => i.Milestones)
             .Where(i => i.UserId == userId);
 
         if (statusFilter is not null)

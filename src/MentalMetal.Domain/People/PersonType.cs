@@ -2,7 +2,8 @@ namespace MentalMetal.Domain.People;
 
 public enum PersonType
 {
-    DirectReport,
-    Stakeholder,
-    Candidate
+    DirectReport = 0,
+    Stakeholder = 1,
+    Peer = 3,
+    External = 4
 }

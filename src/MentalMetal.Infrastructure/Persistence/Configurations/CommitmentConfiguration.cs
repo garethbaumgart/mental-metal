@@ -26,8 +26,16 @@ public sealed class CommitmentConfiguration : IEntityTypeConfiguration<Commitmen
             .IsRequired()
             .HasMaxLength(20);
 
+        builder.Property(c => c.Confidence)
+            .HasConversion<string>()
+            .IsRequired()
+            .HasMaxLength(10)
+            .HasDefaultValue(CommitmentConfidence.High);
+
         builder.Property(c => c.PersonId)
             .IsRequired();
+
+        builder.Property(c => c.DismissedAt);
 
         builder.Property(c => c.Notes)
             .HasMaxLength(4000);
@@ -38,6 +46,7 @@ public sealed class CommitmentConfiguration : IEntityTypeConfiguration<Commitmen
         builder.HasIndex(c => c.UserId);
         builder.HasIndex(c => c.PersonId);
         builder.HasIndex(c => c.InitiativeId);
+        builder.HasIndex(c => c.SourceCaptureId);
 
         builder.Ignore(c => c.IsOverdue);
     }

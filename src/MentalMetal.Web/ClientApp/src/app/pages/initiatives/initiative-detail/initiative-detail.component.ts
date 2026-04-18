@@ -1,43 +1,29 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { DatePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { TextareaModule } from 'primeng/textarea';
 import { TagModule } from 'primeng/tag';
-import { ChipModule } from 'primeng/chip';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { AutoCompleteModule, AutoCompleteCompleteEvent } from 'primeng/autocomplete';
-import { DatePickerModule } from 'primeng/datepicker';
-import { TabsModule } from 'primeng/tabs';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { InitiativesService } from '../../../shared/services/initiatives.service';
-import { PeopleService } from '../../../shared/services/people.service';
-import { Initiative, InitiativeStatus, Milestone } from '../../../shared/models/initiative.model';
-import { Person } from '../../../shared/models/person.model';
+import { Initiative, InitiativeStatus } from '../../../shared/models/initiative.model';
+
 @Component({
   selector: 'app-initiative-detail',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
+    DatePipe,
     ButtonModule,
     InputTextModule,
-    TextareaModule,
     TagModule,
-    ChipModule,
     ToastModule,
     ConfirmDialogModule,
-    AutoCompleteModule,
-    DatePickerModule,
-    TabsModule,
   ],
-  styles: [`
-    .milestone-card, .milestone-form {
-      border-color: var(--p-content-border-color);
-    }
-  `],
   providers: [MessageService, ConfirmationService],
   template: `
     <p-toast />
@@ -58,14 +44,6 @@ import { Person } from '../../../shared/models/person.model';
             [severity]="statusSeverity(initiative()!.status)"
           />
         </div>
-
-        <p-tabs value="overview">
-          <p-tablist>
-            <p-tab value="overview">Overview</p-tab>
-          </p-tablist>
-          <p-tabpanels>
-            <p-tabpanel value="overview">
-              <div class="flex flex-col gap-8">
 
         <!-- Title Section -->
         <section class="flex flex-col gap-4">
@@ -102,122 +80,28 @@ import { Person } from '../../../shared/models/person.model';
           </section>
         }
 
-        <!-- Milestones Section -->
+        <!-- Auto Summary -->
         <section class="flex flex-col gap-4">
-          <h2 class="text-xl font-semibold">Milestones</h2>
-
-          @if (initiative()!.milestones.length === 0) {
-            <p class="text-muted-color text-sm">No milestones yet.</p>
-          } @else {
-            <div class="flex flex-col gap-3">
-              @for (milestone of initiative()!.milestones; track milestone.id) {
-                <div class="flex items-center gap-3 p-3 rounded-md border milestone-card">
-                  @if (milestone.isCompleted) {
-                    <i class="pi pi-check-circle text-lg" style="color: var(--p-green-500)"></i>
-                  } @else {
-                    <i class="pi pi-circle text-lg text-muted-color"></i>
-                  }
-                  <div class="flex-1">
-                    <div class="font-medium">{{ milestone.title }}</div>
-                    <div class="text-sm text-muted-color">
-                      {{ milestone.targetDate }}
-                      @if (milestone.description) {
-                        — {{ milestone.description }}
-                      }
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-1">
-                    @if (!milestone.isCompleted) {
-                      <p-button
-                        icon="pi pi-check"
-                        [text]="true"
-                        severity="success"
-
-                        (onClick)="completeMilestone(milestone)"
-                      />
-                    }
-                    <p-button
-                      icon="pi pi-trash"
-                      [text]="true"
-                      severity="danger"
-
-                      (onClick)="confirmRemoveMilestone(milestone)"
-                    />
-                  </div>
-                </div>
-              }
-            </div>
-          }
-
-          <!-- Add Milestone Form -->
-          <div class="flex flex-col gap-3 p-4 rounded-md border milestone-card">
-            <h3 class="text-sm font-semibold">Add Milestone</h3>
-            <div class="flex flex-col gap-2">
-              <label for="msTitle" class="text-sm font-medium text-muted-color">Title *</label>
-              <input pInputText id="msTitle" [(ngModel)]="newMilestoneTitle" class="w-full" />
-            </div>
-            <div class="flex flex-col gap-2">
-              <label for="msDate" class="text-sm font-medium text-muted-color">Target Date *</label>
-              <p-datepicker id="msDate" [(ngModel)]="newMilestoneDate" dateFormat="yy-mm-dd" class="w-full" />
-            </div>
-            <div class="flex flex-col gap-2">
-              <label for="msDesc" class="text-sm font-medium text-muted-color">Description</label>
-              <input pInputText id="msDesc" [(ngModel)]="newMilestoneDescription" class="w-full" />
-            </div>
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-semibold">Auto Summary</h2>
             <p-button
-              label="Add Milestone"
-              icon="pi pi-plus"
+              label="Refresh"
+              icon="pi pi-refresh"
               [outlined]="true"
-              (onClick)="addMilestone()"
-              [loading]="addingMilestone()"
-              [disabled]="!newMilestoneTitle.trim() || !newMilestoneDate"
+              size="small"
+              (onClick)="refreshSummary()"
+              [loading]="refreshingSummary()"
             />
           </div>
-        </section>
-
-        <!-- Linked People Section -->
-        <section class="flex flex-col gap-4">
-          <h2 class="text-xl font-semibold">Linked People</h2>
-
-          @if (linkedPeople().length === 0 && initiative()!.linkedPersonIds.length === 0) {
-            <p class="text-muted-color text-sm">No linked people yet.</p>
+          @if (initiative()!.autoSummary) {
+            <p class="text-sm whitespace-pre-wrap">{{ initiative()!.autoSummary }}</p>
+            @if (initiative()!.lastSummaryRefreshedAt) {
+              <p class="text-xs text-muted-color">Last refreshed: {{ initiative()!.lastSummaryRefreshedAt | date:'medium' }}</p>
+            }
           } @else {
-            <div class="flex flex-wrap gap-2">
-              @for (person of linkedPeople(); track person.id) {
-                <p-chip [label]="person.name" [removable]="true" (onRemove)="unlinkPerson(person.id)" />
-              }
-            </div>
+            <p class="text-muted-color text-sm">No summary yet. Upload transcripts that mention this initiative and a summary will be generated automatically.</p>
           }
-
-          <div class="flex items-end gap-4">
-            <div class="flex flex-col gap-2 flex-1">
-              <label for="linkPerson" class="text-sm font-medium text-muted-color">Add Person</label>
-              <p-autoComplete
-                id="linkPerson"
-                [(ngModel)]="selectedPerson"
-                [suggestions]="peopleSuggestions()"
-                (completeMethod)="searchPeople($event)"
-                field="name"
-                [forceSelection]="true"
-                [minLength]="2"
-                placeholder="Search people..."
-                class="w-full"
-              />
-            </div>
-            <p-button
-              label="Link"
-              icon="pi pi-link"
-              [outlined]="true"
-              (onClick)="linkPerson()"
-              [loading]="linkingPerson()"
-              [disabled]="!selectedPerson"
-            />
-          </div>
         </section>
-              </div>
-            </p-tabpanel>
-          </p-tabpanels>
-        </p-tabs>
       </div>
     }
   `,
@@ -226,30 +110,16 @@ export class InitiativeDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly initiativesService = inject(InitiativesService);
-  private readonly peopleService = inject(PeopleService);
   private readonly messageService = inject(MessageService);
-  private readonly confirmationService = inject(ConfirmationService);
 
   readonly initiative = signal<Initiative | null>(null);
   readonly loading = signal(true);
   readonly savingTitle = signal(false);
   readonly changingStatus = signal(false);
-  readonly addingMilestone = signal(false);
-  readonly linkingPerson = signal(false);
-  readonly linkedPeople = signal<Person[]>([]);
-  readonly peopleSuggestions = signal<Person[]>([]);
+  readonly refreshingSummary = signal(false);
   readonly statusActions = signal<StatusAction[]>([]);
 
-  // Title editing
   protected title = '';
-
-  // Milestone form
-  protected newMilestoneTitle = '';
-  protected newMilestoneDate: Date | null = null;
-  protected newMilestoneDescription = '';
-
-  // Person linking
-  protected selectedPerson: Person | null = null;
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -300,109 +170,20 @@ export class InitiativeDetailComponent implements OnInit {
     });
   }
 
-  protected addMilestone(): void {
-    const i = this.initiative();
-    if (!i || !this.newMilestoneTitle.trim() || !this.newMilestoneDate) return;
-
-    this.addingMilestone.set(true);
-    const targetDate = this.formatDate(this.newMilestoneDate);
-    this.initiativesService.addMilestone(i.id, {
-      title: this.newMilestoneTitle.trim(),
-      targetDate,
-      ...(this.newMilestoneDescription.trim() && { description: this.newMilestoneDescription.trim() }),
-    }).subscribe({
-      next: (updated) => {
-        this.initiative.set(updated);
-        this.newMilestoneTitle = '';
-        this.newMilestoneDate = null;
-        this.newMilestoneDescription = '';
-        this.addingMilestone.set(false);
-        this.messageService.add({ severity: 'success', summary: 'Milestone added' });
-      },
-      error: () => {
-        this.addingMilestone.set(false);
-        this.messageService.add({ severity: 'error', summary: 'Failed to add milestone' });
-      },
-    });
-  }
-
-  protected completeMilestone(milestone: Milestone): void {
+  protected refreshSummary(): void {
     const i = this.initiative();
     if (!i) return;
 
-    this.initiativesService.completeMilestone(i.id, milestone.id).subscribe({
+    this.refreshingSummary.set(true);
+    this.initiativesService.refreshSummary(i.id).subscribe({
       next: (updated) => {
         this.initiative.set(updated);
-        this.messageService.add({ severity: 'success', summary: 'Milestone completed' });
+        this.refreshingSummary.set(false);
+        this.messageService.add({ severity: 'success', summary: 'Summary refreshed' });
       },
       error: () => {
-        this.messageService.add({ severity: 'error', summary: 'Failed to complete milestone' });
-      },
-    });
-  }
-
-  protected confirmRemoveMilestone(milestone: Milestone): void {
-    this.confirmationService.confirm({
-      message: `Remove milestone "${milestone.title}"?`,
-      header: 'Confirm Remove',
-      icon: 'pi pi-exclamation-triangle',
-      acceptButtonStyleClass: 'p-button-danger',
-      accept: () => this.removeMilestone(milestone),
-    });
-  }
-
-  protected searchPeople(event: AutoCompleteCompleteEvent): void {
-    const i = this.initiative();
-    if (!i) return;
-
-    this.peopleService.list().subscribe({
-      next: (people) => {
-        const linkedIds = new Set(i.linkedPersonIds);
-        this.peopleSuggestions.set(
-          people.filter((p) => !linkedIds.has(p.id) && p.name.toLowerCase().includes(event.query.toLowerCase()))
-        );
-      },
-    });
-  }
-
-  protected linkPerson(): void {
-    const i = this.initiative();
-    if (!i || !this.selectedPerson) return;
-
-    this.linkingPerson.set(true);
-    const personToLink = this.selectedPerson;
-    this.initiativesService.linkPerson(i.id, personToLink.id).subscribe({
-      next: (updated) => {
-        this.initiative.set(updated);
-        this.linkedPeople.update((list) =>
-          list.some((p) => p.id === personToLink.id) ? list : [...list, personToLink]
-        );
-        this.selectedPerson = null;
-        this.linkingPerson.set(false);
-        this.messageService.add({ severity: 'success', summary: 'Person linked' });
-      },
-      error: () => {
-        this.linkingPerson.set(false);
-        this.messageService.add({ severity: 'error', summary: 'Failed to link person' });
-      },
-    });
-  }
-
-  protected unlinkPerson(personId: string): void {
-    const i = this.initiative();
-    if (!i) return;
-
-    this.initiativesService.unlinkPerson(i.id, personId).subscribe({
-      next: () => {
-        this.initiative.update((init) => init ? {
-          ...init,
-          linkedPersonIds: init.linkedPersonIds.filter((id) => id !== personId),
-        } : null);
-        this.linkedPeople.update((list) => list.filter((p) => p.id !== personId));
-        this.messageService.add({ severity: 'success', summary: 'Person unlinked' });
-      },
-      error: () => {
-        this.messageService.add({ severity: 'error', summary: 'Failed to unlink person' });
+        this.refreshingSummary.set(false);
+        this.messageService.add({ severity: 'error', summary: 'Failed to refresh summary' });
       },
     });
   }
@@ -425,24 +206,6 @@ export class InitiativeDetailComponent implements OnInit {
     }
   }
 
-  private removeMilestone(milestone: Milestone): void {
-    const i = this.initiative();
-    if (!i) return;
-
-    this.initiativesService.removeMilestone(i.id, milestone.id).subscribe({
-      next: () => {
-        this.initiative.update((init) => init ? {
-          ...init,
-          milestones: init.milestones.filter((m) => m.id !== milestone.id),
-        } : null);
-        this.messageService.add({ severity: 'success', summary: 'Milestone removed' });
-      },
-      error: () => {
-        this.messageService.add({ severity: 'error', summary: 'Failed to remove milestone' });
-      },
-    });
-  }
-
   private loadInitiative(id: string): void {
     this.loading.set(true);
     this.initiativesService.get(id).subscribe({
@@ -450,25 +213,11 @@ export class InitiativeDetailComponent implements OnInit {
         this.initiative.set(initiative);
         this.title = initiative.title;
         this.updateStatusActions(initiative.status);
-        this.loadLinkedPeople(initiative.linkedPersonIds);
         this.loading.set(false);
       },
       error: () => {
         this.loading.set(false);
         this.router.navigate(['/initiatives']);
-      },
-    });
-  }
-
-  private loadLinkedPeople(personIds: string[]): void {
-    if (personIds.length === 0) {
-      this.linkedPeople.set([]);
-      return;
-    }
-    this.peopleService.list().subscribe({
-      next: (people) => {
-        const idSet = new Set(personIds);
-        this.linkedPeople.set(people.filter((p) => idSet.has(p.id)));
       },
     });
   }
@@ -491,13 +240,6 @@ export class InitiativeDetailComponent implements OnInit {
         this.statusActions.set([]);
         break;
     }
-  }
-
-  private formatDate(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
   }
 }
 

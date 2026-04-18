@@ -7,11 +7,12 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
+import { ChipModule } from 'primeng/chip';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { PeopleService } from '../../../shared/services/people.service';
-import { Person, PersonType, PipelineStatus } from '../../../shared/models/person.model';
+import { Person, PersonType } from '../../../shared/models/person.model';
 import { CommitmentsService } from '../../../shared/services/commitments.service';
 import { Commitment } from '../../../shared/models/commitment.model';
 
@@ -27,6 +28,7 @@ import { Commitment } from '../../../shared/models/commitment.model';
     TextareaModule,
     SelectModule,
     TagModule,
+    ChipModule,
     ToastModule,
     ConfirmDialogModule,
   ],
@@ -48,6 +50,22 @@ import { Commitment } from '../../../shared/models/commitment.model';
           <p-tag [value]="formatType(person()!.type)" [severity]="typeSeverity(person()!.type)" />
         </div>
 
+        <!-- Aliases -->
+        <section class="flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold">Aliases</h2>
+          </div>
+          <div class="flex flex-wrap gap-1">
+            @for (alias of person()!.aliases; track alias) {
+              <p-chip [label]="alias" [removable]="true" (onRemove)="removeAlias(alias)" />
+            }
+          </div>
+          <div class="flex gap-2">
+            <input pInputText [ngModel]="newAlias()" (ngModelChange)="newAlias.set($event)" class="flex-1" placeholder="Add alias..." aria-label="New alias" (keydown.enter)="addAlias()" />
+            <p-button icon="pi pi-plus" [outlined]="true" size="small" (onClick)="addAlias()" [disabled]="!newAlias().trim()" ariaLabel="Add alias" />
+          </div>
+        </section>
+
         <section class="flex flex-col gap-3">
           <h2 class="text-xl font-semibold">Open Commitments</h2>
           @if (openCommitments().length === 0) {
@@ -56,7 +74,7 @@ import { Commitment } from '../../../shared/models/commitment.model';
             <ul class="flex flex-col gap-2">
               @for (c of openCommitments(); track c.id) {
                 <li class="flex items-center gap-2 p-3 rounded bg-surface-50">
-                  <p-tag [value]="c.direction === 'MineToThem' ? 'Mine → Them' : 'Theirs → Me'" severity="secondary" />
+                  <p-tag [value]="c.direction === 'MineToThem' ? 'Mine' : 'Theirs'" severity="secondary" />
                   <span class="flex-1 text-sm">{{ c.description }}</span>
                   @if (c.dueDate) {
                     <span class="text-xs text-muted-color">Due {{ c.dueDate | date: 'mediumDate' }}</span>
@@ -67,7 +85,7 @@ import { Commitment } from '../../../shared/models/commitment.model';
           }
         </section>
 
-        <!-- Profile & Details (read-only by default; expand to edit) -->
+        <!-- Profile & Details -->
         <section class="flex flex-col gap-4 border-t pt-6">
           <div class="flex items-center justify-between">
             <h2 class="text-xl font-semibold" id="profile-details-heading">Profile &amp; details</h2>
@@ -83,7 +101,6 @@ import { Commitment } from '../../../shared/models/commitment.model';
             />
           </div>
 
-          <!-- Read-only summary (always visible) -->
           <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <div>
               <dt class="text-xs text-muted-color">Name</dt>
@@ -91,15 +108,15 @@ import { Commitment } from '../../../shared/models/commitment.model';
             </div>
             <div>
               <dt class="text-xs text-muted-color">Email</dt>
-              <dd>{{ person()!.email || '—' }}</dd>
+              <dd>{{ person()!.email || '\u2014' }}</dd>
             </div>
             <div>
               <dt class="text-xs text-muted-color">Role</dt>
-              <dd>{{ person()!.role || '—' }}</dd>
+              <dd>{{ person()!.role || '\u2014' }}</dd>
             </div>
             <div>
               <dt class="text-xs text-muted-color">Team</dt>
-              <dd>{{ person()!.team || '—' }}</dd>
+              <dd>{{ person()!.team || '\u2014' }}</dd>
             </div>
             @if (person()!.notes) {
               <div class="sm:col-span-2">
@@ -110,7 +127,6 @@ import { Commitment } from '../../../shared/models/commitment.model';
           </dl>
 
           @if (profileEditOpen()) {
-            <!-- Editable Profile -->
             <div
               class="flex flex-col gap-4 pt-4 border-t"
               id="profile-edit-panel"
@@ -170,74 +186,6 @@ import { Commitment } from '../../../shared/models/commitment.model';
                 />
               </div>
             </div>
-
-            @if (person()!.type === 'DirectReport') {
-              <div class="flex flex-col gap-4 pt-4 border-t">
-                <h3 class="text-base font-semibold">Career details</h3>
-
-                <div class="flex flex-col gap-2">
-                  <label for="level" class="text-sm font-medium text-muted-color">Level</label>
-                  <input pInputText id="level" [(ngModel)]="careerLevel" class="w-full" />
-                </div>
-
-                <div class="flex flex-col gap-2">
-                  <label for="aspirations" class="text-sm font-medium text-muted-color">Aspirations</label>
-                  <textarea pTextarea id="aspirations" [(ngModel)]="careerAspirations" [rows]="3" class="w-full"></textarea>
-                </div>
-
-                <div class="flex flex-col gap-2">
-                  <label for="growthAreas" class="text-sm font-medium text-muted-color">Growth Areas</label>
-                  <textarea pTextarea id="growthAreas" [(ngModel)]="careerGrowthAreas" [rows]="3" class="w-full"></textarea>
-                </div>
-
-                <p-button label="Save Career Details" (onClick)="saveCareerDetails()" [loading]="savingCareer()" />
-              </div>
-            }
-
-            @if (person()!.type === 'Candidate') {
-              <div class="flex flex-col gap-4 pt-4 border-t">
-                <h3 class="text-base font-semibold">Candidate details</h3>
-
-                <div class="flex items-center gap-3">
-                  <span class="text-sm font-medium text-muted-color">Pipeline Status:</span>
-                  <p-tag
-                    [value]="person()!.candidateDetails?.pipelineStatus ?? 'New'"
-                    [severity]="pipelineSeverity(person()!.candidateDetails?.pipelineStatus ?? 'New')"
-                  />
-                </div>
-
-                <div class="flex items-end gap-4">
-                  <div class="flex flex-col gap-2 flex-1">
-                    <label for="pipelineStatus" class="text-sm font-medium text-muted-color">Advance to</label>
-                    <p-select
-                      id="pipelineStatus"
-                      [options]="pipelineOptions"
-                      [(ngModel)]="newPipelineStatus"
-                      placeholder="Select status"
-                      class="w-full"
-                    />
-                  </div>
-                  <p-button
-                    label="Advance"
-                    (onClick)="advancePipeline()"
-                    [loading]="advancingPipeline()"
-                    [disabled]="!newPipelineStatus"
-                  />
-                </div>
-
-                <div class="flex flex-col gap-2">
-                  <label for="cvNotes" class="text-sm font-medium text-muted-color">CV Notes</label>
-                  <textarea pTextarea id="cvNotes" [(ngModel)]="cvNotes" [rows]="3" class="w-full"></textarea>
-                </div>
-
-                <div class="flex flex-col gap-2">
-                  <label for="sourceChannel" class="text-sm font-medium text-muted-color">Source Channel</label>
-                  <input pInputText id="sourceChannel" [(ngModel)]="sourceChannel" class="w-full" />
-                </div>
-
-                <p-button label="Save Candidate Details" (onClick)="saveCandidateDetails()" [loading]="savingCandidate()" />
-              </div>
-            }
           }
         </section>
 
@@ -266,10 +214,7 @@ export class PersonDetailComponent implements OnInit {
   readonly person = signal<Person | null>(null);
   readonly loading = signal(true);
   readonly savingProfile = signal(false);
-  readonly savingCareer = signal(false);
-  readonly savingCandidate = signal(false);
   readonly changingType = signal(false);
-  readonly advancingPipeline = signal(false);
 
   readonly profileEditOpen = signal(false);
 
@@ -285,30 +230,14 @@ export class PersonDetailComponent implements OnInit {
   // Type change
   protected newType: PersonType | null = null;
 
-  // Career details
-  protected careerLevel = '';
-  protected careerAspirations = '';
-  protected careerGrowthAreas = '';
-
-  // Candidate details
-  protected newPipelineStatus: PipelineStatus | null = null;
-  protected cvNotes = '';
-  protected sourceChannel = '';
+  // Alias
+  protected readonly newAlias = signal('');
 
   protected readonly typeOptions = [
     { label: 'Direct Report', value: 'DirectReport' as PersonType },
+    { label: 'Peer', value: 'Peer' as PersonType },
     { label: 'Stakeholder', value: 'Stakeholder' as PersonType },
-    { label: 'Candidate', value: 'Candidate' as PersonType },
-  ];
-
-  protected readonly pipelineOptions = [
-    { label: 'New', value: 'New' as PipelineStatus },
-    { label: 'Screening', value: 'Screening' as PipelineStatus },
-    { label: 'Interviewing', value: 'Interviewing' as PipelineStatus },
-    { label: 'Offer Stage', value: 'OfferStage' as PipelineStatus },
-    { label: 'Hired', value: 'Hired' as PipelineStatus },
-    { label: 'Rejected', value: 'Rejected' as PipelineStatus },
-    { label: 'Withdrawn', value: 'Withdrawn' as PipelineStatus },
+    { label: 'External', value: 'External' as PersonType },
   ];
 
   ngOnInit(): void {
@@ -366,64 +295,34 @@ export class PersonDetailComponent implements OnInit {
     });
   }
 
-  protected saveCareerDetails(): void {
+  protected addAlias(): void {
     const p = this.person();
-    if (!p) return;
+    if (!p || !this.newAlias().trim()) return;
 
-    this.savingCareer.set(true);
-    this.peopleService.updateCareerDetails(p.id, {
-      level: this.careerLevel || null,
-      aspirations: this.careerAspirations || null,
-      growthAreas: this.careerGrowthAreas || null,
-    }).subscribe({
+    this.peopleService.addAlias(p.id, this.newAlias().trim()).subscribe({
       next: (updated) => {
         this.person.set(updated);
-        this.savingCareer.set(false);
-        this.messageService.add({ severity: 'success', summary: 'Career details updated' });
+        this.newAlias.set('');
+        this.messageService.add({ severity: 'success', summary: 'Alias added' });
       },
       error: () => {
-        this.savingCareer.set(false);
-        this.messageService.add({ severity: 'error', summary: 'Failed to update career details' });
+        this.messageService.add({ severity: 'error', summary: 'Failed to add alias' });
       },
     });
   }
 
-  protected saveCandidateDetails(): void {
+  protected removeAlias(alias: string): void {
     const p = this.person();
     if (!p) return;
 
-    this.savingCandidate.set(true);
-    this.peopleService.updateCandidateDetails(p.id, {
-      cvNotes: this.cvNotes || null,
-      sourceChannel: this.sourceChannel || null,
-    }).subscribe({
+    const remaining = p.aliases.filter(a => a !== alias);
+    this.peopleService.setAliases(p.id, remaining).subscribe({
       next: (updated) => {
         this.person.set(updated);
-        this.savingCandidate.set(false);
-        this.messageService.add({ severity: 'success', summary: 'Candidate details updated' });
+        this.messageService.add({ severity: 'success', summary: 'Alias removed' });
       },
       error: () => {
-        this.savingCandidate.set(false);
-        this.messageService.add({ severity: 'error', summary: 'Failed to update candidate details' });
-      },
-    });
-  }
-
-  protected advancePipeline(): void {
-    const p = this.person();
-    if (!p || !this.newPipelineStatus) return;
-
-    this.advancingPipeline.set(true);
-    this.peopleService.advancePipeline(p.id, this.newPipelineStatus).subscribe({
-      next: (updated) => {
-        this.person.set(updated);
-        this.advancingPipeline.set(false);
-        this.newPipelineStatus = null;
-        this.messageService.add({ severity: 'success', summary: 'Pipeline status updated' });
-      },
-      error: () => {
-        this.advancingPipeline.set(false);
-        this.messageService.add({ severity: 'error', summary: 'Failed to advance pipeline' });
+        this.messageService.add({ severity: 'error', summary: 'Failed to remove alias' });
       },
     });
   }
@@ -441,28 +340,29 @@ export class PersonDetailComponent implements OnInit {
   protected formatType(type: PersonType): string {
     switch (type) {
       case 'DirectReport': return 'Direct Report';
+      case 'Peer': return 'Peer';
       case 'Stakeholder': return 'Stakeholder';
-      case 'Candidate': return 'Candidate';
+      case 'External': return 'External';
     }
   }
 
-  protected typeSeverity(type: PersonType): 'info' | 'warn' | 'success' {
+  protected typeSeverity(type: PersonType): 'info' | 'warn' | 'success' | 'secondary' {
     switch (type) {
       case 'DirectReport': return 'info';
+      case 'Peer': return 'success';
       case 'Stakeholder': return 'warn';
-      case 'Candidate': return 'success';
+      case 'External': return 'secondary';
     }
   }
 
-  protected pipelineSeverity(status: PipelineStatus): 'info' | 'warn' | 'success' | 'danger' | 'secondary' {
-    switch (status) {
-      case 'New': return 'info';
-      case 'Screening':
-      case 'Interviewing':
-      case 'OfferStage': return 'warn';
-      case 'Hired': return 'success';
-      case 'Rejected': return 'danger';
-      case 'Withdrawn': return 'secondary';
+  protected toggleProfileEdit(): void {
+    const next = !this.profileEditOpen();
+    this.profileEditOpen.set(next);
+    if (next) {
+      const p = this.person();
+      if (p) this.populateFields(p);
+    } else {
+      this.newType = null;
     }
   }
 
@@ -503,34 +403,11 @@ export class PersonDetailComponent implements OnInit {
     });
   }
 
-  /**
-   * Toggles the Profile & details edit panel. When opening, re-populate the
-   * draft fields from the current person so stale edits from a previous
-   * "close without save" cycle don't persist. When closing, clear any type-
-   * change / pipeline draft state too.
-   */
-  protected toggleProfileEdit(): void {
-    const next = !this.profileEditOpen();
-    this.profileEditOpen.set(next);
-    if (next) {
-      const p = this.person();
-      if (p) this.populateFields(p);
-    } else {
-      this.newType = null;
-      this.newPipelineStatus = null;
-    }
-  }
-
   private populateFields(person: Person): void {
     this.name = person.name;
     this.email = person.email ?? '';
     this.role = person.role ?? '';
     this.team = person.team ?? '';
     this.notes = person.notes ?? '';
-    this.careerLevel = person.careerDetails?.level ?? '';
-    this.careerAspirations = person.careerDetails?.aspirations ?? '';
-    this.careerGrowthAreas = person.careerDetails?.growthAreas ?? '';
-    this.cvNotes = person.candidateDetails?.cvNotes ?? '';
-    this.sourceChannel = person.candidateDetails?.sourceChannel ?? '';
   }
 }

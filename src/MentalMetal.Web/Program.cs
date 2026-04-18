@@ -555,10 +555,10 @@ app.MapPut("/api/people/{id:guid}/type", async (
     }
 }).RequireAuthorization();
 
-app.MapPut("/api/people/{id:guid}/career-details", async (
+app.MapPut("/api/people/{id:guid}/aliases", async (
     Guid id,
-    CareerDetailsRequest request,
-    UpdateCareerDetailsHandler handler,
+    SetAliasesRequest request,
+    SetAliasesHandler handler,
     CancellationToken cancellationToken) =>
 {
     try
@@ -566,9 +566,13 @@ app.MapPut("/api/people/{id:guid}/career-details", async (
         var response = await handler.HandleAsync(id, request, cancellationToken);
         return Results.Ok(response);
     }
-    catch (InvalidOperationException)
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
     {
         return Results.NotFound();
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("archived"))
+    {
+        return Results.BadRequest(new { error = ex.Message });
     }
     catch (ArgumentException ex)
     {
@@ -576,10 +580,10 @@ app.MapPut("/api/people/{id:guid}/career-details", async (
     }
 }).RequireAuthorization();
 
-app.MapPut("/api/people/{id:guid}/candidate-details", async (
+app.MapPost("/api/people/{id:guid}/aliases", async (
     Guid id,
-    CandidateDetailsRequest request,
-    UpdateCandidateDetailsHandler handler,
+    AddAliasRequest request,
+    AddAliasHandler handler,
     CancellationToken cancellationToken) =>
 {
     try
@@ -587,30 +591,13 @@ app.MapPut("/api/people/{id:guid}/candidate-details", async (
         var response = await handler.HandleAsync(id, request, cancellationToken);
         return Results.Ok(response);
     }
-    catch (InvalidOperationException)
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
     {
         return Results.NotFound();
     }
-    catch (ArgumentException ex)
+    catch (InvalidOperationException ex) when (ex.Message.Contains("archived"))
     {
         return Results.BadRequest(new { error = ex.Message });
-    }
-}).RequireAuthorization();
-
-app.MapPost("/api/people/{id:guid}/advance-pipeline", async (
-    Guid id,
-    AdvancePipelineRequest request,
-    AdvanceCandidatePipelineHandler handler,
-    CancellationToken cancellationToken) =>
-{
-    try
-    {
-        var response = await handler.HandleAsync(id, request, cancellationToken);
-        return Results.Ok(response);
-    }
-    catch (InvalidOperationException)
-    {
-        return Results.NotFound();
     }
     catch (ArgumentException ex)
     {
@@ -712,121 +699,14 @@ app.MapPut("/api/initiatives/{id:guid}/status", async (
     }
 }).RequireAuthorization();
 
-app.MapPost("/api/initiatives/{id:guid}/milestones", async (
+app.MapPost("/api/initiatives/{id:guid}/refresh-summary", async (
     Guid id,
-    MilestoneRequest request,
-    AddMilestoneHandler handler,
+    RefreshSummaryHandler handler,
     CancellationToken cancellationToken) =>
 {
     try
     {
-        var response = await handler.HandleAsync(id, request, cancellationToken);
-        return Results.Ok(response);
-    }
-    catch (NotFoundException)
-    {
-        return Results.NotFound();
-    }
-    catch (ArgumentException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-}).RequireAuthorization();
-
-app.MapPut("/api/initiatives/{id:guid}/milestones/{milestoneId:guid}", async (
-    Guid id,
-    Guid milestoneId,
-    MilestoneRequest request,
-    UpdateMilestoneHandler handler,
-    CancellationToken cancellationToken) =>
-{
-    try
-    {
-        var response = await handler.HandleAsync(id, milestoneId, request, cancellationToken);
-        return Results.Ok(response);
-    }
-    catch (NotFoundException)
-    {
-        return Results.NotFound();
-    }
-    catch (ArgumentException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-}).RequireAuthorization();
-
-app.MapDelete("/api/initiatives/{id:guid}/milestones/{milestoneId:guid}", async (
-    Guid id,
-    Guid milestoneId,
-    RemoveMilestoneHandler handler,
-    CancellationToken cancellationToken) =>
-{
-    try
-    {
-        var response = await handler.HandleAsync(id, milestoneId, cancellationToken);
-        return Results.Ok(response);
-    }
-    catch (NotFoundException)
-    {
-        return Results.NotFound();
-    }
-    catch (ArgumentException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-}).RequireAuthorization();
-
-app.MapPost("/api/initiatives/{id:guid}/milestones/{milestoneId:guid}/complete", async (
-    Guid id,
-    Guid milestoneId,
-    CompleteMilestoneHandler handler,
-    CancellationToken cancellationToken) =>
-{
-    try
-    {
-        var response = await handler.HandleAsync(id, milestoneId, cancellationToken);
-        return Results.Ok(response);
-    }
-    catch (NotFoundException)
-    {
-        return Results.NotFound();
-    }
-    catch (ArgumentException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-}).RequireAuthorization();
-
-app.MapPost("/api/initiatives/{id:guid}/link-person", async (
-    Guid id,
-    MentalMetal.Application.Initiatives.LinkPersonRequest request,
-    LinkPersonHandler handler,
-    CancellationToken cancellationToken) =>
-{
-    try
-    {
-        var response = await handler.HandleAsync(id, request, cancellationToken);
-        return Results.Ok(response);
-    }
-    catch (NotFoundException)
-    {
-        return Results.NotFound();
-    }
-    catch (ArgumentException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-}).RequireAuthorization();
-
-app.MapDelete("/api/initiatives/{id:guid}/link-person/{personId:guid}", async (
-    Guid id,
-    Guid personId,
-    UnlinkPersonHandler handler,
-    CancellationToken cancellationToken) =>
-{
-    try
-    {
-        var response = await handler.HandleAsync(id, personId, cancellationToken);
+        var response = await handler.HandleAsync(id, cancellationToken);
         return Results.Ok(response);
     }
     catch (NotFoundException)
@@ -860,11 +740,10 @@ app.MapPost("/api/captures", async (
 app.MapGet("/api/captures", async (
     CaptureType? type,
     ProcessingStatus? status,
-    bool? includeTriaged,
     GetUserCapturesHandler handler,
     CancellationToken cancellationToken) =>
 {
-    var list = await handler.HandleAsync(type, status, cancellationToken, includeTriaged ?? false);
+    var list = await handler.HandleAsync(type, status, cancellationToken);
     return Results.Ok(list);
 }).RequireAuthorization();
 
@@ -894,110 +773,6 @@ app.MapPut("/api/captures/{id:guid}", async (
     }
 }).RequireAuthorization();
 
-app.MapPost("/api/captures/{id:guid}/link-person", async (
-    Guid id,
-    MentalMetal.Application.Captures.LinkPersonRequest request,
-    LinkCaptureToPersonHandler handler,
-    CancellationToken cancellationToken) =>
-{
-    try
-    {
-        var response = await handler.HandleAsync(id, request, cancellationToken);
-        return Results.Ok(response);
-    }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
-    {
-        return Results.NotFound();
-    }
-    catch (ArgumentException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-}).RequireAuthorization();
-
-app.MapPost("/api/captures/{id:guid}/link-initiative", async (
-    Guid id,
-    LinkInitiativeRequest request,
-    LinkCaptureToInitiativeHandler handler,
-    CancellationToken cancellationToken) =>
-{
-    try
-    {
-        var response = await handler.HandleAsync(id, request, cancellationToken);
-        return Results.Ok(response);
-    }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
-    {
-        return Results.NotFound();
-    }
-    catch (ArgumentException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-}).RequireAuthorization();
-
-app.MapPost("/api/captures/{id:guid}/unlink-person", async (
-    Guid id,
-    MentalMetal.Application.Captures.LinkPersonRequest request,
-    UnlinkCaptureFromPersonHandler handler,
-    CancellationToken cancellationToken) =>
-{
-    try
-    {
-        var response = await handler.HandleAsync(id, request, cancellationToken);
-        return Results.Ok(response);
-    }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
-    {
-        return Results.NotFound();
-    }
-    catch (ArgumentException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-}).RequireAuthorization();
-
-app.MapPost("/api/captures/{id:guid}/unlink-initiative", async (
-    Guid id,
-    LinkInitiativeRequest request,
-    UnlinkCaptureFromInitiativeHandler handler,
-    CancellationToken cancellationToken) =>
-{
-    try
-    {
-        var response = await handler.HandleAsync(id, request, cancellationToken);
-        return Results.Ok(response);
-    }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
-    {
-        return Results.NotFound();
-    }
-    catch (ArgumentException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-}).RequireAuthorization();
-
-app.MapPost("/api/captures/{id:guid}/process", async (
-    Guid id,
-    ProcessCaptureHandler handler,
-    CancellationToken cancellationToken) =>
-{
-    try
-    {
-        var response = await handler.HandleAsync(id, cancellationToken);
-        return Results.Accepted(null, response);
-    }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
-    {
-        return Results.NotFound();
-    }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("Cannot begin processing"))
-    {
-        return Results.Conflict(new { error = ex.Message });
-    }
-}).RequireAuthorization();
-
 app.MapPost("/api/captures/{id:guid}/retry", async (
     Guid id,
     RetryProcessingHandler handler,
@@ -1018,85 +793,7 @@ app.MapPost("/api/captures/{id:guid}/retry", async (
     }
 }).RequireAuthorization();
 
-app.MapPost("/api/captures/{id:guid}/confirm-extraction", async (
-    Guid id,
-    ConfirmExtractionHandler handler,
-    CancellationToken cancellationToken) =>
-{
-    try
-    {
-        var response = await handler.HandleAsync(id, cancellationToken);
-        return Results.Ok(response);
-    }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
-    {
-        return Results.NotFound();
-    }
-    catch (InvalidOperationException ex) when (
-        ex.Message.Contains("Cannot confirm") ||
-        ex.Message.Contains("No extraction to confirm"))
-    {
-        return Results.Conflict(new { error = ex.Message });
-    }
-}).RequireAuthorization();
-
-app.MapPost("/api/captures/{id:guid}/discard-extraction", async (
-    Guid id,
-    DiscardExtractionHandler handler,
-    CancellationToken cancellationToken) =>
-{
-    try
-    {
-        var response = await handler.HandleAsync(id, cancellationToken);
-        return Results.Ok(response);
-    }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
-    {
-        return Results.NotFound();
-    }
-    catch (InvalidOperationException ex) when (
-        ex.Message.Contains("Cannot discard") ||
-        ex.Message.Contains("Extraction already confirmed"))
-    {
-        return Results.Conflict(new { error = ex.Message });
-    }
-}).RequireAuthorization();
-
 // --- Commitment Endpoints ---
-
-app.MapPost("/api/commitments", async (
-    CreateCommitmentRequest request,
-    CreateCommitmentHandler handler,
-    CancellationToken cancellationToken) =>
-{
-    if (request.Direction is null)
-    {
-        return Results.Problem(
-            statusCode: StatusCodes.Status400BadRequest,
-            title: "Direction is required.",
-            extensions: new Dictionary<string, object?>
-            {
-                ["code"] = "commitment.validation",
-                ["field"] = "direction",
-            });
-    }
-
-    try
-    {
-        var response = await handler.HandleAsync(request, cancellationToken);
-        return Results.Created($"/api/commitments/{response.Id}", response);
-    }
-    catch (ArgumentException ex)
-    {
-        return Results.Problem(
-            statusCode: StatusCodes.Status400BadRequest,
-            title: ex.Message,
-            extensions: new Dictionary<string, object?>
-            {
-                ["code"] = "commitment.validation",
-            });
-    }
-}).RequireAuthorization();
 
 app.MapGet("/api/commitments", async (
     CommitmentDirection? direction,
@@ -1120,27 +817,6 @@ app.MapGet("/api/commitments/{id:guid}", async (
     return response is not null ? Results.Ok(response) : Results.NotFound();
 }).RequireAuthorization();
 
-app.MapPut("/api/commitments/{id:guid}", async (
-    Guid id,
-    UpdateCommitmentRequest request,
-    UpdateCommitmentHandler handler,
-    CancellationToken cancellationToken) =>
-{
-    try
-    {
-        var response = await handler.HandleAsync(id, request, cancellationToken);
-        return Results.Ok(response);
-    }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
-    {
-        return Results.NotFound();
-    }
-    catch (ArgumentException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-}).RequireAuthorization();
-
 app.MapPost("/api/commitments/{id:guid}/complete", async (
     Guid id,
     CompleteCommitmentRequest request,
@@ -1162,15 +838,14 @@ app.MapPost("/api/commitments/{id:guid}/complete", async (
     }
 }).RequireAuthorization();
 
-app.MapPost("/api/commitments/{id:guid}/cancel", async (
+app.MapPost("/api/commitments/{id:guid}/dismiss", async (
     Guid id,
-    CancelCommitmentRequest request,
-    CancelCommitmentHandler handler,
+    DismissCommitmentHandler handler,
     CancellationToken cancellationToken) =>
 {
     try
     {
-        var response = await handler.HandleAsync(id, request, cancellationToken);
+        var response = await handler.HandleAsync(id, cancellationToken);
         return Results.Ok(response);
     }
     catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
@@ -1203,39 +878,6 @@ app.MapPost("/api/commitments/{id:guid}/reopen", async (
     }
 }).RequireAuthorization();
 
-app.MapPut("/api/commitments/{id:guid}/due-date", async (
-    Guid id,
-    UpdateDueDateRequest request,
-    UpdateCommitmentDueDateHandler handler,
-    CancellationToken cancellationToken) =>
-{
-    try
-    {
-        var response = await handler.HandleAsync(id, request, cancellationToken);
-        return Results.Ok(response);
-    }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
-    {
-        return Results.NotFound();
-    }
-}).RequireAuthorization();
-
-app.MapPost("/api/commitments/{id:guid}/link-initiative", async (
-    Guid id,
-    LinkCommitmentToInitiativeRequest request,
-    LinkCommitmentToInitiativeHandler handler,
-    CancellationToken cancellationToken) =>
-{
-    try
-    {
-        var response = await handler.HandleAsync(id, request, cancellationToken);
-        return Results.Ok(response);
-    }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
-    {
-        return Results.NotFound();
-    }
-}).RequireAuthorization();
 
 
 

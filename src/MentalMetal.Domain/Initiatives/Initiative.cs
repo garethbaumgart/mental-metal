@@ -4,14 +4,11 @@ namespace MentalMetal.Domain.Initiatives;
 
 public sealed class Initiative : AggregateRoot, IUserScoped
 {
-    private readonly List<Milestone> _milestones = [];
-    private readonly List<Guid> _linkedPersonIds = [];
-
     public Guid UserId { get; private set; }
     public string Title { get; private set; } = null!;
     public InitiativeStatus Status { get; private set; }
-    public IReadOnlyList<Milestone> Milestones => _milestones;
-    public IReadOnlyList<Guid> LinkedPersonIds => _linkedPersonIds;
+    public string? AutoSummary { get; private set; }
+    public DateTimeOffset? LastSummaryRefreshedAt { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
@@ -79,79 +76,19 @@ public sealed class Initiative : AggregateRoot, IUserScoped
         RaiseDomainEvent(new InitiativeStatusChanged(Id, oldStatus, newStatus));
     }
 
-    public void AddMilestone(string title, DateOnly targetDate, string? description = null)
+    /// <summary>
+    /// Sets the AI-generated auto-summary. Called by the extraction/refresh pipeline.
+    /// </summary>
+    public void RefreshAutoSummary(string summary)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(summary, nameof(summary));
         EnsureNotTerminal();
 
-        var milestone = Milestone.Create(title, targetDate, description);
-        _milestones.Add(milestone);
+        AutoSummary = summary.Trim();
+        LastSummaryRefreshedAt = DateTimeOffset.UtcNow;
         UpdatedAt = DateTimeOffset.UtcNow;
 
-        RaiseDomainEvent(new MilestoneSet(Id, milestone.Id));
-    }
-
-    public void UpdateMilestone(Guid milestoneId, string title, DateOnly targetDate, string? description = null)
-    {
-        EnsureNotTerminal();
-
-        var existing = _milestones.FirstOrDefault(m => m.Id == milestoneId)
-            ?? throw new ArgumentException($"Milestone '{milestoneId}' not found.");
-
-        existing.ApplyUpdates(title, targetDate, description);
-        UpdatedAt = DateTimeOffset.UtcNow;
-
-        RaiseDomainEvent(new MilestoneSet(Id, milestoneId));
-    }
-
-    public void RemoveMilestone(Guid milestoneId)
-    {
-        EnsureNotTerminal();
-
-        var removed = _milestones.RemoveAll(m => m.Id == milestoneId);
-        if (removed == 0)
-            throw new ArgumentException($"Milestone '{milestoneId}' not found.");
-
-        UpdatedAt = DateTimeOffset.UtcNow;
-
-        RaiseDomainEvent(new MilestoneRemoved(Id, milestoneId));
-    }
-
-    public void CompleteMilestone(Guid milestoneId)
-    {
-        EnsureNotTerminal();
-
-        var existing = _milestones.FirstOrDefault(m => m.Id == milestoneId)
-            ?? throw new ArgumentException($"Milestone '{milestoneId}' not found.");
-
-        existing.Complete();
-        UpdatedAt = DateTimeOffset.UtcNow;
-
-        RaiseDomainEvent(new MilestoneCompleted(Id, milestoneId));
-    }
-
-    public void LinkPerson(Guid personId)
-    {
-        EnsureNotTerminal();
-
-        if (_linkedPersonIds.Contains(personId))
-            return;
-
-        _linkedPersonIds.Add(personId);
-        UpdatedAt = DateTimeOffset.UtcNow;
-
-        RaiseDomainEvent(new PersonLinkedToInitiative(Id, personId));
-    }
-
-    public void UnlinkPerson(Guid personId)
-    {
-        EnsureNotTerminal();
-
-        if (!_linkedPersonIds.Remove(personId))
-            throw new ArgumentException($"Person '{personId}' is not linked to this initiative.");
-
-        UpdatedAt = DateTimeOffset.UtcNow;
-
-        RaiseDomainEvent(new PersonUnlinkedFromInitiative(Id, personId));
+        RaiseDomainEvent(new InitiativeSummaryRefreshed(Id));
     }
 
     private void EnsureNotTerminal()

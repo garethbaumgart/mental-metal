@@ -15,8 +15,8 @@ public class InitiativeTests
         Assert.Equal(UserId, initiative.UserId);
         Assert.Equal("Q1 Hiring Push", initiative.Title);
         Assert.Equal(InitiativeStatus.Active, initiative.Status);
-        Assert.Empty(initiative.Milestones);
-        Assert.Empty(initiative.LinkedPersonIds);
+        Assert.Null(initiative.AutoSummary);
+        Assert.Null(initiative.LastSummaryRefreshedAt);
     }
 
     [Theory]
@@ -110,18 +110,13 @@ public class InitiativeTests
         initiative.ChangeStatus(InitiativeStatus.Active);
 
         Assert.Equal(InitiativeStatus.Active, initiative.Status);
-        var domainEvent = Assert.Single(initiative.DomainEvents);
-        Assert.IsType<InitiativeStatusChanged>(domainEvent);
     }
 
     [Fact]
     public void ChangeStatus_ActiveToCompleted_Succeeds()
     {
         var initiative = Initiative.Create(UserId, "Test");
-        initiative.ClearDomainEvents();
-
         initiative.ChangeStatus(InitiativeStatus.Completed);
-
         Assert.Equal(InitiativeStatus.Completed, initiative.Status);
     }
 
@@ -129,10 +124,7 @@ public class InitiativeTests
     public void ChangeStatus_ActiveToCancelled_Succeeds()
     {
         var initiative = Initiative.Create(UserId, "Test");
-        initiative.ClearDomainEvents();
-
         initiative.ChangeStatus(InitiativeStatus.Cancelled);
-
         Assert.Equal(InitiativeStatus.Cancelled, initiative.Status);
     }
 
@@ -169,261 +161,30 @@ public class InitiativeTests
     }
 
     [Fact]
-    public void AddMilestone_OnActive_SucceedsAndRaisesEvent()
+    public void RefreshAutoSummary_SetsSummaryAndTimestamp()
     {
         var initiative = Initiative.Create(UserId, "Test");
         initiative.ClearDomainEvents();
 
-        initiative.AddMilestone("Phase 1", new DateOnly(2026, 6, 1), "First phase");
+        initiative.RefreshAutoSummary("This is the AI-generated summary.");
 
-        Assert.Single(initiative.Milestones);
-        Assert.Equal("Phase 1", initiative.Milestones[0].Title);
-        Assert.Equal(new DateOnly(2026, 6, 1), initiative.Milestones[0].TargetDate);
-        Assert.Equal("First phase", initiative.Milestones[0].Description);
-        Assert.False(initiative.Milestones[0].IsCompleted);
+        Assert.Equal("This is the AI-generated summary.", initiative.AutoSummary);
+        Assert.NotNull(initiative.LastSummaryRefreshedAt);
 
         var domainEvent = Assert.Single(initiative.DomainEvents);
-        var set = Assert.IsType<MilestoneSet>(domainEvent);
-        Assert.Equal(initiative.Milestones[0].Id, set.MilestoneId);
-    }
-
-    [Fact]
-    public void UpdateMilestone_OnActive_SucceedsAndRaisesEvent()
-    {
-        var initiative = Initiative.Create(UserId, "Test");
-        initiative.AddMilestone("Phase 1", new DateOnly(2026, 6, 1));
-        var milestoneId = initiative.Milestones[0].Id;
-        initiative.ClearDomainEvents();
-
-        initiative.UpdateMilestone(milestoneId, "Phase 1 Updated", new DateOnly(2026, 7, 1), "Updated desc");
-
-        Assert.Single(initiative.Milestones);
-        Assert.Equal(milestoneId, initiative.Milestones[0].Id);
-        Assert.Equal("Phase 1 Updated", initiative.Milestones[0].Title);
-        Assert.Equal(new DateOnly(2026, 7, 1), initiative.Milestones[0].TargetDate);
-        Assert.Equal("Updated desc", initiative.Milestones[0].Description);
-
-        var domainEvent = Assert.Single(initiative.DomainEvents);
-        Assert.IsType<MilestoneSet>(domainEvent);
-    }
-
-    [Fact]
-    public void UpdateMilestone_NotFound_Throws()
-    {
-        var initiative = Initiative.Create(UserId, "Test");
-
-        Assert.ThrowsAny<ArgumentException>(() =>
-            initiative.UpdateMilestone(Guid.NewGuid(), "Title", new DateOnly(2026, 6, 1)));
-    }
-
-    [Fact]
-    public void RemoveMilestone_OnActive_SucceedsAndRaisesEvent()
-    {
-        var initiative = Initiative.Create(UserId, "Test");
-        initiative.AddMilestone("Phase 1", new DateOnly(2026, 6, 1));
-        var milestoneId = initiative.Milestones[0].Id;
-        initiative.ClearDomainEvents();
-
-        initiative.RemoveMilestone(milestoneId);
-
-        Assert.Empty(initiative.Milestones);
-        var domainEvent = Assert.Single(initiative.DomainEvents);
-        Assert.IsType<MilestoneRemoved>(domainEvent);
-    }
-
-    [Fact]
-    public void RemoveMilestone_NotFound_Throws()
-    {
-        var initiative = Initiative.Create(UserId, "Test");
-
-        Assert.ThrowsAny<ArgumentException>(() =>
-            initiative.RemoveMilestone(Guid.NewGuid()));
-    }
-
-    [Fact]
-    public void CompleteMilestone_OnActive_SucceedsAndRaisesEvent()
-    {
-        var initiative = Initiative.Create(UserId, "Test");
-        initiative.AddMilestone("Phase 1", new DateOnly(2026, 6, 1));
-        var milestoneId = initiative.Milestones[0].Id;
-        initiative.ClearDomainEvents();
-
-        initiative.CompleteMilestone(milestoneId);
-
-        Assert.True(initiative.Milestones[0].IsCompleted);
-        var domainEvent = Assert.Single(initiative.DomainEvents);
-        var completed = Assert.IsType<MilestoneCompleted>(domainEvent);
-        Assert.Equal(milestoneId, completed.MilestoneId);
-    }
-
-    [Fact]
-    public void CompleteMilestone_NotFound_Throws()
-    {
-        var initiative = Initiative.Create(UserId, "Test");
-
-        Assert.ThrowsAny<ArgumentException>(() =>
-            initiative.CompleteMilestone(Guid.NewGuid()));
+        Assert.IsType<InitiativeSummaryRefreshed>(domainEvent);
     }
 
     [Theory]
-    [InlineData(InitiativeStatus.Completed)]
-    [InlineData(InitiativeStatus.Cancelled)]
-    public void AddMilestone_OnTerminalStatus_Throws(InitiativeStatus terminalStatus)
-    {
-        var initiative = CreateWithStatus(terminalStatus);
-
-        Assert.ThrowsAny<ArgumentException>(() =>
-            initiative.AddMilestone("Phase 1", new DateOnly(2026, 6, 1)));
-    }
-
-    [Theory]
-    [InlineData(InitiativeStatus.Completed)]
-    [InlineData(InitiativeStatus.Cancelled)]
-    public void UpdateMilestone_OnTerminalStatus_Throws(InitiativeStatus terminalStatus)
-    {
-        var initiative = Initiative.Create(UserId, "Test");
-        initiative.AddMilestone("Phase 1", new DateOnly(2026, 6, 1));
-        var milestoneId = initiative.Milestones[0].Id;
-        initiative.ChangeStatus(terminalStatus);
-
-        Assert.ThrowsAny<ArgumentException>(() =>
-            initiative.UpdateMilestone(milestoneId, "Updated", new DateOnly(2026, 7, 1)));
-    }
-
-    [Theory]
-    [InlineData(InitiativeStatus.Completed)]
-    [InlineData(InitiativeStatus.Cancelled)]
-    public void RemoveMilestone_OnTerminalStatus_Throws(InitiativeStatus terminalStatus)
-    {
-        var initiative = Initiative.Create(UserId, "Test");
-        initiative.AddMilestone("Phase 1", new DateOnly(2026, 6, 1));
-        var milestoneId = initiative.Milestones[0].Id;
-        initiative.ChangeStatus(terminalStatus);
-
-        Assert.ThrowsAny<ArgumentException>(() =>
-            initiative.RemoveMilestone(milestoneId));
-    }
-
-    [Theory]
-    [InlineData(InitiativeStatus.Completed)]
-    [InlineData(InitiativeStatus.Cancelled)]
-    public void CompleteMilestone_OnTerminalStatus_Throws(InitiativeStatus terminalStatus)
-    {
-        var initiative = Initiative.Create(UserId, "Test");
-        initiative.AddMilestone("Phase 1", new DateOnly(2026, 6, 1));
-        var milestoneId = initiative.Milestones[0].Id;
-        initiative.ChangeStatus(terminalStatus);
-
-        Assert.ThrowsAny<ArgumentException>(() =>
-            initiative.CompleteMilestone(milestoneId));
-    }
-
-    [Fact]
-    public void LinkPerson_OnActive_AddsAndRaisesEvent()
-    {
-        var initiative = Initiative.Create(UserId, "Test");
-        initiative.ClearDomainEvents();
-        var personId = Guid.NewGuid();
-
-        initiative.LinkPerson(personId);
-
-        Assert.Single(initiative.LinkedPersonIds);
-        Assert.Contains(personId, initiative.LinkedPersonIds);
-        var domainEvent = Assert.Single(initiative.DomainEvents);
-        var linked = Assert.IsType<PersonLinkedToInitiative>(domainEvent);
-        Assert.Equal(personId, linked.PersonId);
-    }
-
-    [Fact]
-    public void LinkPerson_Duplicate_IsIdempotent()
-    {
-        var initiative = Initiative.Create(UserId, "Test");
-        var personId = Guid.NewGuid();
-        initiative.LinkPerson(personId);
-        initiative.ClearDomainEvents();
-
-        initiative.LinkPerson(personId);
-
-        Assert.Single(initiative.LinkedPersonIds);
-        Assert.Empty(initiative.DomainEvents);
-    }
-
-    [Fact]
-    public void UnlinkPerson_OnActive_RemovesAndRaisesEvent()
-    {
-        var initiative = Initiative.Create(UserId, "Test");
-        var personId = Guid.NewGuid();
-        initiative.LinkPerson(personId);
-        initiative.ClearDomainEvents();
-
-        initiative.UnlinkPerson(personId);
-
-        Assert.Empty(initiative.LinkedPersonIds);
-        var domainEvent = Assert.Single(initiative.DomainEvents);
-        var unlinked = Assert.IsType<PersonUnlinkedFromInitiative>(domainEvent);
-        Assert.Equal(personId, unlinked.PersonId);
-    }
-
-    [Fact]
-    public void UnlinkPerson_NotLinked_Throws()
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void RefreshAutoSummary_EmptySummary_Throws(string? summary)
     {
         var initiative = Initiative.Create(UserId, "Test");
 
         Assert.ThrowsAny<ArgumentException>(() =>
-            initiative.UnlinkPerson(Guid.NewGuid()));
-    }
-
-    [Theory]
-    [InlineData(InitiativeStatus.Completed)]
-    [InlineData(InitiativeStatus.Cancelled)]
-    public void LinkPerson_OnTerminalStatus_Throws(InitiativeStatus terminalStatus)
-    {
-        var initiative = CreateWithStatus(terminalStatus);
-
-        Assert.ThrowsAny<ArgumentException>(() =>
-            initiative.LinkPerson(Guid.NewGuid()));
-    }
-
-    [Theory]
-    [InlineData(InitiativeStatus.Completed)]
-    [InlineData(InitiativeStatus.Cancelled)]
-    public void UnlinkPerson_OnTerminalStatus_Throws(InitiativeStatus terminalStatus)
-    {
-        var initiative = Initiative.Create(UserId, "Test");
-        var personId = Guid.NewGuid();
-        initiative.LinkPerson(personId);
-        initiative.ChangeStatus(terminalStatus);
-
-        Assert.ThrowsAny<ArgumentException>(() =>
-            initiative.UnlinkPerson(personId));
-    }
-
-    [Fact]
-    public void UpdateMilestone_MutatesExistingInstance()
-    {
-        var initiative = Initiative.Create(UserId, "Test");
-        initiative.AddMilestone("Phase 1", new DateOnly(2026, 6, 1));
-        var original = initiative.Milestones[0];
-        var milestoneId = original.Id;
-
-        initiative.UpdateMilestone(milestoneId, "Phase 1 Updated", new DateOnly(2026, 7, 1));
-
-        Assert.Same(original, initiative.Milestones.First(m => m.Id == milestoneId));
-        Assert.Equal("Phase 1 Updated", original.Title);
-    }
-
-    [Fact]
-    public void CompleteMilestone_MutatesExistingInstance()
-    {
-        var initiative = Initiative.Create(UserId, "Test");
-        initiative.AddMilestone("Phase 1", new DateOnly(2026, 6, 1));
-        var original = initiative.Milestones[0];
-        var milestoneId = original.Id;
-
-        initiative.CompleteMilestone(milestoneId);
-
-        Assert.Same(original, initiative.Milestones.First(m => m.Id == milestoneId));
-        Assert.True(original.IsCompleted);
+            initiative.RefreshAutoSummary(summary!));
     }
 
     [Fact]

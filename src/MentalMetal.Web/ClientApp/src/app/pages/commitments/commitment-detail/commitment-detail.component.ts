@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
@@ -8,14 +8,13 @@ import { MessageService } from 'primeng/api';
 import { CommitmentsService } from '../../../shared/services/commitments.service';
 import { PeopleService } from '../../../shared/services/people.service';
 import { InitiativesService } from '../../../shared/services/initiatives.service';
-import { Commitment, CommitmentDirection, CommitmentStatus } from '../../../shared/models/commitment.model';
-import { CommitmentDialogComponent } from '../commitment-dialog/commitment-dialog.component';
+import { Commitment, CommitmentConfidence, CommitmentDirection, CommitmentStatus } from '../../../shared/models/commitment.model';
 
 @Component({
   selector: 'app-commitment-detail',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, ButtonModule, TagModule, ToastModule, CommitmentDialogComponent],
+  imports: [DatePipe, ButtonModule, TagModule, ToastModule, RouterLink],
   providers: [MessageService],
   styles: [`
     .detail-row {
@@ -36,6 +35,7 @@ import { CommitmentDialogComponent } from '../commitment-dialog/commitment-dialo
           <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="goBack()" />
           <h1 class="text-2xl font-bold flex-1">{{ commitment()!.description }}</h1>
           <p-tag [value]="formatDirection(commitment()!.direction)" [severity]="directionSeverity(commitment()!.direction)" />
+          <p-tag [value]="commitment()!.confidence" [severity]="confidenceSeverity(commitment()!.confidence)" />
           <p-tag [value]="formatStatus(commitment()!.status)" [severity]="statusSeverity(commitment()!.status)" />
           @if (commitment()!.isOverdue) {
             <p-tag value="Overdue" severity="danger" />
@@ -46,11 +46,10 @@ import { CommitmentDialogComponent } from '../commitment-dialog/commitment-dialo
         <div class="flex gap-2">
           @if (commitment()!.status === 'Open') {
             <p-button label="Complete" icon="pi pi-check" severity="success" (onClick)="onComplete()" />
-            <p-button label="Cancel" icon="pi pi-times" severity="danger" [outlined]="true" (onClick)="onCancel()" />
+            <p-button label="Dismiss" icon="pi pi-eye-slash" severity="secondary" [outlined]="true" (onClick)="onDismiss()" />
           } @else {
             <p-button label="Reopen" icon="pi pi-replay" severity="info" (onClick)="onReopen()" />
           }
-          <p-button label="Edit" icon="pi pi-pencil" [outlined]="true" (onClick)="openEditDialog()" />
         </div>
 
         <!-- Details -->
@@ -66,9 +65,19 @@ import { CommitmentDialogComponent } from '../commitment-dialog/commitment-dialo
               <span class="text-sm">{{ formatDirection(commitment()!.direction) }}</span>
             </div>
             <div class="flex gap-4 py-2 border-b detail-row">
+              <span class="text-sm font-medium text-muted-color w-32">Confidence</span>
+              <span class="text-sm">{{ commitment()!.confidence }}</span>
+            </div>
+            <div class="flex gap-4 py-2 border-b detail-row">
               <span class="text-sm font-medium text-muted-color w-32">Due Date</span>
               <span class="text-sm">{{ commitment()!.dueDate || 'Not set' }}</span>
             </div>
+            @if (commitment()!.sourceCaptureId) {
+              <div class="flex gap-4 py-2 border-b detail-row">
+                <span class="text-sm font-medium text-muted-color w-32">Source</span>
+                <a class="text-sm text-primary" [routerLink]="['/capture', commitment()!.sourceCaptureId]">View source capture</a>
+              </div>
+            }
             @if (commitment()!.initiativeId) {
               <div class="flex gap-4 py-2 border-b detail-row">
                 <span class="text-sm font-medium text-muted-color w-32">Initiative</span>
@@ -87,6 +96,12 @@ import { CommitmentDialogComponent } from '../commitment-dialog/commitment-dialo
                 <span class="text-sm">{{ commitment()!.completedAt | date:'medium' }}</span>
               </div>
             }
+            @if (commitment()!.dismissedAt) {
+              <div class="flex gap-4 py-2 border-b detail-row">
+                <span class="text-sm font-medium text-muted-color w-32">Dismissed At</span>
+                <span class="text-sm">{{ commitment()!.dismissedAt | date:'medium' }}</span>
+              </div>
+            }
             <div class="flex gap-4 py-2 border-b detail-row">
               <span class="text-sm font-medium text-muted-color w-32">Created</span>
               <span class="text-sm">{{ commitment()!.createdAt | date:'medium' }}</span>
@@ -98,12 +113,6 @@ import { CommitmentDialogComponent } from '../commitment-dialog/commitment-dialo
           </div>
         </section>
       </div>
-
-      <app-commitment-dialog
-        [(visible)]="showEditDialog"
-        [editCommitment]="commitment()!"
-        (updated)="onUpdated($event)"
-      />
     }
   `,
 })
@@ -117,7 +126,6 @@ export class CommitmentDetailComponent implements OnInit {
 
   readonly commitment = signal<Commitment | null>(null);
   readonly loading = signal(true);
-  readonly showEditDialog = signal(false);
   readonly personName = signal('Loading...');
   readonly initiativeName = signal('');
 
@@ -135,15 +143,6 @@ export class CommitmentDetailComponent implements OnInit {
     this.router.navigate(['/commitments']);
   }
 
-  protected openEditDialog(): void {
-    this.showEditDialog.set(true);
-  }
-
-  protected onUpdated(updated: Commitment): void {
-    this.commitment.set(updated);
-    this.messageService.add({ severity: 'success', summary: 'Commitment updated' });
-  }
-
   protected onComplete(): void {
     const c = this.commitment();
     if (!c) return;
@@ -156,15 +155,15 @@ export class CommitmentDetailComponent implements OnInit {
     });
   }
 
-  protected onCancel(): void {
+  protected onDismiss(): void {
     const c = this.commitment();
     if (!c) return;
-    this.commitmentsService.cancel(c.id).subscribe({
+    this.commitmentsService.dismiss(c.id).subscribe({
       next: (updated) => {
         this.commitment.set(updated);
-        this.messageService.add({ severity: 'success', summary: 'Commitment cancelled' });
+        this.messageService.add({ severity: 'success', summary: 'Commitment dismissed' });
       },
-      error: () => this.messageService.add({ severity: 'error', summary: 'Failed to cancel' }),
+      error: () => this.messageService.add({ severity: 'error', summary: 'Failed to dismiss' }),
     });
   }
 
@@ -198,11 +197,20 @@ export class CommitmentDetailComponent implements OnInit {
     return status;
   }
 
-  protected statusSeverity(status: CommitmentStatus): 'info' | 'success' | 'secondary' {
+  protected statusSeverity(status: CommitmentStatus): 'info' | 'success' | 'secondary' | 'warn' {
     switch (status) {
       case 'Open': return 'info';
       case 'Completed': return 'success';
       case 'Cancelled': return 'secondary';
+      case 'Dismissed': return 'warn';
+    }
+  }
+
+  protected confidenceSeverity(confidence: CommitmentConfidence): 'success' | 'warn' | 'secondary' {
+    switch (confidence) {
+      case 'High': return 'success';
+      case 'Medium': return 'warn';
+      case 'Low': return 'secondary';
     }
   }
 

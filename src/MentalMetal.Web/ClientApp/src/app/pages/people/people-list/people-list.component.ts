@@ -88,8 +88,9 @@ export class PeopleListComponent implements OnInit {
 
   protected readonly typeFilterOptions = [
     { label: 'Direct Report', value: 'DirectReport' as PersonType },
+    { label: 'Peer', value: 'Peer' as PersonType },
     { label: 'Stakeholder', value: 'Stakeholder' as PersonType },
-    { label: 'Candidate', value: 'Candidate' as PersonType },
+    { label: 'External', value: 'External' as PersonType },
   ];
 
   ngOnInit(): void {
@@ -111,16 +112,18 @@ export class PeopleListComponent implements OnInit {
   protected formatType(type: PersonType): string {
     switch (type) {
       case 'DirectReport': return 'Direct Report';
+      case 'Peer': return 'Peer';
       case 'Stakeholder': return 'Stakeholder';
-      case 'Candidate': return 'Candidate';
+      case 'External': return 'External';
     }
   }
 
-  protected typeSeverity(type: PersonType): 'info' | 'warn' | 'success' {
+  protected typeSeverity(type: PersonType): 'info' | 'warn' | 'success' | 'secondary' {
     switch (type) {
       case 'DirectReport': return 'info';
+      case 'Peer': return 'success';
       case 'Stakeholder': return 'warn';
-      case 'Candidate': return 'success';
+      case 'External': return 'secondary';
     }
   }
 
