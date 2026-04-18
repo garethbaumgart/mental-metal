@@ -13,6 +13,8 @@ export const routes: Routes = [
   { path: 'initiatives/:id', loadComponent: () => import('./pages/initiatives/initiative-detail/initiative-detail.component').then(m => m.InitiativeDetailComponent), canActivate: [authGuard], data: { title: 'Initiative Detail' } },
   { path: 'commitments', loadComponent: () => import('./pages/commitments/commitments-list/commitments-list.component').then(m => m.CommitmentsListComponent), canActivate: [authGuard], data: { title: 'Commitments' } },
   { path: 'commitments/:id', loadComponent: () => import('./pages/commitments/commitment-detail/commitment-detail.component').then(m => m.CommitmentDetailComponent), canActivate: [authGuard], data: { title: 'Commitment Detail' } },
+  { path: 'briefing/daily', loadComponent: () => import('./pages/briefings/daily-brief.component').then(m => m.DailyBriefComponent), canActivate: [authGuard], data: { title: 'Daily Brief' } },
+  { path: 'briefing/weekly', loadComponent: () => import('./pages/briefings/weekly-brief.component').then(m => m.WeeklyBriefComponent), canActivate: [authGuard], data: { title: 'Weekly Brief' } },
   { path: 'settings', loadComponent: () => import('./pages/settings/settings.page').then(m => m.SettingsPage), canActivate: [authGuard], data: { title: 'Settings' } },
   { path: '**', redirectTo: 'dashboard' },
 ];

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
@@ -10,11 +10,16 @@ import { TagModule } from 'primeng/tag';
 import { ChipModule } from 'primeng/chip';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { SkeletonModule } from 'primeng/skeleton';
+import { TabsModule } from 'primeng/tabs';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { PeopleService } from '../../../shared/services/people.service';
+import { BriefingService } from '../../../shared/services/briefing.service';
 import { Person, PersonType } from '../../../shared/models/person.model';
+import { PersonDossier } from '../../../shared/models/dossier.model';
 import { CommitmentsService } from '../../../shared/services/commitments.service';
 import { Commitment } from '../../../shared/models/commitment.model';
+import { MarkdownPipe } from '../../../shared/pipes/markdown.pipe';
 
 @Component({
   selector: 'app-person-detail',
@@ -23,6 +28,7 @@ import { Commitment } from '../../../shared/models/commitment.model';
   imports: [
     FormsModule,
     DatePipe,
+    RouterLink,
     ButtonModule,
     InputTextModule,
     TextareaModule,
@@ -31,6 +37,9 @@ import { Commitment } from '../../../shared/models/commitment.model';
     ChipModule,
     ToastModule,
     ConfirmDialogModule,
+    SkeletonModule,
+    TabsModule,
+    MarkdownPipe,
   ],
   providers: [MessageService, ConfirmationService],
   template: `
@@ -42,13 +51,130 @@ import { Commitment } from '../../../shared/models/commitment.model';
         <i class="pi pi-spinner pi-spin text-2xl"></i>
       </div>
     } @else if (person()) {
-      <div class="max-w-2xl mx-auto flex flex-col gap-8">
+      <div class="max-w-3xl mx-auto flex flex-col gap-8">
         <!-- Header -->
         <div class="flex items-center gap-4 flex-wrap">
           <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="goBack()" />
           <h1 class="text-2xl font-bold flex-1">{{ person()!.name }}</h1>
           <p-tag [value]="formatType(person()!.type)" [severity]="typeSeverity(person()!.type)" />
         </div>
+
+        <!-- Dossier Section -->
+        <section class="flex flex-col gap-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-semibold">Intelligence Dossier</h2>
+            <div class="flex gap-2">
+              <p-button
+                [label]="dossierMode() === 'prep' ? 'Standard View' : 'Prep for Meeting'"
+                [icon]="dossierMode() === 'prep' ? 'pi pi-eye' : 'pi pi-calendar'"
+                severity="secondary"
+                [outlined]="true"
+                size="small"
+                (onClick)="toggleDossierMode()"
+                [disabled]="dossierLoading()"
+              />
+              <p-button
+                icon="pi pi-refresh"
+                severity="secondary"
+                [outlined]="true"
+                size="small"
+                (onClick)="refreshDossier()"
+                [disabled]="dossierLoading()"
+                ariaLabel="Refresh dossier"
+              />
+            </div>
+          </div>
+
+          @if (dossierLoading()) {
+            <div class="flex flex-col gap-3">
+              <p-skeleton height="1rem" />
+              <p-skeleton height="1rem" width="90%" />
+              <p-skeleton height="1rem" width="80%" />
+              <p-skeleton height="1rem" width="85%" />
+              <p-skeleton height="1rem" width="70%" />
+            </div>
+          } @else if (dossier()) {
+            <!-- AI Synthesis -->
+            <div class="p-4 rounded bg-surface-50">
+              <div [innerHTML]="dossier()!.synthesis | markdown"></div>
+            </div>
+
+            <!-- Open Commitments -->
+            <div class="flex flex-col gap-3">
+              <h3 class="text-lg font-semibold">Open Commitments</h3>
+              @if (dossier()!.openCommitments.length === 0) {
+                <p class="text-muted-color text-sm">No open commitments.</p>
+              } @else {
+                <div class="flex flex-col gap-2">
+                  @for (group of ['MineToThem', 'TheirsToMe']; track group) {
+                    @if (getCommitmentsForDirection(group).length > 0) {
+                      <h4 class="text-sm font-medium text-muted-color mt-2">
+                        {{ group === 'MineToThem' ? 'I owe them' : 'They owe me' }}
+                      </h4>
+                      @for (c of getCommitmentsForDirection(group); track c.id) {
+                        <div class="flex items-center gap-2 p-3 rounded bg-surface-50">
+                          <span class="flex-1 text-sm">{{ c.description }}</span>
+                          @if (c.dueDate) {
+                            <span class="text-xs text-muted-color">Due {{ c.dueDate | date: 'mediumDate' }}</span>
+                          }
+                          @if (c.isOverdue) {
+                            <p-tag value="Overdue" severity="danger" />
+                          }
+                        </div>
+                      }
+                    }
+                  }
+                </div>
+              }
+            </div>
+
+            <!-- Transcript Mentions -->
+            <div class="flex flex-col gap-3">
+              <h3 class="text-lg font-semibold">Recent Mentions</h3>
+              @if (dossier()!.transcriptMentions.length === 0) {
+                <p class="text-muted-color text-sm">No recent mentions found.</p>
+              } @else {
+                @for (m of dossier()!.transcriptMentions; track m.captureId) {
+                  <div class="p-3 rounded bg-surface-50 flex flex-col gap-1">
+                    <div class="flex items-center justify-between">
+                      <a [routerLink]="['/capture', m.captureId]" class="text-sm font-medium text-primary">
+                        {{ m.captureTitle || 'Untitled capture' }}
+                      </a>
+                      <span class="text-xs text-muted-color">{{ m.capturedAt | date: 'medium' }}</span>
+                    </div>
+                    @if (m.mentionContext) {
+                      <p class="text-sm text-muted-color">{{ m.mentionContext }}</p>
+                    }
+                  </div>
+                }
+              }
+            </div>
+
+            <!-- Unresolved Mentions -->
+            @if (dossier()!.unresolvedMentions.length > 0) {
+              <div class="flex flex-col gap-3">
+                <h3 class="text-lg font-semibold">Unresolved Mentions</h3>
+                @for (u of dossier()!.unresolvedMentions; track u.captureId + u.rawName) {
+                  <div class="p-3 rounded bg-surface-50 flex items-center gap-2">
+                    <p-tag [value]="u.rawName" severity="warn" />
+                    @if (u.context) {
+                      <span class="text-sm text-muted-color">{{ u.context }}</span>
+                    }
+                  </div>
+                }
+              </div>
+            }
+
+            <p class="text-xs text-muted-color">
+              Generated {{ dossier()!.generatedAt | date: 'medium' }}
+            </p>
+          } @else if (dossierError()) {
+            <div class="p-4 rounded bg-surface-50 text-center">
+              <p class="text-sm text-muted-color">{{ dossierError() }}</p>
+              <p-button label="Try Again" size="small" [outlined]="true" (onClick)="loadDossier()" class="mt-2" />
+            </div>
+          }
+        </section>
 
         <!-- Aliases -->
         <section class="flex flex-col gap-3">
@@ -64,25 +190,6 @@ import { Commitment } from '../../../shared/models/commitment.model';
             <input pInputText [ngModel]="newAlias()" (ngModelChange)="newAlias.set($event)" class="flex-1" placeholder="Add alias..." aria-label="New alias" (keydown.enter)="addAlias()" />
             <p-button icon="pi pi-plus" [outlined]="true" size="small" (onClick)="addAlias()" [disabled]="!newAlias().trim()" ariaLabel="Add alias" />
           </div>
-        </section>
-
-        <section class="flex flex-col gap-3">
-          <h2 class="text-xl font-semibold">Open Commitments</h2>
-          @if (openCommitments().length === 0) {
-            <p class="text-muted-color text-sm">No open commitments.</p>
-          } @else {
-            <ul class="flex flex-col gap-2">
-              @for (c of openCommitments(); track c.id) {
-                <li class="flex items-center gap-2 p-3 rounded bg-surface-50">
-                  <p-tag [value]="c.direction === 'MineToThem' ? 'Mine' : 'Theirs'" severity="secondary" />
-                  <span class="flex-1 text-sm">{{ c.description }}</span>
-                  @if (c.dueDate) {
-                    <span class="text-xs text-muted-color">Due {{ c.dueDate | date: 'mediumDate' }}</span>
-                  }
-                </li>
-              }
-            </ul>
-          }
         </section>
 
         <!-- Profile & Details -->
@@ -207,6 +314,7 @@ export class PersonDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly peopleService = inject(PeopleService);
+  private readonly briefingService = inject(BriefingService);
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly commitmentsService = inject(CommitmentsService);
@@ -219,6 +327,12 @@ export class PersonDetailComponent implements OnInit {
   readonly profileEditOpen = signal(false);
 
   readonly openCommitments = signal<Commitment[]>([]);
+
+  // Dossier state
+  readonly dossier = signal<PersonDossier | null>(null);
+  readonly dossierLoading = signal(false);
+  readonly dossierError = signal<string | null>(null);
+  readonly dossierMode = signal<'default' | 'prep'>('default');
 
   // Profile fields
   protected name = '';
@@ -249,6 +363,52 @@ export class PersonDetailComponent implements OnInit {
 
   protected goBack(): void {
     this.router.navigate(['/people']);
+  }
+
+  protected getCommitmentsForDirection(direction: string) {
+    return this.dossier()?.openCommitments.filter(c => c.direction === direction) ?? [];
+  }
+
+  protected toggleDossierMode(): void {
+    const next = this.dossierMode() === 'prep' ? 'default' : 'prep';
+    this.dossierMode.set(next);
+    this.loadDossier();
+  }
+
+  protected refreshDossier(): void {
+    const p = this.person();
+    if (!p) return;
+
+    this.dossierLoading.set(true);
+    this.dossierError.set(null);
+    this.briefingService.refreshDossier(p.id, this.dossierMode()).subscribe({
+      next: (d) => {
+        this.dossier.set(d);
+        this.dossierLoading.set(false);
+      },
+      error: () => {
+        this.dossierLoading.set(false);
+        this.dossierError.set('Failed to generate dossier. Is your AI provider configured?');
+      },
+    });
+  }
+
+  protected loadDossier(): void {
+    const p = this.person();
+    if (!p) return;
+
+    this.dossierLoading.set(true);
+    this.dossierError.set(null);
+    this.briefingService.getDossier(p.id, this.dossierMode()).subscribe({
+      next: (d) => {
+        this.dossier.set(d);
+        this.dossierLoading.set(false);
+      },
+      error: () => {
+        this.dossierLoading.set(false);
+        this.dossierError.set('Failed to generate dossier. Is your AI provider configured?');
+      },
+    });
   }
 
   protected saveProfile(): void {
@@ -388,18 +548,12 @@ export class PersonDetailComponent implements OnInit {
         this.person.set(person);
         this.populateFields(person);
         this.loading.set(false);
-        this.loadLensData(id);
+        this.loadDossier();
       },
       error: () => {
         this.loading.set(false);
         this.router.navigate(['/people']);
       },
-    });
-  }
-
-  private loadLensData(personId: string): void {
-    this.commitmentsService.list(undefined, 'Open', personId).subscribe({
-      next: (list) => this.openCommitments.set(list),
     });
   }
 

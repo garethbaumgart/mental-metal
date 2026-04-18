@@ -54,6 +54,18 @@ import { ThemeService } from '../services/theme.service';
         <i class="pi pi-home"></i>
         <span>Dashboard</span>
       </a>
+      <a routerLink="/briefing/daily" routerLinkActive="font-semibold sidebar-link-active"
+         class="flex items-center gap-3 px-3 py-2 rounded-md text-sm"
+         (click)="navClick.emit()">
+        <i class="pi pi-sun"></i>
+        <span>Daily Brief</span>
+      </a>
+      <a routerLink="/briefing/weekly" routerLinkActive="font-semibold sidebar-link-active"
+         class="flex items-center gap-3 px-3 py-2 rounded-md text-sm"
+         (click)="navClick.emit()">
+        <i class="pi pi-calendar"></i>
+        <span>Weekly Brief</span>
+      </a>
       <a routerLink="/capture" routerLinkActive="font-semibold sidebar-link-active"
          class="flex items-center gap-3 px-3 py-2 rounded-md text-sm"
          (click)="navClick.emit()">
