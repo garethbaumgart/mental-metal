@@ -13,6 +13,7 @@ import { AiProviderSettingsComponent } from './ai-provider-settings.component';
 import { PasswordSettingsComponent } from './password-settings.component';
 import { BookmarkletInstallerComponent } from './bookmarklet-installer.component';
 import { PersonalAccessTokensComponent } from './personal-access-tokens.component';
+import { DeepgramSettingsComponent } from './deepgram-settings.component';
 
 @Component({
   selector: 'app-settings',
@@ -29,6 +30,7 @@ import { PersonalAccessTokensComponent } from './personal-access-tokens.componen
     BookmarkletInstallerComponent,
     PasswordSettingsComponent,
     PersonalAccessTokensComponent,
+    DeepgramSettingsComponent,
   ],
   providers: [MessageService],
   template: `
@@ -113,6 +115,9 @@ import { PersonalAccessTokensComponent } from './personal-access-tokens.componen
 
       <!-- Bookmarklet Section -->
       <app-bookmarklet-installer />
+
+      <!-- Deepgram Transcription Section -->
+      <app-deepgram-settings />
 
       <!-- AI Provider Section -->
       <app-ai-provider-settings />

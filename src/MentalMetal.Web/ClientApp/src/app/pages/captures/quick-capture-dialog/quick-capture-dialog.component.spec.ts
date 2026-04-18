@@ -37,9 +37,20 @@ describe('QuickCaptureDialogComponent', () => {
     httpMock = TestBed.inject(HttpTestingController);
     fixture.componentRef.setInput('visible', true);
     fixture.detectChanges();
+
+    // The component checks Deepgram availability when opened — flush that request
+    flushDeepgramStatusCheck();
   });
 
   afterEach(() => httpMock.verify());
+
+  /** Flush the Deepgram status check that fires when the dialog opens. */
+  function flushDeepgramStatusCheck(): void {
+    const req = httpMock.match('/api/transcription/status');
+    for (const r of req) {
+      r.flush({ available: false, reason: 'Not configured' });
+    }
+  }
 
   function textarea(): HTMLTextAreaElement {
     // PrimeNG dialog portal-renders outside the component; search the whole body.
