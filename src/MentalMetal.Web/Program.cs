@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using MentalMetal.Application.Captures;
 using MentalMetal.Web;
 using MentalMetal.Web.Features.Captures;
+using MentalMetal.Web.Features.Transcription;
 using MentalMetal.Application.Commitments;
 using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.Initiatives;
@@ -36,6 +37,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services.AddOptions<DeepgramSettings>()
+    .Bind(builder.Configuration.GetSection(DeepgramSettings.SectionName));
 
 builder.Services.AddOptions<MentalMetal.Web.Features.Captures.AudioUploadOptions>()
     .Bind(builder.Configuration.GetSection(MentalMetal.Web.Features.Captures.AudioUploadOptions.SectionName))
@@ -159,6 +163,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseStaticFiles();
+app.UseWebSockets();
 
 app.UseCors();
 app.UseAuthentication();
@@ -886,6 +891,7 @@ app.MapPost("/api/commitments/{id:guid}/reopen", async (
 app.MapAudioCaptureEndpoints();
 app.MapImportCaptureEndpoints();
 app.MapPersonalAccessTokenEndpoints();
+app.MapTranscriptionEndpoints();
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
 

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, effect, inject, model, output, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, effect, inject, model, output, signal, viewChild, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -8,11 +8,18 @@ import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
 import { PanelModule } from 'primeng/panel';
 import { ToastModule } from 'primeng/toast';
+import { MessageModule } from 'primeng/message';
+import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { CapturesService } from '../../../shared/services/captures.service';
+import { AudioRecorderService } from '../../../shared/services/audio-recorder.service';
+import { DeepgramTranscriptionService } from '../../../shared/services/deepgram-transcription.service';
 import { Capture, CaptureType } from '../../../shared/models/capture.model';
 
 const ACCEPTED_EXTENSIONS = new Set(['.txt', '.html', '.htm', '.docx']);
+
+type CaptureMode = 'type' | 'voice';
+type VoiceState = 'idle' | 'recording' | 'done';
 
 @Component({
   selector: 'app-quick-capture-dialog',
@@ -27,6 +34,8 @@ const ACCEPTED_EXTENSIONS = new Set(['.txt', '.html', '.htm', '.docx']);
     SelectModule,
     PanelModule,
     ToastModule,
+    MessageModule,
+    TooltipModule,
   ],
   providers: [MessageService],
   template: `
@@ -34,95 +43,195 @@ const ACCEPTED_EXTENSIONS = new Set(['.txt', '.html', '.htm', '.docx']);
     <p-dialog
       header="Quick Capture"
       [visible]="visible()"
-      (visibleChange)="visible.set($event)"
+      (visibleChange)="onVisibleChange($event)"
       [modal]="true"
       [style]="{ width: '32rem' }"
     >
-      <!-- keydown captured at dialog level so Cmd/Ctrl+Enter submits even when -->
-      <!-- focus is inside a primeng control that swallows the textarea's Enter -->
       <div class="flex flex-col gap-4 pt-4" (keydown)="onDialogKeydown($event)">
-        <div class="flex flex-col gap-2">
-          <label for="captureContent" class="text-sm font-medium text-muted-color">Content *</label>
-          <textarea
-            #contentField
-            pTextarea
-            id="captureContent"
-            [(ngModel)]="rawContent"
-            (keydown)="onTextareaKeydown($event)"
-            [rows]="6"
-            class="w-full"
-            placeholder="Paste text, meeting notes, or a quick thought…"
-          ></textarea>
+        <!-- Mode toggle -->
+        <div class="flex items-center gap-2">
+          <p-button
+            icon="pi pi-pencil"
+            label="Type"
+            [severity]="captureMode() === 'type' ? 'primary' : 'secondary'"
+            [outlined]="captureMode() !== 'type'"
+            size="small"
+            (onClick)="setCaptureMode('type')"
+          />
+          <p-button
+            icon="pi pi-microphone"
+            label="Voice"
+            [severity]="captureMode() === 'voice' ? 'primary' : 'secondary'"
+            [outlined]="captureMode() !== 'voice'"
+            size="small"
+            (onClick)="setCaptureMode('voice')"
+            [disabled]="!deepgramAvailable()"
+            [pTooltip]="deepgramAvailable() ? '' : 'Configure Deepgram in Settings to enable voice capture'"
+          />
         </div>
 
-        <p-panel header="Advanced" [toggleable]="true" [collapsed]="true">
-          <div class="flex flex-col gap-4">
-            <!-- File import drop-zone -->
-            <div class="flex flex-col gap-2">
-              <label class="text-sm font-medium text-muted-color">Import file</label>
-              <div
-                class="flex flex-col items-center justify-center gap-2 p-4 rounded-lg text-center cursor-pointer"
-                style="border: 2px dashed var(--p-content-border-color)"
-                (dragover)="onDragOver($event)"
-                (drop)="onFileDrop($event)"
-                (click)="fileInput.click()"
-              >
-                @if (selectedFile()) {
-                  <div class="flex items-center gap-2">
-                    <i class="pi pi-file"></i>
-                    <span class="text-sm font-medium">{{ selectedFile()!.name }}</span>
-                    <p-button
-                      icon="pi pi-times"
-                      [rounded]="true"
-                      [text]="true"
-                      size="small"
-                      severity="secondary"
-                      (onClick)="clearFile($event)"
-                    />
-                  </div>
-                } @else {
-                  <i class="pi pi-upload text-muted-color"></i>
-                  <span class="text-sm text-muted-color">Drop .txt, .html, or .docx file here, or click to browse</span>
+        @if (captureMode() === 'type') {
+          <!-- Type mode (existing behavior) -->
+          <div class="flex flex-col gap-2">
+            <label for="captureContent" class="text-sm font-medium text-muted-color">Content *</label>
+            <textarea
+              #contentField
+              pTextarea
+              id="captureContent"
+              [(ngModel)]="rawContent"
+              (keydown)="onTextareaKeydown($event)"
+              [rows]="6"
+              class="w-full"
+              placeholder="Paste text, meeting notes, or a quick thought..."
+            ></textarea>
+          </div>
+
+          <p-panel header="Advanced" [toggleable]="true" [collapsed]="true">
+            <div class="flex flex-col gap-4">
+              <div class="flex flex-col gap-2">
+                <label class="text-sm font-medium text-muted-color">Import file</label>
+                <div
+                  class="flex flex-col items-center justify-center gap-2 p-4 rounded-lg text-center cursor-pointer"
+                  style="border: 2px dashed var(--p-content-border-color)"
+                  (dragover)="onDragOver($event)"
+                  (drop)="onFileDrop($event)"
+                  (click)="fileInput.click()"
+                >
+                  @if (selectedFile()) {
+                    <div class="flex items-center gap-2">
+                      <i class="pi pi-file"></i>
+                      <span class="text-sm font-medium">{{ selectedFile()!.name }}</span>
+                      <p-button
+                        icon="pi pi-times"
+                        [rounded]="true"
+                        [text]="true"
+                        size="small"
+                        severity="secondary"
+                        (onClick)="clearFile($event)"
+                      />
+                    </div>
+                  } @else {
+                    <i class="pi pi-upload text-muted-color"></i>
+                    <span class="text-sm text-muted-color">Drop .txt, .html, or .docx file here, or click to browse</span>
+                  }
+                </div>
+                <input
+                  #fileInput
+                  type="file"
+                  accept=".txt,.html,.htm,.docx"
+                  class="hidden"
+                  (change)="onFileSelected($event)"
+                />
+                @if (fileError()) {
+                  <span class="text-sm" style="color: var(--p-red-500)">{{ fileError() }}</span>
                 }
               </div>
-              <input
-                #fileInput
-                type="file"
-                accept=".txt,.html,.htm,.docx"
-                class="hidden"
-                (change)="onFileSelected($event)"
+
+              <div class="flex flex-col gap-2">
+                <label for="captureType" class="text-sm font-medium text-muted-color">Type</label>
+                <p-select
+                  id="captureType"
+                  [options]="typeOptions"
+                  [(ngModel)]="selectedType"
+                  class="w-full"
+                />
+              </div>
+
+              <div class="flex flex-col gap-2">
+                <label for="captureTitle" class="text-sm font-medium text-muted-color">Title (optional)</label>
+                <input pInputText id="captureTitle" [(ngModel)]="title" class="w-full" />
+              </div>
+
+              <div class="flex flex-col gap-2">
+                <label for="captureSource" class="text-sm font-medium text-muted-color">Source (optional)</label>
+                <input pInputText id="captureSource" [(ngModel)]="source" class="w-full" placeholder="e.g. weekly 1:1, standup" />
+              </div>
+            </div>
+          </p-panel>
+        }
+
+        @if (captureMode() === 'voice') {
+          <!-- Voice mode -->
+          <div class="flex flex-col items-center gap-4 py-4">
+            @if (voiceState() === 'idle') {
+              <p-button
+                icon="pi pi-microphone"
+                [rounded]="true"
+                severity="danger"
+                class="text-3xl"
+                [style]="{ width: '4rem', height: '4rem' }"
+                (onClick)="startVoiceRecording()"
+                pTooltip="Click to start recording"
               />
-              @if (fileError()) {
-                <span class="text-sm" style="color: var(--p-red-500)">{{ fileError() }}</span>
+              <span class="text-sm text-muted-color">Tap to speak</span>
+              @if (voiceError()) {
+                <p-message severity="error" [text]="voiceError()!" />
               }
-            </div>
+            }
 
-            <div class="flex flex-col gap-2">
-              <label for="captureType" class="text-sm font-medium text-muted-color">Type</label>
-              <p-select
-                id="captureType"
-                [options]="typeOptions"
-                [(ngModel)]="selectedType"
-                class="w-full"
+            @if (voiceState() === 'recording') {
+              <div class="flex items-center gap-3">
+                <span class="inline-block h-3 w-3 rounded-full animate-pulse" style="background: var(--p-red-500)"></span>
+                <span class="font-mono text-lg font-semibold">{{ recorder.formattedTime() }}</span>
+              </div>
+
+              <!-- Audio levels -->
+              <div class="flex items-end gap-0.5 h-6 w-full max-w-xs">
+                @for (level of recorder.audioLevels(); track $index) {
+                  <div
+                    class="flex-1 rounded-sm transition-all duration-75"
+                    [style.height.%]="Math.max(8, level * 100)"
+                    style="background: var(--p-primary-color); min-width: 2px"
+                  ></div>
+                }
+              </div>
+
+              <!-- Interim transcript -->
+              @if (transcription.interimText() || transcription.transcript()) {
+                <div class="w-full max-h-32 overflow-y-auto rounded p-3 text-sm" style="background: var(--p-surface-50)">
+                  @if (transcription.transcript()) {
+                    <p>{{ transcription.transcript() }}</p>
+                  }
+                  @if (transcription.interimText()) {
+                    <p class="text-muted-color italic">{{ transcription.interimText() }}</p>
+                  }
+                </div>
+              }
+
+              <p-button
+                icon="pi pi-stop-circle"
+                label="Stop"
+                severity="secondary"
+                (onClick)="stopVoiceRecording()"
               />
-            </div>
 
-            <div class="flex flex-col gap-2">
-              <label for="captureTitle" class="text-sm font-medium text-muted-color">Title (optional)</label>
-              <input pInputText id="captureTitle" [(ngModel)]="title" class="w-full" />
-            </div>
+              @if (transcription.error()) {
+                <p-message severity="warn" [text]="transcription.error()!" />
+              }
+            }
 
-            <div class="flex flex-col gap-2">
-              <label for="captureSource" class="text-sm font-medium text-muted-color">Source (optional)</label>
-              <input pInputText id="captureSource" [(ngModel)]="source" class="w-full" placeholder="e.g. weekly 1:1, standup" />
-            </div>
+            @if (voiceState() === 'done') {
+              <div class="flex flex-col gap-2 w-full">
+                <label class="text-sm font-medium text-muted-color">Transcript (editable)</label>
+                <textarea
+                  pTextarea
+                  [(ngModel)]="rawContent"
+                  [rows]="6"
+                  class="w-full"
+                  placeholder="Voice transcript will appear here..."
+                ></textarea>
+              </div>
+              @if (!rawContent.trim()) {
+                <p-message severity="warn" text="No transcript was captured. Try again or switch to Type mode." />
+              }
+            }
           </div>
-        </p-panel>
+        }
       </div>
 
       <ng-template #footer>
         <div class="flex justify-end gap-2">
-          <p-button label="Cancel" severity="secondary" (onClick)="visible.set(false)" />
+          <p-button label="Cancel" severity="secondary" (onClick)="onCancel()" />
           <p-button
             label="Capture"
             icon="pi pi-check"
@@ -135,10 +244,12 @@ const ACCEPTED_EXTENSIONS = new Set(['.txt', '.html', '.htm', '.docx']);
     </p-dialog>
   `,
 })
-export class QuickCaptureDialogComponent {
+export class QuickCaptureDialogComponent implements OnDestroy {
   private readonly capturesService = inject(CapturesService);
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
+  protected readonly recorder = inject(AudioRecorderService);
+  protected readonly transcription = inject(DeepgramTranscriptionService);
 
   readonly visible = model(false);
   readonly created = output<Capture>();
@@ -148,11 +259,17 @@ export class QuickCaptureDialogComponent {
   protected readonly submitting = signal(false);
   protected readonly selectedFile = signal<File | null>(null);
   protected readonly fileError = signal<string | null>(null);
+  protected readonly captureMode = signal<CaptureMode>('type');
+  protected readonly voiceState = signal<VoiceState>('idle');
+  protected readonly voiceError = signal<string | null>(null);
+  protected readonly deepgramAvailable = signal(false);
+
   protected rawContent = '';
-  /** Defaults to QuickNote so the happy path requires no categorization (see capture-text spec). */
   protected selectedType: CaptureType = 'QuickNote';
   protected title = '';
   protected source = '';
+
+  protected readonly Math = Math;
 
   protected readonly typeOptions = [
     { label: 'Quick Note', value: 'QuickNote' as CaptureType },
@@ -161,14 +278,85 @@ export class QuickCaptureDialogComponent {
   ];
 
   constructor() {
-    // Autofocus the content textarea when the dialog opens so the user can
-    // start typing immediately without an extra click (brief: "typing-plus-
-    // Enter fast on the happy path").
     effect(() => {
       if (this.visible()) {
         queueMicrotask(() => this.contentField()?.nativeElement.focus());
+        // Check Deepgram availability when dialog opens
+        this.checkDeepgramAvailability();
       }
     });
+  }
+
+  private async checkDeepgramAvailability(): Promise<void> {
+    const available = await this.transcription.checkAvailability();
+    this.deepgramAvailable.set(available);
+    // Reset transcription error so it doesn't leak into the UI
+    if (!available) {
+      this.transcription.error.set(null);
+    }
+  }
+
+  protected setCaptureMode(mode: CaptureMode): void {
+    if (this.voiceState() === 'recording') {
+      // Don't switch while recording
+      return;
+    }
+    this.captureMode.set(mode);
+    if (mode === 'type') {
+      queueMicrotask(() => this.contentField()?.nativeElement.focus());
+    }
+  }
+
+  protected async startVoiceRecording(): Promise<void> {
+    this.voiceError.set(null);
+
+    // Wire up PCM forwarding
+    this.recorder.onPcmChunk.set((data: ArrayBuffer) => {
+      this.transcription.sendRawPcm(data);
+    });
+
+    try {
+      await this.recorder.start();
+    } catch {
+      this.voiceError.set(this.recorder.error() ?? 'Failed to start recording');
+      return;
+    }
+
+    if (this.recorder.state() !== 'recording') {
+      this.voiceError.set(this.recorder.error() ?? 'Microphone access denied. Switch to Type mode.');
+      return;
+    }
+
+    // Start transcription — single channel, no diarization for voice notes
+    this.transcription.start(1, 'You', 'linear16', this.recorder.sampleRate());
+    this.voiceState.set('recording');
+  }
+
+  protected async stopVoiceRecording(): Promise<void> {
+    this.transcription.stop();
+    await this.recorder.stop();
+    this.recorder.onPcmChunk.set(null);
+
+    // Populate the text area with the transcript
+    this.rawContent = this.transcription.transcript();
+    this.voiceState.set('done');
+  }
+
+  protected onVisibleChange(newVisible: boolean): void {
+    if (!newVisible) {
+      this.onCancel();
+    }
+    this.visible.set(newVisible);
+  }
+
+  protected onCancel(): void {
+    if (this.voiceState() === 'recording') {
+      this.transcription.reset();
+      this.recorder.discard();
+      this.recorder.onPcmChunk.set(null);
+    }
+    this.voiceState.set('idle');
+    this.visible.set(false);
   }
 
   protected isValid(): boolean {
@@ -176,7 +364,6 @@ export class QuickCaptureDialogComponent {
   }
 
   protected onTextareaKeydown(event: KeyboardEvent): void {
-    // Plain Enter submits; Shift+Enter inserts a newline as normal.
     if (event.key === 'Enter' && !event.shiftKey && !event.metaKey && !event.ctrlKey) {
       if (this.isValid() && !this.selectedFile()) {
         event.preventDefault();
@@ -186,7 +373,6 @@ export class QuickCaptureDialogComponent {
   }
 
   protected onDialogKeydown(event: KeyboardEvent): void {
-    // Cmd/Ctrl+Enter submits from any field inside the dialog.
     if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
       if (this.isValid()) {
         event.preventDefault();
@@ -211,7 +397,7 @@ export class QuickCaptureDialogComponent {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (file) this.validateAndSetFile(file);
-    input.value = ''; // reset so the same file can be selected again
+    input.value = '';
   }
 
   protected clearFile(event: Event): void {
@@ -233,11 +419,11 @@ export class QuickCaptureDialogComponent {
   protected onSubmit(): void {
     if (!this.isValid()) return;
 
+    const isVoice = this.captureMode() === 'voice' && this.voiceState() === 'done';
+
     const file = this.selectedFile();
-    if (file) {
-      // File upload path — goes to /api/captures/import
+    if (file && !isVoice) {
       if (this.rawContent.trim().length > 0) {
-        // Both typed content and a file — confirm before discarding text
         if (!confirm('You have both typed content and an attached file. The file will be imported and the typed content will be discarded. Continue?')) {
           return;
         }
@@ -266,12 +452,11 @@ export class QuickCaptureDialogComponent {
         },
       });
     } else {
-      // Text capture path — existing POST /api/captures
       this.submitting.set(true);
       this.capturesService.create({
         rawContent: this.rawContent.trim(),
-        type: this.selectedType,
-        source: 'Typed',
+        type: 'QuickNote',
+        source: isVoice ? 'Voice' : 'Typed',
         ...(this.title.trim() && { title: this.title.trim() }),
       }).subscribe({
         next: (capture) => {
@@ -295,5 +480,17 @@ export class QuickCaptureDialogComponent {
     this.source = '';
     this.selectedFile.set(null);
     this.fileError.set(null);
+    this.captureMode.set('type');
+    this.voiceState.set('idle');
+    this.voiceError.set(null);
+    this.transcription.reset();
+  }
+
+  ngOnDestroy(): void {
+    if (this.voiceState() === 'recording') {
+      this.transcription.reset();
+      this.recorder.discard();
+      this.recorder.onPcmChunk.set(null);
+    }
   }
 }

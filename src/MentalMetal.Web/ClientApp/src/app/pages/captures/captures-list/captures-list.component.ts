@@ -10,13 +10,14 @@ import { CapturesService } from '../../../shared/services/captures.service';
 import { QuickCaptureUiService } from '../../../shared/services/quick-capture-ui.service';
 import { Capture, CaptureType, ProcessingStatus } from '../../../shared/models/capture.model';
 import { CaptureRecorderComponent } from '../audio-recorder/capture-recorder.component';
+import { RecordingPanelComponent } from '../recording-panel/recording-panel.component';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-captures-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, DatePipe, ButtonModule, SelectModule, TableModule, TagModule, CaptureRecorderComponent],
+  imports: [FormsModule, DatePipe, ButtonModule, SelectModule, TableModule, TagModule, CaptureRecorderComponent, RecordingPanelComponent],
   template: `
     <div class="flex flex-col gap-6">
       <div class="flex items-center justify-between">
@@ -24,6 +25,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
         <p-button label="New Capture" icon="pi pi-plus" (onClick)="quickCapture.open()" />
       </div>
 
+      <app-recording-panel (saved)="onCaptureCreated($event)" />
       <app-capture-recorder (uploaded)="onCaptureCreated($event)" />
 
       <div class="flex items-center gap-4">

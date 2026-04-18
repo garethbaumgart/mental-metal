@@ -1,0 +1,408 @@
+import { Injectable, signal, computed, inject, OnDestroy } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
+
+export interface TranscriptSegment {
+  speaker: string;
+  text: string;
+}
+
+/**
+ * Deepgram transcription service ported from Praxis-note and adapted to Mental Metal.
+ * Connects via WebSocket to /api/transcription/stream, streams PCM audio,
+ * and receives interim + final transcript results.
+ *
+ * Uses inject() for DI and signals for all state (zoneless-safe).
+ */
+@Injectable({ providedIn: 'root' })
+export class DeepgramTranscriptionService implements OnDestroy {
+  private readonly http = inject(HttpClient);
+  private ws: WebSocket | null = null;
+  private channels = 1;
+  private localUserName = 'You';
+  private pcmEncoding = '';
+  private pcmSampleRate = 0;
+  private actualMultichannel: boolean | null = null;
+
+  // Reconnection state
+  private intentionallyStopped = false;
+  private hasEverConnected = false;
+  private reconnectAttempts = 0;
+  private totalReconnects = 0;
+  private reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private pendingAudioChunks: ArrayBuffer[] = [];
+  private droppedAudioChunks = 0;
+  private static readonly MAX_RECONNECT_ATTEMPTS = 10;
+  private static readonly MAX_TOTAL_RECONNECTS = 20;
+  private static readonly MAX_DROPPED_CHUNKS_BEFORE_ERROR = 10;
+  private static readonly INITIAL_RECONNECT_DELAY_MS = 500;
+  private static readonly MAX_RECONNECT_DELAY_MS = 15000;
+  private static readonly FLUSH_THROTTLE_MS = 50;
+
+  readonly transcript = signal('');
+  readonly segments = signal<TranscriptSegment[]>([]);
+  readonly interimText = signal('');
+  readonly interimSpeaker = signal('');
+  readonly isListening = signal(false);
+  readonly isReconnecting = signal(false);
+  readonly error = signal<string | null>(null);
+
+  readonly labeledTranscript = computed(() => {
+    const segs = this.segments();
+    if (segs.length === 0) return this.transcript();
+    return segs.map((s) => `[${s.speaker}]: ${s.text}`).join('\n');
+  });
+
+  ngOnDestroy(): void {
+    this.stop();
+  }
+
+  /**
+   * Pre-flight check: verifies the transcription service is configured.
+   * Returns true if available, false otherwise (and sets the error signal).
+   */
+  async checkAvailability(): Promise<boolean> {
+    try {
+      const response = await firstValueFrom(
+        this.http.get<{ available: boolean; reason?: string }>('/api/transcription/status'),
+      );
+      if (!response.available) {
+        this.error.set(
+          response.reason ?? 'Transcription service is not configured. Please add your Deepgram API key in Settings.',
+        );
+        return false;
+      }
+      return true;
+    } catch (err) {
+      if (err instanceof HttpErrorResponse && (err.status === 401 || err.status === 403)) {
+        this.error.set('Session expired. Please refresh the page and try again.');
+      } else {
+        this.error.set('Transcription service is unreachable. Please check your connection and try again.');
+      }
+      return false;
+    }
+  }
+
+  start(channelCount = 1, userName = 'You', encoding = '', sampleRate = 0): void {
+    this.transcript.set('');
+    this.segments.set([]);
+    this.interimText.set('');
+    this.interimSpeaker.set('');
+    this.error.set(null);
+    this.channels = channelCount;
+    this.localUserName = userName;
+    this.pcmEncoding = encoding;
+    this.pcmSampleRate = sampleRate;
+    this.actualMultichannel = null;
+    this.intentionallyStopped = false;
+    this.hasEverConnected = false;
+    this.reconnectAttempts = 0;
+    this.totalReconnects = 0;
+    this.isReconnecting.set(false);
+    this.pendingAudioChunks = [];
+    this.droppedAudioChunks = 0;
+    if (this.reconnectTimeoutId !== null) {
+      clearTimeout(this.reconnectTimeoutId);
+      this.reconnectTimeoutId = null;
+    }
+
+    this.connectWebSocket();
+  }
+
+  private buildWsUrl(): string {
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    let wsUrl = `${protocol}//${location.host}/api/transcription/stream`;
+
+    const params = new URLSearchParams();
+
+    if (this.channels > 1) {
+      params.set('channels', String(this.channels));
+    }
+
+    if (this.pcmEncoding) {
+      params.set('encoding', this.pcmEncoding);
+    }
+
+    if (this.pcmSampleRate > 0) {
+      params.set('sampleRate', String(this.pcmSampleRate));
+    }
+
+    const qs = params.toString();
+    if (qs) {
+      wsUrl += `?${qs}`;
+    }
+
+    return wsUrl;
+  }
+
+  private connectWebSocket(): void {
+    if (this.ws) {
+      this.ws.onopen = null;
+      this.ws.onmessage = null;
+      this.ws.onerror = null;
+      this.ws.onclose = null;
+      if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
+        this.ws.close();
+      }
+      this.ws = null;
+    }
+
+    const wsUrl = this.buildWsUrl();
+    this.ws = new WebSocket(wsUrl);
+    this.ws.binaryType = 'arraybuffer';
+
+    this.ws.onopen = () => {
+      this.isListening.set(true);
+      this.error.set(null);
+      this.hasEverConnected = true;
+      this.reconnectTimeoutId = null;
+      this.droppedAudioChunks = 0;
+
+      if (this.isReconnecting()) {
+        this.flushPendingAudio();
+        this.isReconnecting.set(false);
+        this.reconnectAttempts = 0;
+      }
+    };
+
+    this.ws.onmessage = (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data['type'] === 'SessionConfig') {
+          this.actualMultichannel = data['multichannel'] === true;
+          return;
+        }
+        this.handleDeepgramResult(data);
+      } catch {
+        // Ignore non-JSON messages
+      }
+    };
+
+    this.ws.onerror = () => {
+      this.isListening.set(false);
+      if (!this.intentionallyStopped) {
+        if (this.hasEverConnected) {
+          this.isReconnecting.set(true);
+        }
+        this.attemptReconnect();
+      }
+    };
+
+    this.ws.onclose = (event: CloseEvent) => {
+      this.isListening.set(false);
+      if (event.code !== 1000 && !this.intentionallyStopped) {
+        if (this.hasEverConnected) {
+          this.isReconnecting.set(true);
+        }
+        this.attemptReconnect(event.reason);
+      }
+    };
+  }
+
+  private attemptReconnect(closeReason?: string): void {
+    if (this.intentionallyStopped) return;
+    if (this.reconnectTimeoutId !== null) return;
+
+    if (!this.hasEverConnected) {
+      this.isReconnecting.set(false);
+      this.pendingAudioChunks = [];
+      const reason = closeReason
+        ? `Transcription service unavailable: ${closeReason}`
+        : 'Could not connect to transcription service. Please try again.';
+      this.error.set(reason);
+      return;
+    }
+
+    if (this.totalReconnects >= DeepgramTranscriptionService.MAX_TOTAL_RECONNECTS) {
+      this.isReconnecting.set(false);
+      this.pendingAudioChunks = [];
+      this.error.set('Transcription connection lost. Maximum session reconnection limit reached.');
+      return;
+    }
+
+    if (this.reconnectAttempts >= DeepgramTranscriptionService.MAX_RECONNECT_ATTEMPTS) {
+      this.isReconnecting.set(false);
+      this.pendingAudioChunks = [];
+      this.error.set('Transcription connection lost after multiple retries.');
+      return;
+    }
+
+    if (!this.isReconnecting()) {
+      this.isReconnecting.set(true);
+    }
+    this.reconnectAttempts++;
+    this.totalReconnects++;
+
+    const delay = Math.min(
+      DeepgramTranscriptionService.INITIAL_RECONNECT_DELAY_MS * Math.pow(2, this.reconnectAttempts - 1),
+      DeepgramTranscriptionService.MAX_RECONNECT_DELAY_MS,
+    );
+
+    this.reconnectTimeoutId = setTimeout(() => {
+      this.reconnectTimeoutId = null;
+      if (!this.intentionallyStopped) {
+        this.connectWebSocket();
+      }
+    }, delay);
+  }
+
+  private flushPendingAudio(): void {
+    const chunks = [...this.pendingAudioChunks];
+    this.pendingAudioChunks = [];
+
+    let index = 0;
+    const sendNext = (): void => {
+      if (index >= chunks.length) return;
+      if (this.ws?.readyState === WebSocket.OPEN) {
+        this.ws.send(chunks[index]);
+        index++;
+        if (index < chunks.length) {
+          setTimeout(sendNext, DeepgramTranscriptionService.FLUSH_THROTTLE_MS);
+        }
+      }
+    };
+    sendNext();
+  }
+
+  private handleDeepgramResult(data: Record<string, unknown>): void {
+    if (data['type'] !== 'Results') return;
+
+    const isFinal = data['is_final'] as boolean;
+    let isMultichannel = this.actualMultichannel ?? (this.channels > 1);
+
+    if (isMultichannel && !Array.isArray(data['channel_index'])) {
+      this.actualMultichannel = false;
+      isMultichannel = false;
+    }
+
+    if (isMultichannel) {
+      this.handleMultichannelResult(data, isFinal);
+    } else {
+      this.handleSingleChannelResult(data, isFinal);
+    }
+  }
+
+  private handleSingleChannelResult(data: Record<string, unknown>, isFinal: boolean): void {
+    const channel = data['channel'] as Record<string, unknown> | undefined;
+    const alt = (channel?.['alternatives'] as Record<string, unknown>[])?.[0];
+    if (!alt) return;
+
+    const transcriptText = (alt['transcript'] as string)?.trim();
+    if (!transcriptText) {
+      if (!isFinal) this.interimText.set('');
+      return;
+    }
+
+    const words = alt['words'] as Array<Record<string, unknown>> | undefined;
+    const speaker = this.getSpeakerFromWords(words);
+
+    if (isFinal) {
+      this.transcript.update((prev) => {
+        const separator = prev ? ' ' : '';
+        return prev + separator + transcriptText;
+      });
+      this.segments.update((prev) => [...prev, { speaker, text: transcriptText }]);
+      this.interimText.set('');
+      this.interimSpeaker.set('');
+    } else {
+      this.interimText.set(transcriptText);
+      this.interimSpeaker.set(speaker);
+    }
+  }
+
+  private handleMultichannelResult(data: Record<string, unknown>, isFinal: boolean): void {
+    const channelObj = data['channel'] as Record<string, unknown> | undefined;
+    const channelIndex = (data['channel_index'] as number[])?.[0] ?? 0;
+    const alt = (channelObj?.['alternatives'] as Record<string, unknown>[])?.[0];
+    if (!alt) return;
+
+    const transcriptText = (alt['transcript'] as string)?.trim();
+    if (!transcriptText) {
+      if (!isFinal) this.interimText.set('');
+      return;
+    }
+
+    let speaker: string;
+    if (channelIndex === 0) {
+      speaker = this.localUserName;
+    } else {
+      const words = alt['words'] as Array<Record<string, unknown>> | undefined;
+      const speakerNum = this.getSpeakerNumberFromWords(words);
+      speaker = speakerNum !== null ? `Participant ${speakerNum}` : 'Remote';
+    }
+
+    if (isFinal) {
+      this.transcript.update((prev) => {
+        const separator = prev ? ' ' : '';
+        return prev + separator + transcriptText;
+      });
+      this.segments.update((prev) => [...prev, { speaker, text: transcriptText }]);
+      this.interimText.set('');
+      this.interimSpeaker.set('');
+    } else {
+      this.interimText.set(transcriptText);
+      this.interimSpeaker.set(speaker);
+    }
+  }
+
+  private getSpeakerFromWords(words: Array<Record<string, unknown>> | undefined): string {
+    if (!words || words.length === 0) return 'Speaker';
+    const speakerNum = words[0]?.['speaker'] as number | undefined;
+    if (speakerNum === undefined || speakerNum === null) return 'Speaker';
+    if (this.channels <= 1 && speakerNum === 0 && this.localUserName) {
+      return this.localUserName;
+    }
+    return `Speaker ${speakerNum}`;
+  }
+
+  private getSpeakerNumberFromWords(words: Array<Record<string, unknown>> | undefined): number | null {
+    if (!words || words.length === 0) return null;
+    const speakerNum = words[0]?.['speaker'] as number | undefined;
+    return speakerNum ?? null;
+  }
+
+  /**
+   * Send raw PCM binary data directly to the WebSocket.
+   */
+  sendRawPcm(data: ArrayBuffer): void {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.droppedAudioChunks = 0;
+      this.ws.send(data);
+    } else if (this.isReconnecting()) {
+      this.pendingAudioChunks.push(data);
+    } else if (!this.intentionallyStopped) {
+      this.droppedAudioChunks++;
+      if (this.droppedAudioChunks >= DeepgramTranscriptionService.MAX_DROPPED_CHUNKS_BEFORE_ERROR && !this.error()) {
+        this.error.set('Transcription connection lost. Audio is not being transcribed.');
+      }
+    }
+  }
+
+  stop(): void {
+    this.intentionallyStopped = true;
+    if (this.reconnectTimeoutId !== null) {
+      clearTimeout(this.reconnectTimeoutId);
+      this.reconnectTimeoutId = null;
+    }
+    this.isReconnecting.set(false);
+    this.pendingAudioChunks = [];
+    this.reconnectAttempts = 0;
+
+    if (this.ws) {
+      if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
+        this.ws.close(1000, 'Recording stopped');
+      }
+      this.ws = null;
+    }
+    this.interimText.set('');
+    this.interimSpeaker.set('');
+    this.isListening.set(false);
+  }
+
+  reset(): void {
+    this.stop();
+    this.transcript.set('');
+    this.segments.set([]);
+    this.error.set(null);
+  }
+}
