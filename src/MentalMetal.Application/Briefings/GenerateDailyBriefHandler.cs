@@ -48,8 +48,10 @@ public sealed class GenerateDailyBriefHandler(
             .Where(c => c.SourceCaptureId.HasValue && yesterdayCaptureIds.Contains(c.SourceCaptureId.Value))
             .ToList();
 
-        // Get people for name resolution
-        var allPersonIds = allOpenCommitments.Select(c => c.PersonId).Distinct().ToList();
+        // Get people for name resolution — include IDs from both commitments and capture mentions
+        var capturePersonIds = yesterdayCaptures.SelectMany(c => c.LinkedPersonIds);
+        var commitmentPersonIds = allOpenCommitments.Select(c => c.PersonId);
+        var allPersonIds = commitmentPersonIds.Concat(capturePersonIds).Distinct().ToList();
         var people = await personRepository.GetByIdsAsync(userId, allPersonIds, cancellationToken);
         var personLookup = people.ToDictionary(p => p.Id, p => p.Name);
 

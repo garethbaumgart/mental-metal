@@ -28,7 +28,9 @@ public sealed class GenerateWeeklyBriefHandler(
         var weekStartOffset = new DateTimeOffset(weekStart.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
         var weekEndOffset = new DateTimeOffset(weekEnd.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
 
-        // Get all processed captures and filter to this week
+        // TODO: ICaptureRepository.GetAllAsync does not accept a date range — all captures are
+        // loaded then filtered in memory. Add a date-range overload to push filtering to the
+        // database once capture volume warrants it.
         var allCaptures = await captureRepository.GetAllAsync(
             userId, null, ProcessingStatus.Processed, cancellationToken);
 
@@ -37,7 +39,8 @@ public sealed class GenerateWeeklyBriefHandler(
             .OrderByDescending(c => c.CapturedAt)
             .ToList();
 
-        // Get all commitments for counting
+        // TODO: Same optimisation opportunity — ICommitmentRepository.GetAllAsync does not
+        // accept a date range, so we load all commitments and filter in memory.
         var allCommitments = await commitmentRepository.GetAllAsync(
             userId, null, null, null, null, null, cancellationToken);
 
