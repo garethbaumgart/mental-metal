@@ -15,8 +15,7 @@ public sealed record UpdatePersonRequest(
     string? Email = null,
     string? Role = null,
     string? Team = null,
-    string? Notes = null,
-    List<string>? Aliases = null);
+    string? Notes = null);
 
 public sealed record ChangeTypeRequest(PersonType NewType);
 

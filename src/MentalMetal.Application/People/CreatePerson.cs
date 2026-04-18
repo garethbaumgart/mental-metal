@@ -18,6 +18,12 @@ public sealed class CreatePersonHandler(
             throw new InvalidOperationException(
                 $"A person with name '{request.Name}' already exists.");
 
+        foreach (var alias in request.Aliases ?? [])
+        {
+            if (await personRepository.AliasExistsForOtherPersonAsync(userId, alias, Guid.Empty, cancellationToken))
+                throw new InvalidOperationException($"Alias '{alias}' is already used by another person.");
+        }
+
         var person = Person.Create(userId, request.Name, request.Type, request.Email, request.Role, request.Aliases);
 
         if (request.Team is not null)
