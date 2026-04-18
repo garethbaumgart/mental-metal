@@ -17,6 +17,11 @@ public sealed record CommitmentCancelled(Guid CommitmentId, string? Reason) : ID
     public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
 }
 
+public sealed record CommitmentDismissed(Guid CommitmentId) : IDomainEvent
+{
+    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+}
+
 public sealed record CommitmentReopened(Guid CommitmentId) : IDomainEvent
 {
     public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;

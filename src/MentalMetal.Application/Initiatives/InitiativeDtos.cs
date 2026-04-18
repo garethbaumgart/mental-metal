@@ -8,24 +8,13 @@ public sealed record UpdateTitleRequest(string Title);
 
 public sealed record ChangeStatusRequest(InitiativeStatus NewStatus);
 
-public sealed record MilestoneRequest(string Title, DateOnly TargetDate, string? Description);
-
-public sealed record LinkPersonRequest(Guid PersonId);
-
-public sealed record MilestoneResponse(
-    Guid Id,
-    string Title,
-    DateOnly TargetDate,
-    string? Description,
-    bool IsCompleted);
-
 public sealed record InitiativeResponse(
     Guid Id,
     Guid UserId,
     string Title,
     InitiativeStatus Status,
-    List<MilestoneResponse> Milestones,
-    List<Guid> LinkedPersonIds,
+    string? AutoSummary,
+    DateTimeOffset? LastSummaryRefreshedAt,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt)
 {
@@ -34,13 +23,8 @@ public sealed record InitiativeResponse(
         initiative.UserId,
         initiative.Title,
         initiative.Status,
-        initiative.Milestones.Select(m => new MilestoneResponse(
-            m.Id,
-            m.Title,
-            m.TargetDate,
-            m.Description,
-            m.IsCompleted)).ToList(),
-        initiative.LinkedPersonIds.ToList(),
+        initiative.AutoSummary,
+        initiative.LastSummaryRefreshedAt,
         initiative.CreatedAt,
         initiative.UpdatedAt);
 }

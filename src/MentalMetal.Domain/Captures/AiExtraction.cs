@@ -1,42 +1,41 @@
+using MentalMetal.Domain.Commitments;
+
 namespace MentalMetal.Domain.Captures;
 
+/// <summary>
+/// V2 extraction value object — auto-applied, no confirmation step.
+/// </summary>
 public sealed record AiExtraction
 {
     public required string Summary { get; init; }
+    public IReadOnlyList<PersonMention> PeopleMentioned { get; init; } = new List<PersonMention>();
     public IReadOnlyList<ExtractedCommitment> Commitments { get; init; } = new List<ExtractedCommitment>();
-    public IReadOnlyList<ExtractedDelegation> Delegations { get; init; } = new List<ExtractedDelegation>();
-    public IReadOnlyList<ExtractedObservation> Observations { get; init; } = new List<ExtractedObservation>();
     public IReadOnlyList<string> Decisions { get; init; } = new List<string>();
-    public IReadOnlyList<string> RisksIdentified { get; init; } = new List<string>();
-    public IReadOnlyList<string> SuggestedPersonLinks { get; init; } = new List<string>();
-    public IReadOnlyList<string> SuggestedInitiativeLinks { get; init; } = new List<string>();
-    public decimal ConfidenceScore { get; init; }
+    public IReadOnlyList<string> Risks { get; init; } = new List<string>();
+    public IReadOnlyList<InitiativeTag> InitiativeTags { get; init; } = new List<InitiativeTag>();
+    public DateTimeOffset ExtractedAt { get; init; }
+}
+
+public sealed record PersonMention
+{
+    public required string RawName { get; init; }
+    public Guid? PersonId { get; init; }
+    public string? Context { get; init; }
 }
 
 public sealed record ExtractedCommitment
 {
     public required string Description { get; init; }
-    public required ExtractionDirection Direction { get; init; }
-    public string? PersonHint { get; init; }
-    public string? DueDate { get; init; }
+    public required CommitmentDirection Direction { get; init; }
+    public Guid? PersonId { get; init; }
+    public DateTimeOffset? DueDate { get; init; }
+    public required CommitmentConfidence Confidence { get; init; }
+    public Guid? SpawnedCommitmentId { get; init; }
 }
 
-public sealed record ExtractedDelegation
+public sealed record InitiativeTag
 {
-    public required string Description { get; init; }
-    public string? PersonHint { get; init; }
-    public string? DueDate { get; init; }
-}
-
-public sealed record ExtractedObservation
-{
-    public required string Description { get; init; }
-    public string? PersonHint { get; init; }
-    public string? Tag { get; init; }
-}
-
-public enum ExtractionDirection
-{
-    MineToThem,
-    TheirsToMe
+    public required string RawName { get; init; }
+    public Guid? InitiativeId { get; init; }
+    public string? Context { get; init; }
 }

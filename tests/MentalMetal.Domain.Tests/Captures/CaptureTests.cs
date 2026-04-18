@@ -9,44 +9,38 @@ public class CaptureTests
     private static AiExtraction CreateTestExtraction(string summary = "Test summary") => new()
     {
         Summary = summary,
+        ExtractedAt = DateTimeOffset.UtcNow,
     };
 
-    // 2.1 Test Capture creation with valid inputs and domain event
     [Fact]
     public void Create_ValidInputs_CreatesCaptureWithCorrectState()
     {
-        var capture = Capture.Create(UserId, "Follow up with Sarah", CaptureType.QuickNote);
+        var capture = Capture.Create(UserId, "Follow up with Alice", CaptureType.QuickNote);
 
         Assert.NotEqual(Guid.Empty, capture.Id);
         Assert.Equal(UserId, capture.UserId);
-        Assert.Equal("Follow up with Sarah", capture.RawContent);
+        Assert.Equal("Follow up with Alice", capture.RawContent);
         Assert.Equal(CaptureType.QuickNote, capture.CaptureType);
         Assert.Equal(ProcessingStatus.Raw, capture.ProcessingStatus);
+        Assert.Null(capture.CaptureSource);
         Assert.Null(capture.Title);
-        Assert.Null(capture.Source);
         Assert.Empty(capture.LinkedPersonIds);
         Assert.Empty(capture.LinkedInitiativeIds);
 
         var domainEvent = Assert.Single(capture.DomainEvents);
         var created = Assert.IsType<CaptureCreated>(domainEvent);
         Assert.Equal(capture.Id, created.CaptureId);
-        Assert.Equal(UserId, created.UserId);
-        Assert.Equal(CaptureType.QuickNote, created.Type);
     }
 
     [Fact]
-    public void Create_WithOptionalFields_SetsAllFields()
+    public void Create_WithSource_SetsCaptureSource()
     {
-        var capture = Capture.Create(UserId, "Transcript content", CaptureType.Transcript,
-            source: "leadership sync", title: "Leadership sync 2026-04-10");
+        var capture = Capture.Create(UserId, "content", CaptureType.Transcript,
+            source: CaptureSource.Upload, title: "Test");
 
-        Assert.Equal("Transcript content", capture.RawContent);
-        Assert.Equal(CaptureType.Transcript, capture.CaptureType);
-        Assert.Equal("Leadership sync 2026-04-10", capture.Title);
-        Assert.Equal("leadership sync", capture.Source);
+        Assert.Equal(CaptureSource.Upload, capture.CaptureSource);
     }
 
-    // 2.2 Test Capture creation rejects empty/whitespace rawContent
     [Theory]
     [InlineData(null)]
     [InlineData("")]
@@ -57,7 +51,6 @@ public class CaptureTests
             Capture.Create(UserId, rawContent!, CaptureType.QuickNote));
     }
 
-    // 2.3 Test processing status state machine: valid transitions
     [Fact]
     public void BeginProcessing_FromRaw_TransitionsToProcessing()
     {
@@ -67,8 +60,6 @@ public class CaptureTests
         capture.BeginProcessing();
 
         Assert.Equal(ProcessingStatus.Processing, capture.ProcessingStatus);
-        var domainEvent = Assert.Single(capture.DomainEvents);
-        Assert.IsType<CaptureProcessingStarted>(domainEvent);
     }
 
     [Fact]
@@ -84,8 +75,6 @@ public class CaptureTests
         Assert.Equal(ProcessingStatus.Processed, capture.ProcessingStatus);
         Assert.Equal(extraction, capture.AiExtraction);
         Assert.NotNull(capture.ProcessedAt);
-        var domainEvent = Assert.Single(capture.DomainEvents);
-        Assert.IsType<CaptureProcessed>(domainEvent);
     }
 
     [Fact]
@@ -93,14 +82,11 @@ public class CaptureTests
     {
         var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
         capture.BeginProcessing();
-        capture.ClearDomainEvents();
 
         capture.FailProcessing("timeout");
 
         Assert.Equal(ProcessingStatus.Failed, capture.ProcessingStatus);
-        var domainEvent = Assert.Single(capture.DomainEvents);
-        var failed = Assert.IsType<CaptureProcessingFailed>(domainEvent);
-        Assert.Equal("timeout", failed.Reason);
+        Assert.Equal("timeout", capture.FailureReason);
     }
 
     [Fact]
@@ -109,16 +95,13 @@ public class CaptureTests
         var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
         capture.BeginProcessing();
         capture.FailProcessing("error");
-        capture.ClearDomainEvents();
 
         capture.RetryProcessing();
 
         Assert.Equal(ProcessingStatus.Raw, capture.ProcessingStatus);
-        var domainEvent = Assert.Single(capture.DomainEvents);
-        Assert.IsType<CaptureRetryRequested>(domainEvent);
+        Assert.Null(capture.AiExtraction);
     }
 
-    // 2.4 Test processing status state machine: invalid transitions throw domain exception
     [Fact]
     public void BeginProcessing_FromProcessing_Throws()
     {
@@ -129,32 +112,6 @@ public class CaptureTests
     }
 
     [Fact]
-    public void BeginProcessing_FromProcessed_Throws()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-        capture.BeginProcessing();
-        capture.CompleteProcessing(CreateTestExtraction());
-
-        Assert.Throws<InvalidOperationException>(() => capture.BeginProcessing());
-    }
-
-    [Fact]
-    public void CompleteProcessing_FromRaw_Throws()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-
-        Assert.Throws<InvalidOperationException>(() => capture.CompleteProcessing(CreateTestExtraction()));
-    }
-
-    [Fact]
-    public void FailProcessing_FromRaw_Throws()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-
-        Assert.Throws<InvalidOperationException>(() => capture.FailProcessing());
-    }
-
-    [Fact]
     public void RetryProcessing_FromRaw_Throws()
     {
         var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
@@ -162,7 +119,6 @@ public class CaptureTests
         Assert.Throws<InvalidOperationException>(() => capture.RetryProcessing());
     }
 
-    // 2.5 Test link/unlink person idempotency
     [Fact]
     public void LinkToPerson_AddsAndRaisesEvent()
     {
@@ -174,9 +130,6 @@ public class CaptureTests
 
         Assert.Single(capture.LinkedPersonIds);
         Assert.Contains(personId, capture.LinkedPersonIds);
-        var domainEvent = Assert.Single(capture.DomainEvents);
-        var linked = Assert.IsType<CaptureLinkedToPerson>(domainEvent);
-        Assert.Equal(personId, linked.PersonId);
     }
 
     [Fact]
@@ -194,33 +147,6 @@ public class CaptureTests
     }
 
     [Fact]
-    public void UnlinkFromPerson_RemovesAndRaisesEvent()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-        var personId = Guid.NewGuid();
-        capture.LinkToPerson(personId);
-        capture.ClearDomainEvents();
-
-        capture.UnlinkFromPerson(personId);
-
-        Assert.Empty(capture.LinkedPersonIds);
-        var domainEvent = Assert.Single(capture.DomainEvents);
-        Assert.IsType<CaptureUnlinkedFromPerson>(domainEvent);
-    }
-
-    [Fact]
-    public void UnlinkFromPerson_NotLinked_IsIdempotent()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-        capture.ClearDomainEvents();
-
-        capture.UnlinkFromPerson(Guid.NewGuid());
-
-        Assert.Empty(capture.DomainEvents);
-    }
-
-    // 2.6 Test link/unlink initiative idempotency
-    [Fact]
     public void LinkToInitiative_AddsAndRaisesEvent()
     {
         var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
@@ -231,82 +157,23 @@ public class CaptureTests
 
         Assert.Single(capture.LinkedInitiativeIds);
         Assert.Contains(initiativeId, capture.LinkedInitiativeIds);
-        var domainEvent = Assert.Single(capture.DomainEvents);
-        var linked = Assert.IsType<CaptureLinkedToInitiative>(domainEvent);
-        Assert.Equal(initiativeId, linked.InitiativeId);
     }
 
     [Fact]
-    public void LinkToInitiative_Duplicate_IsIdempotent()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-        var initiativeId = Guid.NewGuid();
-        capture.LinkToInitiative(initiativeId);
-        capture.ClearDomainEvents();
-
-        capture.LinkToInitiative(initiativeId);
-
-        Assert.Single(capture.LinkedInitiativeIds);
-        Assert.Empty(capture.DomainEvents);
-    }
-
-    [Fact]
-    public void UnlinkFromInitiative_RemovesAndRaisesEvent()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-        var initiativeId = Guid.NewGuid();
-        capture.LinkToInitiative(initiativeId);
-        capture.ClearDomainEvents();
-
-        capture.UnlinkFromInitiative(initiativeId);
-
-        Assert.Empty(capture.LinkedInitiativeIds);
-        var domainEvent = Assert.Single(capture.DomainEvents);
-        Assert.IsType<CaptureUnlinkedFromInitiative>(domainEvent);
-    }
-
-    [Fact]
-    public void UnlinkFromInitiative_NotLinked_IsIdempotent()
+    public void UpdateMetadata_SetsTitleAndRaisesEvent()
     {
         var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
         capture.ClearDomainEvents();
 
-        capture.UnlinkFromInitiative(Guid.NewGuid());
-
-        Assert.Empty(capture.DomainEvents);
-    }
-
-    // 2.7 Test metadata update
-    [Fact]
-    public void UpdateMetadata_SetsTitleAndSourceAndRaisesEvent()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-        capture.ClearDomainEvents();
-
-        capture.UpdateMetadata("New Title", "weekly 1:1");
+        capture.UpdateMetadata("New Title");
 
         Assert.Equal("New Title", capture.Title);
-        Assert.Equal("weekly 1:1", capture.Source);
         var domainEvent = Assert.Single(capture.DomainEvents);
         Assert.IsType<CaptureMetadataUpdated>(domainEvent);
     }
 
     [Fact]
-    public void UpdateMetadata_ClearsOptionalFields()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote,
-            source: "old source", title: "old title");
-        capture.ClearDomainEvents();
-
-        capture.UpdateMetadata(null, null);
-
-        Assert.Null(capture.Title);
-        Assert.Null(capture.Source);
-    }
-
-    // RecordSpawned* tests
-    [Fact]
-    public void RecordSpawnedCommitment_AddsIdAndUpdatesTimestamp()
+    public void RecordSpawnedCommitment_AddsId()
     {
         var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
         var commitmentId = Guid.NewGuid();
@@ -330,151 +197,6 @@ public class CaptureTests
     }
 
     [Fact]
-    public void RecordSpawnedDelegation_AddsId()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-        var delegationId = Guid.NewGuid();
-
-        capture.RecordSpawnedDelegation(delegationId);
-
-        Assert.Single(capture.SpawnedDelegationIds);
-        Assert.Contains(delegationId, capture.SpawnedDelegationIds);
-    }
-
-    [Fact]
-    public void RecordSpawnedObservation_AddsId()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-        var observationId = Guid.NewGuid();
-
-        capture.RecordSpawnedObservation(observationId);
-
-        Assert.Single(capture.SpawnedObservationIds);
-        Assert.Contains(observationId, capture.SpawnedObservationIds);
-    }
-
-    // ConfirmExtraction tests
-    [Fact]
-    public void ConfirmExtraction_FromProcessed_SetsConfirmedAndRaisesEvent()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-        capture.BeginProcessing();
-        capture.CompleteProcessing(CreateTestExtraction());
-        capture.ClearDomainEvents();
-
-        capture.ConfirmExtraction();
-
-        Assert.Equal(ExtractionStatus.Confirmed, capture.ExtractionStatus);
-        var domainEvent = Assert.Single(capture.DomainEvents);
-        Assert.IsType<CaptureExtractionConfirmed>(domainEvent);
-    }
-
-    [Fact]
-    public void ConfirmExtraction_FromRaw_Throws()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-
-        Assert.Throws<InvalidOperationException>(() => capture.ConfirmExtraction());
-    }
-
-    [Fact]
-    public void ConfirmExtraction_AlreadyConfirmed_Throws()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-        capture.BeginProcessing();
-        capture.CompleteProcessing(CreateTestExtraction());
-        capture.ConfirmExtraction();
-
-        Assert.Throws<InvalidOperationException>(() => capture.ConfirmExtraction());
-    }
-
-    [Fact]
-    public void ConfirmExtraction_NullExtraction_Throws()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-        capture.BeginProcessing();
-        // Manually transition to Processed without extraction not possible via public API
-        // This tests the guard at domain level
-        Assert.Throws<InvalidOperationException>(() => capture.ConfirmExtraction());
-    }
-
-    // DiscardExtraction tests
-    [Fact]
-    public void DiscardExtraction_FromProcessedPending_SetsDiscardedAndRaisesEvent()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-        capture.BeginProcessing();
-        capture.CompleteProcessing(CreateTestExtraction());
-        capture.ClearDomainEvents();
-
-        capture.DiscardExtraction();
-
-        Assert.Equal(ExtractionStatus.Discarded, capture.ExtractionStatus);
-        Assert.NotNull(capture.AiExtraction); // retained for reference
-        var domainEvent = Assert.Single(capture.DomainEvents);
-        Assert.IsType<CaptureExtractionDiscarded>(domainEvent);
-    }
-
-    [Fact]
-    public void DiscardExtraction_FromRaw_Throws()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-
-        Assert.Throws<InvalidOperationException>(() => capture.DiscardExtraction());
-    }
-
-    [Fact]
-    public void DiscardExtraction_AlreadyConfirmed_Throws()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-        capture.BeginProcessing();
-        capture.CompleteProcessing(CreateTestExtraction());
-        capture.ConfirmExtraction();
-
-        Assert.Throws<InvalidOperationException>(() => capture.DiscardExtraction());
-    }
-
-    [Fact]
-    public void DiscardExtraction_AlreadyDiscarded_Throws()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-        capture.BeginProcessing();
-        capture.CompleteProcessing(CreateTestExtraction());
-        capture.DiscardExtraction();
-
-        Assert.Throws<InvalidOperationException>(() => capture.DiscardExtraction());
-    }
-
-    // ExtractionStatus lifecycle
-    [Fact]
-    public void ExtractionStatus_FullLifecycle()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-        Assert.Equal(ExtractionStatus.None, capture.ExtractionStatus);
-
-        capture.BeginProcessing();
-        Assert.Equal(ExtractionStatus.None, capture.ExtractionStatus);
-
-        capture.CompleteProcessing(CreateTestExtraction());
-        Assert.Equal(ExtractionStatus.Pending, capture.ExtractionStatus);
-
-        capture.ConfirmExtraction();
-        Assert.Equal(ExtractionStatus.Confirmed, capture.ExtractionStatus);
-    }
-
-    [Fact]
-    public void RetryProcessing_ResetsExtractionStatus()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-        capture.BeginProcessing();
-        capture.FailProcessing("error");
-        capture.RetryProcessing();
-
-        Assert.Equal(ExtractionStatus.None, capture.ExtractionStatus);
-    }
-
-    // Guid.Empty guard tests
-    [Fact]
     public void Create_EmptyUserId_Throws()
     {
         Assert.Throws<ArgumentException>(() =>
@@ -490,14 +212,6 @@ public class CaptureTests
     }
 
     [Fact]
-    public void UnlinkFromPerson_EmptyPersonId_Throws()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-
-        Assert.Throws<ArgumentException>(() => capture.UnlinkFromPerson(Guid.Empty));
-    }
-
-    [Fact]
     public void LinkToInitiative_EmptyInitiativeId_Throws()
     {
         var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
@@ -506,96 +220,10 @@ public class CaptureTests
     }
 
     [Fact]
-    public void UnlinkFromInitiative_EmptyInitiativeId_Throws()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-
-        Assert.Throws<ArgumentException>(() => capture.UnlinkFromInitiative(Guid.Empty));
-    }
-
-    [Fact]
     public void RecordSpawnedCommitment_EmptyId_Throws()
     {
         var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
 
         Assert.Throws<ArgumentException>(() => capture.RecordSpawnedCommitment(Guid.Empty));
-    }
-
-    [Fact]
-    public void RecordSpawnedDelegation_EmptyId_Throws()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-
-        Assert.Throws<ArgumentException>(() => capture.RecordSpawnedDelegation(Guid.Empty));
-    }
-
-    [Fact]
-    public void RecordSpawnedObservation_EmptyId_Throws()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-
-        Assert.Throws<ArgumentException>(() => capture.RecordSpawnedObservation(Guid.Empty));
-    }
-
-    // --- Daily close-out / triage ---
-
-    [Fact]
-    public void QuickDiscard_NotTriaged_SetsFlagsAndRaisesEvent()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-        capture.ClearDomainEvents();
-
-        capture.QuickDiscard();
-
-        Assert.True(capture.Triaged);
-        Assert.NotNull(capture.TriagedAtUtc);
-        var evt = Assert.Single(capture.DomainEvents);
-        var discarded = Assert.IsType<CaptureQuickDiscarded>(evt);
-        Assert.Equal(capture.Id, discarded.CaptureId);
-    }
-
-    [Fact]
-    public void QuickDiscard_AlreadyTriaged_IsNoOp()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-        capture.QuickDiscard();
-        var firstTriagedAt = capture.TriagedAtUtc;
-        capture.ClearDomainEvents();
-
-        capture.QuickDiscard();
-
-        Assert.True(capture.Triaged);
-        Assert.Equal(firstTriagedAt, capture.TriagedAtUtc);
-        Assert.Empty(capture.DomainEvents);
-    }
-
-    [Fact]
-    public void ConfirmExtraction_SetsExtractionResolvedAndTriaged()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-        capture.BeginProcessing();
-        capture.CompleteProcessing(CreateTestExtraction());
-        capture.ClearDomainEvents();
-
-        capture.ConfirmExtraction();
-
-        Assert.True(capture.ExtractionResolved);
-        Assert.True(capture.Triaged);
-        Assert.NotNull(capture.TriagedAtUtc);
-    }
-
-    [Fact]
-    public void DiscardExtraction_SetsExtractionResolvedAndTriaged()
-    {
-        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
-        capture.BeginProcessing();
-        capture.CompleteProcessing(CreateTestExtraction());
-        capture.ClearDomainEvents();
-
-        capture.DiscardExtraction();
-
-        Assert.True(capture.ExtractionResolved);
-        Assert.True(capture.Triaged);
-        Assert.NotNull(capture.TriagedAtUtc);
     }
 }

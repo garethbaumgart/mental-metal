@@ -9,7 +9,8 @@ public class PersonTests
     [Theory]
     [InlineData(PersonType.DirectReport)]
     [InlineData(PersonType.Stakeholder)]
-    [InlineData(PersonType.Candidate)]
+    [InlineData(PersonType.Peer)]
+    [InlineData(PersonType.External)]
     public void Create_ValidInputs_CreatesPersonWithCorrectState(PersonType type)
     {
         var person = Person.Create(UserId, "Alice Smith", type, "alice@example.com", "Engineer");
@@ -22,36 +23,20 @@ public class PersonTests
         Assert.Equal("Engineer", person.Role);
         Assert.Null(person.Team);
         Assert.Null(person.Notes);
+        Assert.Empty(person.Aliases);
         Assert.False(person.IsArchived);
         Assert.Null(person.ArchivedAt);
     }
 
     [Fact]
-    public void Create_DirectReport_HasNoCareerDetailsOrCandidateDetails()
+    public void Create_WithAliases_SetsAliases()
     {
-        var person = Person.Create(UserId, "Alice", PersonType.DirectReport);
+        var person = Person.Create(UserId, "Alice Smith", PersonType.DirectReport,
+            aliases: ["Ali", "AJ"]);
 
-        Assert.Null(person.CareerDetails);
-        Assert.Null(person.CandidateDetails);
-    }
-
-    [Fact]
-    public void Create_Stakeholder_HasNoTypeSpecificDetails()
-    {
-        var person = Person.Create(UserId, "Bob", PersonType.Stakeholder);
-
-        Assert.Null(person.CareerDetails);
-        Assert.Null(person.CandidateDetails);
-    }
-
-    [Fact]
-    public void Create_Candidate_InitialisesCandidateDetailsWithNewStatus()
-    {
-        var person = Person.Create(UserId, "Carol", PersonType.Candidate);
-
-        Assert.NotNull(person.CandidateDetails);
-        Assert.Equal(PipelineStatus.New, person.CandidateDetails.PipelineStatus);
-        Assert.Null(person.CareerDetails);
+        Assert.Equal(2, person.Aliases.Count);
+        Assert.Contains("Ali", person.Aliases);
+        Assert.Contains("AJ", person.Aliases);
     }
 
     [Fact]
@@ -96,38 +81,6 @@ public class PersonTests
     }
 
     [Fact]
-    public void ChangeType_DirectReportToCandidate_ClearsCareerDetailsInitialisesCandidate()
-    {
-        var person = Person.Create(UserId, "Alice", PersonType.DirectReport);
-        person.UpdateCareerDetails("Senior", "Management", "Public speaking");
-        person.ClearDomainEvents();
-
-        person.ChangeType(PersonType.Candidate);
-
-        Assert.Equal(PersonType.Candidate, person.Type);
-        Assert.Null(person.CareerDetails);
-        Assert.NotNull(person.CandidateDetails);
-        Assert.Equal(PipelineStatus.New, person.CandidateDetails.PipelineStatus);
-
-        var domainEvent = Assert.Single(person.DomainEvents);
-        var changed = Assert.IsType<PersonTypeChanged>(domainEvent);
-        Assert.Equal(PersonType.DirectReport, changed.OldType);
-        Assert.Equal(PersonType.Candidate, changed.NewType);
-    }
-
-    [Fact]
-    public void ChangeType_CandidateToDirectReport_ClearsCandidateDetails()
-    {
-        var person = Person.Create(UserId, "Alice", PersonType.Candidate);
-        person.ClearDomainEvents();
-
-        person.ChangeType(PersonType.DirectReport);
-
-        Assert.Equal(PersonType.DirectReport, person.Type);
-        Assert.Null(person.CandidateDetails);
-    }
-
-    [Fact]
     public void ChangeType_SameType_IsNoOp()
     {
         var person = Person.Create(UserId, "Alice", PersonType.Stakeholder);
@@ -139,147 +92,99 @@ public class PersonTests
     }
 
     [Fact]
-    public void UpdateCareerDetails_OnDirectReport_Succeeds()
+    public void ChangeType_ChangesTypeAndRaisesEvent()
     {
         var person = Person.Create(UserId, "Alice", PersonType.DirectReport);
         person.ClearDomainEvents();
 
-        person.UpdateCareerDetails("Senior", "Leadership", "Communication");
+        person.ChangeType(PersonType.Peer);
 
-        Assert.NotNull(person.CareerDetails);
-        Assert.Equal("Senior", person.CareerDetails.Level);
-        Assert.Equal("Leadership", person.CareerDetails.Aspirations);
-        Assert.Equal("Communication", person.CareerDetails.GrowthAreas);
-
+        Assert.Equal(PersonType.Peer, person.Type);
         var domainEvent = Assert.Single(person.DomainEvents);
-        Assert.IsType<CareerDetailsUpdated>(domainEvent);
+        var changed = Assert.IsType<PersonTypeChanged>(domainEvent);
+        Assert.Equal(PersonType.DirectReport, changed.OldType);
+        Assert.Equal(PersonType.Peer, changed.NewType);
     }
 
-    [Theory]
-    [InlineData(PersonType.Stakeholder)]
-    [InlineData(PersonType.Candidate)]
-    public void UpdateCareerDetails_OnNonDirectReport_Throws(PersonType type)
-    {
-        var person = Person.Create(UserId, "Alice", type);
+    // --- Alias invariant tests ---
 
-        Assert.ThrowsAny<ArgumentException>(() =>
-            person.UpdateCareerDetails("Senior", null, null));
+    [Fact]
+    public void SetAliases_ReplacesFullList()
+    {
+        var person = Person.Create(UserId, "Alice", PersonType.DirectReport, aliases: ["Old"]);
+        person.ClearDomainEvents();
+
+        person.SetAliases(["New1", "New2"]);
+
+        Assert.Equal(2, person.Aliases.Count);
+        Assert.Contains("New1", person.Aliases);
+        Assert.Contains("New2", person.Aliases);
+        Assert.DoesNotContain("Old", person.Aliases);
+
+        var domainEvent = Assert.Single(person.DomainEvents);
+        Assert.IsType<PersonAliasesUpdated>(domainEvent);
     }
 
     [Fact]
-    public void UpdateCandidateDetails_OnCandidate_Succeeds()
+    public void SetAliases_RejectsCaseInsensitiveDuplicates()
     {
-        var person = Person.Create(UserId, "Alice", PersonType.Candidate);
-        person.ClearDomainEvents();
-
-        person.UpdateCandidateDetails("Strong CV", "LinkedIn");
-
-        Assert.NotNull(person.CandidateDetails);
-        Assert.Equal("Strong CV", person.CandidateDetails.CvNotes);
-        Assert.Equal("LinkedIn", person.CandidateDetails.SourceChannel);
-        Assert.Equal(PipelineStatus.New, person.CandidateDetails.PipelineStatus);
-
-        var domainEvent = Assert.Single(person.DomainEvents);
-        Assert.IsType<CandidateDetailsUpdated>(domainEvent);
-    }
-
-    [Theory]
-    [InlineData(PersonType.DirectReport)]
-    [InlineData(PersonType.Stakeholder)]
-    public void UpdateCandidateDetails_OnNonCandidate_Throws(PersonType type)
-    {
-        var person = Person.Create(UserId, "Alice", type);
+        var person = Person.Create(UserId, "Alice", PersonType.DirectReport);
 
         Assert.ThrowsAny<ArgumentException>(() =>
-            person.UpdateCandidateDetails("Notes", "Referral"));
-    }
-
-    [Theory]
-    [InlineData(PipelineStatus.New, PipelineStatus.Screening)]
-    [InlineData(PipelineStatus.Screening, PipelineStatus.Interviewing)]
-    [InlineData(PipelineStatus.Interviewing, PipelineStatus.OfferStage)]
-    [InlineData(PipelineStatus.OfferStage, PipelineStatus.Hired)]
-    public void AdvanceCandidatePipeline_ValidForwardTransitions_Succeeds(
-        PipelineStatus from, PipelineStatus to)
-    {
-        var person = Person.Create(UserId, "Alice", PersonType.Candidate);
-
-        // Advance to the 'from' state
-        AdvanceToStatus(person, from);
-        person.ClearDomainEvents();
-
-        person.AdvanceCandidatePipeline(to);
-
-        Assert.Equal(to, person.CandidateDetails!.PipelineStatus);
-
-        var domainEvent = Assert.Single(person.DomainEvents);
-        var advanced = Assert.IsType<CandidatePipelineAdvanced>(domainEvent);
-        Assert.Equal(from, advanced.OldStatus);
-        Assert.Equal(to, advanced.NewStatus);
-    }
-
-    [Theory]
-    [InlineData(PipelineStatus.New)]
-    [InlineData(PipelineStatus.Screening)]
-    [InlineData(PipelineStatus.Interviewing)]
-    [InlineData(PipelineStatus.OfferStage)]
-    public void AdvanceCandidatePipeline_RejectFromAnyActiveState_Succeeds(PipelineStatus from)
-    {
-        var person = Person.Create(UserId, "Alice", PersonType.Candidate);
-        AdvanceToStatus(person, from);
-
-        person.AdvanceCandidatePipeline(PipelineStatus.Rejected);
-
-        Assert.Equal(PipelineStatus.Rejected, person.CandidateDetails!.PipelineStatus);
-    }
-
-    [Theory]
-    [InlineData(PipelineStatus.New)]
-    [InlineData(PipelineStatus.Screening)]
-    [InlineData(PipelineStatus.Interviewing)]
-    [InlineData(PipelineStatus.OfferStage)]
-    public void AdvanceCandidatePipeline_WithdrawFromAnyActiveState_Succeeds(PipelineStatus from)
-    {
-        var person = Person.Create(UserId, "Alice", PersonType.Candidate);
-        AdvanceToStatus(person, from);
-
-        person.AdvanceCandidatePipeline(PipelineStatus.Withdrawn);
-
-        Assert.Equal(PipelineStatus.Withdrawn, person.CandidateDetails!.PipelineStatus);
+            person.SetAliases(["Ali", "ali"]));
     }
 
     [Fact]
-    public void AdvanceCandidatePipeline_SkippingStages_Throws()
+    public void AddAlias_AddsToExistingList()
     {
-        var person = Person.Create(UserId, "Alice", PersonType.Candidate);
-        person.AdvanceCandidatePipeline(PipelineStatus.Screening);
+        var person = Person.Create(UserId, "Alice", PersonType.DirectReport, aliases: ["Ali"]);
+        person.ClearDomainEvents();
 
-        Assert.ThrowsAny<ArgumentException>(() =>
-            person.AdvanceCandidatePipeline(PipelineStatus.OfferStage));
+        person.AddAlias("AJ");
+
+        Assert.Equal(2, person.Aliases.Count);
+        Assert.Contains("Ali", person.Aliases);
+        Assert.Contains("AJ", person.Aliases);
+
+        var domainEvent = Assert.Single(person.DomainEvents);
+        Assert.IsType<PersonAliasesUpdated>(domainEvent);
     }
 
-    [Theory]
-    [InlineData(PipelineStatus.Hired)]
-    [InlineData(PipelineStatus.Rejected)]
-    [InlineData(PipelineStatus.Withdrawn)]
-    public void AdvanceCandidatePipeline_FromTerminalState_Throws(PipelineStatus terminalStatus)
+    [Fact]
+    public void AddAlias_RejectsCaseInsensitiveDuplicate()
     {
-        var person = Person.Create(UserId, "Alice", PersonType.Candidate);
-        AdvanceToStatus(person, terminalStatus);
+        var person = Person.Create(UserId, "Alice", PersonType.DirectReport, aliases: ["Ali"]);
 
         Assert.ThrowsAny<ArgumentException>(() =>
-            person.AdvanceCandidatePipeline(PipelineStatus.Screening));
+            person.AddAlias("ali"));
     }
 
-    [Theory]
-    [InlineData(PersonType.DirectReport)]
-    [InlineData(PersonType.Stakeholder)]
-    public void AdvanceCandidatePipeline_OnNonCandidate_Throws(PersonType type)
+    [Fact]
+    public void AddAlias_RejectsEmptyAlias()
     {
-        var person = Person.Create(UserId, "Alice", type);
+        var person = Person.Create(UserId, "Alice", PersonType.DirectReport);
 
         Assert.ThrowsAny<ArgumentException>(() =>
-            person.AdvanceCandidatePipeline(PipelineStatus.Screening));
+            person.AddAlias(""));
+    }
+
+    [Fact]
+    public void SetAliases_TrimsWhitespace()
+    {
+        var person = Person.Create(UserId, "Alice", PersonType.DirectReport);
+        person.SetAliases(["  Ali  ", "AJ "]);
+
+        Assert.Equal("Ali", person.Aliases[0]);
+        Assert.Equal("AJ", person.Aliases[1]);
+    }
+
+    [Fact]
+    public void SetAliases_SkipsEmptyStrings()
+    {
+        var person = Person.Create(UserId, "Alice", PersonType.DirectReport);
+        person.SetAliases(["Ali", "", "  ", "AJ"]);
+
+        Assert.Equal(2, person.Aliases.Count);
     }
 
     [Fact]
@@ -308,30 +213,5 @@ public class PersonTests
 
         Assert.True(person.IsArchived);
         Assert.Empty(person.DomainEvents);
-    }
-
-    private static void AdvanceToStatus(Person person, PipelineStatus target)
-    {
-        var path = new[] { PipelineStatus.Screening, PipelineStatus.Interviewing, PipelineStatus.OfferStage, PipelineStatus.Hired };
-
-        if (target is PipelineStatus.Rejected)
-        {
-            // Stay at New, then reject
-            person.AdvanceCandidatePipeline(PipelineStatus.Rejected);
-            return;
-        }
-
-        if (target is PipelineStatus.Withdrawn)
-        {
-            person.AdvanceCandidatePipeline(PipelineStatus.Withdrawn);
-            return;
-        }
-
-        foreach (var step in path)
-        {
-            if (person.CandidateDetails!.PipelineStatus == target)
-                break;
-            person.AdvanceCandidatePipeline(step);
-        }
     }
 }

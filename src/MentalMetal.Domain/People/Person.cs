@@ -4,6 +4,8 @@ namespace MentalMetal.Domain.People;
 
 public sealed class Person : AggregateRoot, IUserScoped
 {
+    private readonly List<string> _aliases = [];
+
     public Guid UserId { get; private set; }
     public string Name { get; private set; } = null!;
     public PersonType Type { get; private set; }
@@ -11,8 +13,7 @@ public sealed class Person : AggregateRoot, IUserScoped
     public string? Role { get; private set; }
     public string? Team { get; private set; }
     public string? Notes { get; private set; }
-    public CareerDetails? CareerDetails { get; private set; }
-    public CandidateDetails? CandidateDetails { get; private set; }
+    public IReadOnlyList<string> Aliases => _aliases;
     public bool IsArchived { get; private set; }
     public DateTimeOffset? ArchivedAt { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
@@ -20,7 +21,13 @@ public sealed class Person : AggregateRoot, IUserScoped
 
     private Person() { } // EF Core
 
-    public static Person Create(Guid userId, string name, PersonType type, string? email = null, string? role = null)
+    public static Person Create(
+        Guid userId,
+        string name,
+        PersonType type,
+        string? email = null,
+        string? role = null,
+        IEnumerable<string>? aliases = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name, nameof(name));
 
@@ -38,8 +45,8 @@ public sealed class Person : AggregateRoot, IUserScoped
             UpdatedAt = now
         };
 
-        if (type == PersonType.Candidate)
-            person.CandidateDetails = CandidateDetails.Create();
+        if (aliases is not null)
+            person.SetAliasesInternal(aliases);
 
         person.RaiseDomainEvent(new PersonCreated(person.Id, userId, person.Name, type));
 
@@ -66,65 +73,39 @@ public sealed class Person : AggregateRoot, IUserScoped
             return;
 
         var oldType = Type;
-
-        // Clear type-specific details from old type
-        if (oldType == PersonType.DirectReport)
-            CareerDetails = null;
-
-        if (oldType == PersonType.Candidate)
-            CandidateDetails = null;
-
         Type = newType;
-
-        // Initialise type-specific details for new type
-        if (newType == PersonType.Candidate)
-            CandidateDetails = CandidateDetails.Create();
-
         UpdatedAt = DateTimeOffset.UtcNow;
 
         RaiseDomainEvent(new PersonTypeChanged(Id, oldType, newType));
     }
 
-    public void UpdateCareerDetails(string? level, string? aspirations, string? growthAreas)
+    /// <summary>
+    /// Replaces the full alias list. Enforces case-insensitive uniqueness within this person.
+    /// Cross-person uniqueness per user is enforced at the application/repository level.
+    /// </summary>
+    public void SetAliases(IEnumerable<string> aliases)
     {
-        if (Type != PersonType.DirectReport)
-            throw new ArgumentException("Career details are only valid for direct reports.");
-
-        CareerDetails = CareerDetails.Create(level, aspirations, growthAreas);
+        SetAliasesInternal(aliases);
         UpdatedAt = DateTimeOffset.UtcNow;
-
-        RaiseDomainEvent(new CareerDetailsUpdated(Id));
+        RaiseDomainEvent(new PersonAliasesUpdated(Id));
     }
 
-    public void UpdateCandidateDetails(string? cvNotes, string? sourceChannel)
+    /// <summary>
+    /// Adds a single alias. Case-insensitive duplicate within this person is rejected.
+    /// </summary>
+    public void AddAlias(string alias)
     {
-        if (Type != PersonType.Candidate)
-            throw new ArgumentException("Candidate details are only valid for candidates.");
+        ArgumentException.ThrowIfNullOrWhiteSpace(alias, nameof(alias));
 
-        CandidateDetails = CandidateDetails.Create(
-            CandidateDetails!.PipelineStatus,
-            cvNotes,
-            sourceChannel);
+        var trimmed = alias.Trim();
+
+        if (_aliases.Any(a => string.Equals(a, trimmed, StringComparison.OrdinalIgnoreCase)))
+            throw new ArgumentException($"Alias '{trimmed}' already exists for this person.");
+
+        _aliases.Add(trimmed);
         UpdatedAt = DateTimeOffset.UtcNow;
 
-        RaiseDomainEvent(new CandidateDetailsUpdated(Id));
-    }
-
-    public void AdvanceCandidatePipeline(PipelineStatus newStatus)
-    {
-        if (Type != PersonType.Candidate)
-            throw new ArgumentException("Pipeline advancement is only valid for candidates.");
-
-        var oldStatus = CandidateDetails!.PipelineStatus;
-        CandidateDetails.ValidateTransition(oldStatus, newStatus);
-
-        CandidateDetails = CandidateDetails.Create(
-            newStatus,
-            CandidateDetails.CvNotes,
-            CandidateDetails.SourceChannel);
-        UpdatedAt = DateTimeOffset.UtcNow;
-
-        RaiseDomainEvent(new CandidatePipelineAdvanced(Id, oldStatus, newStatus));
+        RaiseDomainEvent(new PersonAliasesUpdated(Id));
     }
 
     public void Archive()
@@ -137,5 +118,24 @@ public sealed class Person : AggregateRoot, IUserScoped
         UpdatedAt = DateTimeOffset.UtcNow;
 
         RaiseDomainEvent(new PersonArchived(Id));
+    }
+
+    private void SetAliasesInternal(IEnumerable<string> aliases)
+    {
+        var trimmed = aliases
+            .Where(a => !string.IsNullOrWhiteSpace(a))
+            .Select(a => a.Trim())
+            .ToList();
+
+        // Check for case-insensitive duplicates within the list
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var alias in trimmed)
+        {
+            if (!seen.Add(alias))
+                throw new ArgumentException($"Duplicate alias '{alias}' in the provided list.");
+        }
+
+        _aliases.Clear();
+        _aliases.AddRange(trimmed);
     }
 }

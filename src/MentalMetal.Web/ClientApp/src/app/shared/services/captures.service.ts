@@ -5,7 +5,6 @@ import {
   Capture,
   CaptureTranscript,
   CaptureType,
-  ConfirmExtractionResponse,
   CreateCaptureRequest,
   ProcessingStatus,
   UpdateCaptureMetadataRequest,
@@ -40,36 +39,8 @@ export class CapturesService {
     return this.http.put<Capture>(`${this.baseUrl}/${id}`, request);
   }
 
-  process(id: string): Observable<Capture> {
-    return this.http.post<Capture>(`${this.baseUrl}/${id}/process`, {});
-  }
-
   retry(id: string): Observable<Capture> {
     return this.http.post<Capture>(`${this.baseUrl}/${id}/retry`, {});
-  }
-
-  confirmExtraction(id: string): Observable<ConfirmExtractionResponse> {
-    return this.http.post<ConfirmExtractionResponse>(`${this.baseUrl}/${id}/confirm-extraction`, {});
-  }
-
-  discardExtraction(id: string): Observable<Capture> {
-    return this.http.post<Capture>(`${this.baseUrl}/${id}/discard-extraction`, {});
-  }
-
-  linkPerson(id: string, personId: string): Observable<Capture> {
-    return this.http.post<Capture>(`${this.baseUrl}/${id}/link-person`, { personId });
-  }
-
-  unlinkPerson(id: string, personId: string): Observable<Capture> {
-    return this.http.post<Capture>(`${this.baseUrl}/${id}/unlink-person`, { personId });
-  }
-
-  linkInitiative(id: string, initiativeId: string): Observable<Capture> {
-    return this.http.post<Capture>(`${this.baseUrl}/${id}/link-initiative`, { initiativeId });
-  }
-
-  unlinkInitiative(id: string, initiativeId: string): Observable<Capture> {
-    return this.http.post<Capture>(`${this.baseUrl}/${id}/unlink-initiative`, { initiativeId });
   }
 
   importFile(file: File, type?: CaptureType, title?: string, source?: string): Observable<{ id: string }> {
@@ -81,9 +52,8 @@ export class CapturesService {
     return this.http.post<{ id: string }>(`${this.baseUrl}/import`, form);
   }
 
-  uploadAudio(blob: Blob, durationSeconds: number, title?: string, source?: string): Observable<Capture> {
+  uploadAudio(blob: Blob, durationSeconds: number, title?: string): Observable<Capture> {
     const form = new FormData();
-    // Preserve MIME on the file part — the backend reads `file.ContentType`.
     const ext = blob.type.includes('webm')
       ? 'webm'
       : blob.type.includes('mp4')
@@ -94,7 +64,6 @@ export class CapturesService {
     form.append('file', blob, `recording.${ext}`);
     form.append('durationSeconds', durationSeconds.toString());
     if (title) form.append('title', title);
-    if (source) form.append('source', source);
     return this.http.post<Capture>(`${this.baseUrl}/audio`, form);
   }
 

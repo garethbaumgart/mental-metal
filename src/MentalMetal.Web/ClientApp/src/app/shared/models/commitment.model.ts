@@ -1,6 +1,8 @@
 export type CommitmentDirection = 'MineToThem' | 'TheirsToMe';
 
-export type CommitmentStatus = 'Open' | 'Completed' | 'Cancelled';
+export type CommitmentStatus = 'Open' | 'Completed' | 'Cancelled' | 'Dismissed';
+
+export type CommitmentConfidence = 'High' | 'Medium' | 'Low';
 
 export interface Commitment {
   id: string;
@@ -10,42 +12,17 @@ export interface Commitment {
   personId: string;
   initiativeId: string | null;
   sourceCaptureId: string | null;
+  confidence: CommitmentConfidence;
   dueDate: string | null;
   status: CommitmentStatus;
   completedAt: string | null;
+  dismissedAt: string | null;
   notes: string | null;
   isOverdue: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface CreateCommitmentRequest {
-  description: string;
-  direction: CommitmentDirection;
-  personId: string;
-  dueDate?: string;
-  initiativeId?: string;
-  sourceCaptureId?: string;
-  notes?: string;
-}
-
-export interface UpdateCommitmentRequest {
-  description: string;
-  notes: string | null;
-}
-
 export interface CompleteCommitmentRequest {
   notes?: string;
-}
-
-export interface CancelCommitmentRequest {
-  reason?: string;
-}
-
-export interface UpdateDueDateRequest {
-  dueDate: string | null;
-}
-
-export interface LinkInitiativeRequest {
-  initiativeId: string;
 }

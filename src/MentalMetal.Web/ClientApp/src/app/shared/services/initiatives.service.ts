@@ -5,8 +5,6 @@ import {
   CreateInitiativeRequest,
   Initiative,
   InitiativeStatus,
-  LinkPersonRequest,
-  MilestoneRequest,
   UpdateTitleRequest,
 } from '../models/initiative.model';
 
@@ -39,27 +37,7 @@ export class InitiativesService {
     return this.http.put<Initiative>(`${this.baseUrl}/${id}/status`, { newStatus });
   }
 
-  addMilestone(id: string, request: MilestoneRequest): Observable<Initiative> {
-    return this.http.post<Initiative>(`${this.baseUrl}/${id}/milestones`, request);
-  }
-
-  updateMilestone(id: string, milestoneId: string, request: MilestoneRequest): Observable<Initiative> {
-    return this.http.put<Initiative>(`${this.baseUrl}/${id}/milestones/${milestoneId}`, request);
-  }
-
-  removeMilestone(id: string, milestoneId: string): Observable<Initiative> {
-    return this.http.delete<Initiative>(`${this.baseUrl}/${id}/milestones/${milestoneId}`);
-  }
-
-  completeMilestone(id: string, milestoneId: string): Observable<Initiative> {
-    return this.http.post<Initiative>(`${this.baseUrl}/${id}/milestones/${milestoneId}/complete`, {});
-  }
-
-  linkPerson(id: string, personId: string): Observable<Initiative> {
-    return this.http.post<Initiative>(`${this.baseUrl}/${id}/link-person`, { personId } as LinkPersonRequest);
-  }
-
-  unlinkPerson(id: string, personId: string): Observable<Initiative> {
-    return this.http.delete<Initiative>(`${this.baseUrl}/${id}/link-person/${personId}`);
+  refreshSummary(id: string): Observable<Initiative> {
+    return this.http.post<Initiative>(`${this.baseUrl}/${id}/refresh-summary`, {});
   }
 }

@@ -271,8 +271,8 @@ export class QuickCaptureDialogComponent {
       this.capturesService.create({
         rawContent: this.rawContent.trim(),
         type: this.selectedType,
+        source: 'Typed',
         ...(this.title.trim() && { title: this.title.trim() }),
-        ...(this.source.trim() && { source: this.source.trim() }),
       }).subscribe({
         next: (capture) => {
           this.submitting.set(false);

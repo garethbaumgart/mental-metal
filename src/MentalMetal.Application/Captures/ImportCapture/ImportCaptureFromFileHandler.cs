@@ -57,11 +57,12 @@ public sealed class ImportCaptureFromFileHandler(
         if (captureType is not (CaptureType.Transcript or CaptureType.QuickNote))
             throw new ArgumentException($"Unsupported capture type for file import: {captureType}");
 
+        var source = request.SourceUrl is not null ? CaptureSource.Upload : (CaptureSource?)null;
         var capture = Capture.Create(
             currentUserService.UserId,
             detected.NormalizedContent,
             captureType,
-            request.SourceUrl,
+            source,
             request.Title);
 
         await captureRepository.AddAsync(capture, cancellationToken);

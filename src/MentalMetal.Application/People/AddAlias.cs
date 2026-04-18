@@ -4,13 +4,13 @@ using MentalMetal.Domain.Users;
 
 namespace MentalMetal.Application.People;
 
-public sealed class AdvanceCandidatePipelineHandler(
+public sealed class AddAliasHandler(
     IPersonRepository personRepository,
     ICurrentUserService currentUserService,
     IUnitOfWork unitOfWork)
 {
     public async Task<PersonResponse> HandleAsync(
-        Guid personId, AdvancePipelineRequest request, CancellationToken cancellationToken)
+        Guid personId, AddAliasRequest request, CancellationToken cancellationToken)
     {
         var person = await personRepository.GetByIdAsync(personId, cancellationToken)
             ?? throw new InvalidOperationException("Person not found.");
@@ -21,7 +21,7 @@ public sealed class AdvanceCandidatePipelineHandler(
         if (person.IsArchived)
             throw new InvalidOperationException("Cannot modify an archived person.");
 
-        person.AdvanceCandidatePipeline(request.NewStatus);
+        person.AddAlias(request.Alias);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 

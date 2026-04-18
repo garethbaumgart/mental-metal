@@ -53,7 +53,7 @@ import { CreateInitiativeDialogComponent } from '../create-initiative-dialog/cre
             <tr>
               <th>Title</th>
               <th>Status</th>
-              <th>Milestones</th>
+              <th>Summary</th>
             </tr>
           </ng-template>
           <ng-template #body let-initiative>
@@ -62,7 +62,7 @@ import { CreateInitiativeDialogComponent } from '../create-initiative-dialog/cre
               <td>
                 <p-tag [value]="formatStatus(initiative.status)" [severity]="statusSeverity(initiative.status)" />
               </td>
-              <td>{{ initiative.milestones.length }}</td>
+              <td class="text-sm text-muted-color truncate" style="max-width: 300px">{{ initiative.autoSummary || '\u2014' }}</td>
             </tr>
           </ng-template>
         </p-table>

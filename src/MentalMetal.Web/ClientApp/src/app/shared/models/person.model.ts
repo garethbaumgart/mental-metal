@@ -1,17 +1,4 @@
-export type PersonType = 'DirectReport' | 'Stakeholder' | 'Candidate';
-export type PipelineStatus = 'New' | 'Screening' | 'Interviewing' | 'OfferStage' | 'Hired' | 'Rejected' | 'Withdrawn';
-
-export interface CareerDetails {
-  level: string | null;
-  aspirations: string | null;
-  growthAreas: string | null;
-}
-
-export interface CandidateDetails {
-  pipelineStatus: PipelineStatus;
-  cvNotes: string | null;
-  sourceChannel: string | null;
-}
+export type PersonType = 'DirectReport' | 'Peer' | 'Stakeholder' | 'External';
 
 export interface Person {
   id: string;
@@ -22,8 +9,7 @@ export interface Person {
   role: string | null;
   team: string | null;
   notes: string | null;
-  careerDetails: CareerDetails | null;
-  candidateDetails: CandidateDetails | null;
+  aliases: string[];
   isArchived: boolean;
   archivedAt: string | null;
   createdAt: string;
@@ -36,6 +22,7 @@ export interface CreatePersonRequest {
   email?: string;
   role?: string;
   team?: string;
+  aliases?: string[];
 }
 
 export interface UpdatePersonRequest {
@@ -44,15 +31,5 @@ export interface UpdatePersonRequest {
   role: string | null;
   team: string | null;
   notes: string | null;
-}
-
-export interface UpdateCareerDetailsRequest {
-  level: string | null;
-  aspirations: string | null;
-  growthAreas: string | null;
-}
-
-export interface UpdateCandidateDetailsRequest {
-  cvNotes: string | null;
-  sourceChannel: string | null;
+  aliases?: string[];
 }

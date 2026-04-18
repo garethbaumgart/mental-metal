@@ -18,7 +18,7 @@ public sealed class CreatePersonHandler(
             throw new InvalidOperationException(
                 $"A person with name '{request.Name}' already exists.");
 
-        var person = Person.Create(userId, request.Name, request.Type, request.Email, request.Role);
+        var person = Person.Create(userId, request.Name, request.Type, request.Email, request.Role, request.Aliases);
 
         if (request.Team is not null)
             person.UpdateProfile(request.Name, request.Email, request.Role, request.Team, notes: null);

@@ -17,17 +17,7 @@ public sealed record PersonTypeChanged(Guid PersonId, PersonType OldType, Person
     public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
 }
 
-public sealed record CareerDetailsUpdated(Guid PersonId) : IDomainEvent
-{
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
-}
-
-public sealed record CandidateDetailsUpdated(Guid PersonId) : IDomainEvent
-{
-    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
-}
-
-public sealed record CandidatePipelineAdvanced(Guid PersonId, PipelineStatus OldStatus, PipelineStatus NewStatus) : IDomainEvent
+public sealed record PersonAliasesUpdated(Guid PersonId) : IDomainEvent
 {
     public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
 }

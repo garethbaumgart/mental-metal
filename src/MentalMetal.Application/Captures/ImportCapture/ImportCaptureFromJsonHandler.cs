@@ -19,11 +19,12 @@ public sealed class ImportCaptureFromJsonHandler(
 
         var detected = TranscriptFormatDetector.Detect(request.Content);
 
+        var source = request.SourceUrl is not null ? CaptureSource.Bookmarklet : (CaptureSource?)null;
         var capture = Capture.Create(
             currentUserService.UserId,
             detected.NormalizedContent,
             request.Type,
-            request.SourceUrl,
+            source,
             request.Title);
 
         await captureRepository.AddAsync(capture, cancellationToken);

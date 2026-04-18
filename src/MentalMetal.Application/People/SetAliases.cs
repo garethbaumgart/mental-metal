@@ -4,13 +4,13 @@ using MentalMetal.Domain.Users;
 
 namespace MentalMetal.Application.People;
 
-public sealed class UpdateCareerDetailsHandler(
+public sealed class SetAliasesHandler(
     IPersonRepository personRepository,
     ICurrentUserService currentUserService,
     IUnitOfWork unitOfWork)
 {
     public async Task<PersonResponse> HandleAsync(
-        Guid personId, CareerDetailsRequest request, CancellationToken cancellationToken)
+        Guid personId, SetAliasesRequest request, CancellationToken cancellationToken)
     {
         var person = await personRepository.GetByIdAsync(personId, cancellationToken)
             ?? throw new InvalidOperationException("Person not found.");
@@ -21,7 +21,7 @@ public sealed class UpdateCareerDetailsHandler(
         if (person.IsArchived)
             throw new InvalidOperationException("Cannot modify an archived person.");
 
-        person.UpdateCareerDetails(request.Level, request.Aspirations, request.GrowthAreas);
+        person.SetAliases(request.Aliases);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 

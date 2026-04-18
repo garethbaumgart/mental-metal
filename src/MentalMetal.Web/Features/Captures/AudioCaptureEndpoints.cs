@@ -1,5 +1,6 @@
 using System.Globalization;
 using MentalMetal.Application.Captures;
+using MentalMetal.Domain.Captures;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -59,7 +60,7 @@ public static class AudioCaptureEndpoints
                     new UploadAudioCaptureRequest(
                         stream, file.ContentType, duration,
                         string.IsNullOrWhiteSpace(title) ? null : title,
-                        string.IsNullOrWhiteSpace(source) ? null : source),
+                        CaptureSource.AudioCapture),
                     cancellationToken);
                 return Results.Created($"/api/captures/{response.Id}", response);
             }

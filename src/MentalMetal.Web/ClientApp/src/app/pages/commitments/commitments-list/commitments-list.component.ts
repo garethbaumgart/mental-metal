@@ -9,23 +9,21 @@ import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { CommitmentsService } from '../../../shared/services/commitments.service';
-import { Commitment, CommitmentDirection, CommitmentStatus } from '../../../shared/models/commitment.model';
+import { Commitment, CommitmentConfidence, CommitmentDirection, CommitmentStatus } from '../../../shared/models/commitment.model';
 import { PeopleService } from '../../../shared/services/people.service';
 import { Person } from '../../../shared/models/person.model';
-import { CommitmentDialogComponent } from '../commitment-dialog/commitment-dialog.component';
 
 @Component({
   selector: 'app-commitments-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, ButtonModule, SelectModule, TableModule, TagModule, ToastModule, TooltipModule, CommitmentDialogComponent],
+  imports: [FormsModule, ButtonModule, SelectModule, TableModule, TagModule, ToastModule, TooltipModule],
   providers: [MessageService],
   template: `
     <p-toast />
     <div class="flex flex-col gap-6">
       <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold">Commitments</h1>
-        <p-button label="New Commitment" icon="pi pi-plus" (onClick)="showCreateDialog.set(true)" />
       </div>
 
       <div class="flex items-center gap-4 flex-wrap">
@@ -62,7 +60,7 @@ import { CommitmentDialogComponent } from '../commitment-dialog/commitment-dialo
       } @else if (commitments().length === 0) {
         <div class="flex flex-col items-center gap-4 p-12">
           <i class="pi pi-check-square text-4xl text-muted-color"></i>
-          <p class="text-muted-color">No commitments found. Create your first commitment to start tracking promises.</p>
+          <p class="text-muted-color">No commitments found. Commitments are created automatically from transcript extraction.</p>
         </div>
       } @else {
         <p-table
@@ -77,6 +75,7 @@ import { CommitmentDialogComponent } from '../commitment-dialog/commitment-dialo
               <th>Direction</th>
               <th>Description</th>
               <th>Person</th>
+              <th>Confidence</th>
               <th>Status</th>
               <th>Due Date</th>
               <th>Actions</th>
@@ -91,6 +90,9 @@ import { CommitmentDialogComponent } from '../commitment-dialog/commitment-dialo
                 {{ commitment.description.length > 60 ? commitment.description.substring(0, 60) + '...' : commitment.description }}
               </td>
               <td class="text-muted-color text-sm">{{ personName(commitment.personId) }}</td>
+              <td>
+                <p-tag [value]="commitment.confidence" [severity]="confidenceSeverity(commitment.confidence)" />
+              </td>
               <td>
                 <p-tag [value]="formatStatus(commitment.status)" [severity]="statusSeverity(commitment.status)" />
                 @if (commitment.isOverdue) {
@@ -108,7 +110,7 @@ import { CommitmentDialogComponent } from '../commitment-dialog/commitment-dialo
                 <div class="flex gap-1" (click)="$event.stopPropagation()">
                   @if (commitment.status === 'Open') {
                     <p-button icon="pi pi-check" severity="success" [text]="true" size="small" pTooltip="Complete" (onClick)="onComplete(commitment)" />
-                    <p-button icon="pi pi-times" severity="danger" [text]="true" size="small" pTooltip="Cancel" (onClick)="onCancel(commitment)" />
+                    <p-button icon="pi pi-eye-slash" severity="secondary" [text]="true" size="small" pTooltip="Dismiss" (onClick)="onDismiss(commitment)" />
                   } @else {
                     <p-button icon="pi pi-replay" severity="info" [text]="true" size="small" pTooltip="Reopen" (onClick)="onReopen(commitment)" />
                   }
@@ -118,11 +120,6 @@ import { CommitmentDialogComponent } from '../commitment-dialog/commitment-dialo
           </ng-template>
         </p-table>
       }
-
-      <app-commitment-dialog
-        [(visible)]="showCreateDialog"
-        (created)="onCommitmentCreated($event)"
-      />
     </div>
   `,
 })
@@ -134,7 +131,6 @@ export class CommitmentsListComponent implements OnInit {
 
   readonly commitments = signal<Commitment[]>([]);
   readonly loading = signal(true);
-  readonly showCreateDialog = signal(false);
   private readonly peopleMap = signal<Map<string, string>>(new Map());
 
   readonly selectedDirection = signal<CommitmentDirection | null>(null);
@@ -150,6 +146,7 @@ export class CommitmentsListComponent implements OnInit {
     { label: 'Open', value: 'Open' as CommitmentStatus },
     { label: 'Completed', value: 'Completed' as CommitmentStatus },
     { label: 'Cancelled', value: 'Cancelled' as CommitmentStatus },
+    { label: 'Dismissed', value: 'Dismissed' as CommitmentStatus },
   ];
 
   protected readonly overdueFilterOptions = [
@@ -167,10 +164,6 @@ export class CommitmentsListComponent implements OnInit {
 
   protected onRowClick(commitment: Commitment): void {
     this.router.navigate(['/commitments', commitment.id]);
-  }
-
-  protected onCommitmentCreated(_commitment: Commitment): void {
-    this.loadCommitments();
   }
 
   protected personName(personId: string): string {
@@ -195,11 +188,20 @@ export class CommitmentsListComponent implements OnInit {
     return status;
   }
 
-  protected statusSeverity(status: CommitmentStatus): 'info' | 'success' | 'secondary' {
+  protected statusSeverity(status: CommitmentStatus): 'info' | 'success' | 'secondary' | 'warn' {
     switch (status) {
       case 'Open': return 'info';
       case 'Completed': return 'success';
       case 'Cancelled': return 'secondary';
+      case 'Dismissed': return 'warn';
+    }
+  }
+
+  protected confidenceSeverity(confidence: CommitmentConfidence): 'success' | 'warn' | 'secondary' {
+    switch (confidence) {
+      case 'High': return 'success';
+      case 'Medium': return 'warn';
+      case 'Low': return 'secondary';
     }
   }
 
@@ -210,10 +212,10 @@ export class CommitmentsListComponent implements OnInit {
     });
   }
 
-  protected onCancel(commitment: Commitment): void {
-    this.commitmentsService.cancel(commitment.id).subscribe({
+  protected onDismiss(commitment: Commitment): void {
+    this.commitmentsService.dismiss(commitment.id).subscribe({
       next: () => this.loadCommitments(),
-      error: () => this.messageService.add({ severity: 'error', summary: 'Failed to cancel commitment' }),
+      error: () => this.messageService.add({ severity: 'error', summary: 'Failed to dismiss commitment' }),
     });
   }
 

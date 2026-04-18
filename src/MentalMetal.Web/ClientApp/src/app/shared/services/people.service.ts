@@ -5,9 +5,6 @@ import {
   CreatePersonRequest,
   Person,
   PersonType,
-  PipelineStatus,
-  UpdateCareerDetailsRequest,
-  UpdateCandidateDetailsRequest,
   UpdatePersonRequest,
 } from '../models/person.model';
 
@@ -43,16 +40,12 @@ export class PeopleService {
     return this.http.put<Person>(`${this.baseUrl}/${id}/type`, { newType });
   }
 
-  updateCareerDetails(id: string, request: UpdateCareerDetailsRequest): Observable<Person> {
-    return this.http.put<Person>(`${this.baseUrl}/${id}/career-details`, request);
+  setAliases(id: string, aliases: string[]): Observable<Person> {
+    return this.http.put<Person>(`${this.baseUrl}/${id}/aliases`, { aliases });
   }
 
-  updateCandidateDetails(id: string, request: UpdateCandidateDetailsRequest): Observable<Person> {
-    return this.http.put<Person>(`${this.baseUrl}/${id}/candidate-details`, request);
-  }
-
-  advancePipeline(id: string, newStatus: PipelineStatus): Observable<Person> {
-    return this.http.post<Person>(`${this.baseUrl}/${id}/advance-pipeline`, { newStatus });
+  addAlias(id: string, alias: string): Observable<Person> {
+    return this.http.post<Person>(`${this.baseUrl}/${id}/aliases`, { alias });
   }
 
   archive(id: string): Observable<void> {
