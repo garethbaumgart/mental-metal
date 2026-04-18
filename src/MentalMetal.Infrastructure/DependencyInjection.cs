@@ -1,39 +1,17 @@
-using MentalMetal.Application.Briefings;
 using MentalMetal.Application.Captures;
 using MentalMetal.Application.Captures.ImportCapture;
-using MentalMetal.Application.DailyCloseOut;
-using MentalMetal.Application.Chat.Global;
-using MentalMetal.Application.Initiatives.Chat;
 using MentalMetal.Application.Commitments;
-using MentalMetal.Application.Delegations;
 using MentalMetal.Application.Common;
 using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.Common.Auth;
-using MentalMetal.Application.Goals;
 using MentalMetal.Application.Initiatives;
-using MentalMetal.Application.Initiatives.Brief;
-using MentalMetal.Application.Interviews;
-using MentalMetal.Application.MyQueue;
-using MentalMetal.Application.Nudges;
-using MentalMetal.Application.Observations;
-using MentalMetal.Application.OneOnOnes;
 using MentalMetal.Application.People;
 using MentalMetal.Application.PersonalAccessTokens;
-using MentalMetal.Application.PeopleLens;
 using MentalMetal.Application.Users;
-using MentalMetal.Domain.Briefings;
 using MentalMetal.Domain.Captures;
-using MentalMetal.Domain.ChatThreads;
 using MentalMetal.Domain.Commitments;
-using MentalMetal.Domain.Delegations;
-using MentalMetal.Domain.Goals;
 using MentalMetal.Domain.Initiatives;
-using MentalMetal.Domain.Initiatives.LivingBrief;
-using MentalMetal.Domain.Interviews;
-using MentalMetal.Domain.Nudges;
 using MentalMetal.Domain.PersonalAccessTokens;
-using MentalMetal.Domain.Observations;
-using MentalMetal.Domain.OneOnOnes;
 using MentalMetal.Domain.People;
 using MentalMetal.Domain.Users;
 using MentalMetal.Infrastructure.Ai;
@@ -64,18 +42,6 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString));
 
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
-        services.AddOptions<MyQueueOptions>()
-            .Bind(configuration.GetSection(MyQueueOptions.SectionName))
-            .ValidateDataAnnotations()
-            .ValidateOnStart();
-        services.AddOptions<BriefingOptions>()
-            .Bind(configuration.GetSection(BriefingOptions.SectionName))
-            .ValidateDataAnnotations()
-            .ValidateOnStart();
-        services.AddOptions<InterviewAnalysisOptions>()
-            .Bind(configuration.GetSection(InterviewAnalysisOptions.SectionName))
-            .ValidateDataAnnotations()
-            .ValidateOnStart();
         services.AddOptions<AudioBlobStoreOptions>()
             .Bind(configuration.GetSection(AudioBlobStoreOptions.SectionName))
             .ValidateDataAnnotations()
@@ -96,17 +62,8 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPersonRepository, PersonRepository>();
         services.AddScoped<IInitiativeRepository, InitiativeRepository>();
-        services.AddScoped<IPendingBriefUpdateRepository, PendingBriefUpdateRepository>();
         services.AddScoped<ICaptureRepository, CaptureRepository>();
         services.AddScoped<ICommitmentRepository, CommitmentRepository>();
-        services.AddScoped<IDelegationRepository, DelegationRepository>();
-        services.AddScoped<IChatThreadRepository, ChatThreadRepository>();
-        services.AddScoped<IOneOnOneRepository, OneOnOneRepository>();
-        services.AddScoped<IObservationRepository, ObservationRepository>();
-        services.AddScoped<IGoalRepository, GoalRepository>();
-        services.AddScoped<IBriefingRepository, BriefingRepository>();
-        services.AddScoped<IInterviewRepository, InterviewRepository>();
-        services.AddScoped<INudgeRepository, NudgeRepository>();
         services.AddScoped<IPersonalAccessTokenRepository, PersonalAccessTokenRepository>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
@@ -163,24 +120,6 @@ public static class DependencyInjection
         services.AddScoped<LinkPersonHandler>();
         services.AddScoped<UnlinkPersonHandler>();
 
-        // Living Brief services and handlers
-        services.AddSingleton<BriefRefreshQueue>();
-        services.AddScoped<IBriefMaintenanceService, BriefMaintenanceService>();
-        services.AddHostedService<BriefRefreshHostedService>();
-        services.AddScoped<GetInitiativeBriefHandler>();
-        services.AddScoped<UpdateInitiativeBriefSummaryHandler>();
-        services.AddScoped<LogInitiativeBriefDecisionHandler>();
-        services.AddScoped<RaiseInitiativeBriefRiskHandler>();
-        services.AddScoped<ResolveInitiativeBriefRiskHandler>();
-        services.AddScoped<SnapshotInitiativeBriefRequirementsHandler>();
-        services.AddScoped<SnapshotInitiativeBriefDesignDirectionHandler>();
-        services.AddScoped<RefreshInitiativeBriefHandler>();
-        services.AddScoped<ListPendingBriefUpdatesHandler>();
-        services.AddScoped<GetPendingBriefUpdateHandler>();
-        services.AddScoped<ApplyPendingBriefUpdateHandler>();
-        services.AddScoped<RejectPendingBriefUpdateHandler>();
-        services.AddScoped<EditPendingBriefUpdateHandler>();
-
         // Commitment handlers
         services.AddScoped<CreateCommitmentHandler>();
         services.AddScoped<GetCommitmentByIdHandler>();
@@ -191,20 +130,6 @@ public static class DependencyInjection
         services.AddScoped<ReopenCommitmentHandler>();
         services.AddScoped<UpdateCommitmentDueDateHandler>();
         services.AddScoped<LinkCommitmentToInitiativeHandler>();
-
-        // Delegation handlers
-        services.AddScoped<CreateDelegationHandler>();
-        services.AddScoped<GetDelegationByIdHandler>();
-        services.AddScoped<GetUserDelegationsHandler>();
-        services.AddScoped<UpdateDelegationHandler>();
-        services.AddScoped<StartDelegationHandler>();
-        services.AddScoped<CompleteDelegationHandler>();
-        services.AddScoped<BlockDelegationHandler>();
-        services.AddScoped<UnblockDelegationHandler>();
-        services.AddScoped<RecordDelegationFollowUpHandler>();
-        services.AddScoped<UpdateDelegationDueDateHandler>();
-        services.AddScoped<ReprioritizeDelegationHandler>();
-        services.AddScoped<ReassignDelegationHandler>();
 
         // Capture handlers
         services.AddScoped<CreateCaptureHandler>();
@@ -231,103 +156,6 @@ public static class DependencyInjection
         services.AddScoped<GetCaptureTranscriptHandler>();
         services.AddScoped<UpdateCaptureSpeakersHandler>();
 
-        // Initiative chat services and handlers
-        services.AddScoped<IInitiativeChatContextBuilder, InitiativeChatContextBuilder>();
-        services.AddScoped<IInitiativeChatCompletionService, InitiativeChatCompletionService>();
-        services.AddScoped<StartInitiativeChatThreadHandler>();
-        services.AddScoped<ListInitiativeChatThreadsHandler>();
-        services.AddScoped<GetInitiativeChatThreadHandler>();
-        services.AddScoped<RenameInitiativeChatThreadHandler>();
-        services.AddScoped<PostInitiativeChatMessageHandler>();
-        services.AddScoped<ArchiveInitiativeChatThreadHandler>();
-        services.AddScoped<UnarchiveInitiativeChatThreadHandler>();
-
-        // Global chat services and handlers
-        services.AddScoped<RuleIntentClassifier>();
-        services.AddScoped<AiIntentClassifier>();
-        services.AddScoped<IIntentClassifier, HybridIntentClassifier>();
-        services.AddScoped<IGlobalChatContextBuilder, GlobalChatContextBuilder>();
-        services.AddScoped<IGlobalChatCompletionService, GlobalChatCompletionService>();
-        services.AddScoped<StartGlobalChatThreadHandler>();
-        services.AddScoped<ListGlobalChatThreadsHandler>();
-        services.AddScoped<GetGlobalChatThreadHandler>();
-        services.AddScoped<RenameGlobalChatThreadHandler>();
-        services.AddScoped<PostGlobalChatMessageHandler>();
-        services.AddScoped<ArchiveGlobalChatThreadHandler>();
-        services.AddScoped<UnarchiveGlobalChatThreadHandler>();
-
-        // OneOnOne handlers
-        services.AddScoped<CreateOneOnOneHandler>();
-        services.AddScoped<UpdateOneOnOneHandler>();
-        services.AddScoped<GetOneOnOneByIdHandler>();
-        services.AddScoped<GetUserOneOnOnesHandler>();
-        services.AddScoped<AddActionItemHandler>();
-        services.AddScoped<CompleteActionItemHandler>();
-        services.AddScoped<RemoveActionItemHandler>();
-        services.AddScoped<AddFollowUpHandler>();
-        services.AddScoped<ResolveFollowUpHandler>();
-
-        // Observation handlers
-        services.AddScoped<CreateObservationHandler>();
-        services.AddScoped<UpdateObservationHandler>();
-        services.AddScoped<GetObservationByIdHandler>();
-        services.AddScoped<GetUserObservationsHandler>();
-        services.AddScoped<DeleteObservationHandler>();
-
-        // Goal handlers
-        services.AddScoped<CreateGoalHandler>();
-        services.AddScoped<UpdateGoalHandler>();
-        services.AddScoped<GetGoalByIdHandler>();
-        services.AddScoped<GetUserGoalsHandler>();
-        services.AddScoped<AchieveGoalHandler>();
-        services.AddScoped<MissGoalHandler>();
-        services.AddScoped<DeferGoalHandler>();
-        services.AddScoped<ReactivateGoalHandler>();
-        services.AddScoped<RecordGoalCheckInHandler>();
-
-        // People Lens handlers
-        services.AddScoped<GetPersonEvidenceSummaryHandler>();
-
-        // My Queue handlers
-        services.AddSingleton<QueuePrioritizationService>();
-        services.AddScoped<GetMyQueueHandler>();
-
-        // Briefing services and handlers
-        services.AddScoped<BriefingFactsAssembler>();
-        services.AddSingleton<BriefingPromptBuilder>();
-        services.AddScoped<BriefingService>();
-        services.AddScoped<GenerateMorningBriefingHandler>();
-        services.AddScoped<GenerateWeeklyBriefingHandler>();
-        services.AddScoped<GenerateOneOnOnePrepHandler>();
-        services.AddScoped<GetRecentBriefingsHandler>();
-        services.AddScoped<GetBriefingHandler>();
-
-        // Interview services and handlers
-        services.AddScoped<IInterviewAnalysisService, InterviewAnalysisService>();
-        services.AddScoped<CreateInterviewHandler>();
-        services.AddScoped<UpdateInterviewHandler>();
-        services.AddScoped<AdvanceInterviewStageHandler>();
-        services.AddScoped<RecordInterviewDecisionHandler>();
-        services.AddScoped<DeleteInterviewHandler>();
-        services.AddScoped<GetInterviewByIdHandler>();
-        services.AddScoped<GetUserInterviewsHandler>();
-        services.AddScoped<AddInterviewScorecardHandler>();
-        services.AddScoped<UpdateInterviewScorecardHandler>();
-        services.AddScoped<RemoveInterviewScorecardHandler>();
-        services.AddScoped<SetInterviewTranscriptHandler>();
-        services.AddScoped<AnalyzeInterviewHandler>();
-
-        // Nudge handlers
-        services.AddScoped<CreateNudgeHandler>();
-        services.AddScoped<GetNudgeHandler>();
-        services.AddScoped<ListNudgesHandler>();
-        services.AddScoped<UpdateNudgeHandler>();
-        services.AddScoped<UpdateNudgeCadenceHandler>();
-        services.AddScoped<MarkNudgeAsNudgedHandler>();
-        services.AddScoped<PauseNudgeHandler>();
-        services.AddScoped<ResumeNudgeHandler>();
-        services.AddScoped<DeleteNudgeHandler>();
-
         // Personal Access Token handlers
         services.AddSingleton<IPatTokenHasher, PatTokenHasher>();
         services.AddScoped<CreatePersonalAccessTokenHandler>();
@@ -341,13 +169,6 @@ public static class DependencyInjection
         services.AddSingleton<ITranscriptFileParser, DocxTranscriptParser>();
         services.AddScoped<ImportCaptureFromJsonHandler>();
         services.AddScoped<ImportCaptureFromFileHandler>();
-
-        // Daily close-out handlers
-        services.AddScoped<GetCloseOutQueueHandler>();
-        services.AddScoped<QuickDiscardCaptureHandler>();
-        services.AddScoped<ReassignCaptureHandler>();
-        services.AddScoped<CloseOutDayHandler>();
-        services.AddScoped<GetCloseOutLogHandler>();
 
         return services;
     }

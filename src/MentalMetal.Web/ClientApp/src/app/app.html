@@ -33,9 +33,7 @@
         @if (pageTitle()) {
           <span class="text-sm font-medium header-title">{{ pageTitle() }}</span>
         }
-        <span class="ml-auto">
-          <app-global-chat-launcher />
-        </span>
+        <span class="ml-auto"></span>
       </header>
 
       <!-- Page content -->
@@ -44,9 +42,6 @@
       </main>
 
     </div>
-
-    <!-- Global chat slide-over: rendered once for the whole shell, controlled by GlobalChatStateService. -->
-    <app-global-chat-slide-over />
 
     <!-- Persistent Quick Capture: single dialog + FAB available from every authenticated page. -->
     <app-quick-capture-fab />

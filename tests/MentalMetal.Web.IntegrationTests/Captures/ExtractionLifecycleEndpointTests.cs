@@ -5,7 +5,6 @@ using MentalMetal.Application.Common;
 using MentalMetal.Application.Common.Ai;
 using MentalMetal.Domain.Users;
 using MentalMetal.Infrastructure.Ai;
-using MentalMetal.Web.IntegrationTests.Briefings;
 using MentalMetal.Web.IntegrationTests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 

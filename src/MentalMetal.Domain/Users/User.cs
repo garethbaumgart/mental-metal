@@ -5,8 +5,6 @@ namespace MentalMetal.Domain.Users;
 
 public sealed class User : AggregateRoot
 {
-    private readonly List<DailyCloseOutLog> _dailyCloseOutLogs = [];
-
     public string? ExternalAuthId { get; private set; }
     public Email Email { get; private set; } = null!;
     public string Name { get; private set; } = null!;
@@ -17,8 +15,6 @@ public sealed class User : AggregateRoot
     public string Timezone { get; private set; } = null!;
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset LastLoginAt { get; private set; }
-
-    public IReadOnlyList<DailyCloseOutLog> DailyCloseOutLogs => _dailyCloseOutLogs;
 
     private User() { } // EF Core
 
@@ -133,43 +129,4 @@ public sealed class User : AggregateRoot
         LastLoginAt = DateTimeOffset.UtcNow;
     }
 
-    public DailyCloseOutLog? GetCloseOutLog(DateOnly date) =>
-        _dailyCloseOutLogs.FirstOrDefault(l => l.Date == date);
-
-    /// <summary>
-    /// Records (or overwrites) the user's close-out summary for the given date.
-    /// Returns the log entry together with a flag indicating whether a new entry was appended
-    /// (handlers must call <c>IUserRepository.MarkOwnedAdded</c> for new entries because EF Core's
-    /// snapshot change detection does not always recognise additions to field-backed owned collections).
-    /// </summary>
-    public RecordDailyCloseOutResult RecordDailyCloseOut(
-        DateOnly date,
-        int confirmedCount,
-        int discardedCount,
-        int remainingCount)
-    {
-        if (confirmedCount < 0)
-            throw new ArgumentOutOfRangeException(nameof(confirmedCount), "Count cannot be negative.");
-        if (discardedCount < 0)
-            throw new ArgumentOutOfRangeException(nameof(discardedCount), "Count cannot be negative.");
-        if (remainingCount < 0)
-            throw new ArgumentOutOfRangeException(nameof(remainingCount), "Count cannot be negative.");
-
-        var now = DateTimeOffset.UtcNow;
-        var existing = GetCloseOutLog(date);
-
-        if (existing is not null)
-        {
-            existing.Overwrite(now, confirmedCount, discardedCount, remainingCount);
-            RaiseDomainEvent(new DailyCloseOutRecorded(Id, date));
-            return new RecordDailyCloseOutResult(existing, IsNew: false);
-        }
-
-        var entry = new DailyCloseOutLog(date, now, confirmedCount, discardedCount, remainingCount);
-        _dailyCloseOutLogs.Add(entry);
-        RaiseDomainEvent(new DailyCloseOutRecorded(Id, date));
-        return new RecordDailyCloseOutResult(entry, IsNew: true);
-    }
 }
-
-public sealed record RecordDailyCloseOutResult(DailyCloseOutLog Log, bool IsNew);

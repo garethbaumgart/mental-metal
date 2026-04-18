@@ -3,8 +3,6 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter, map, startWith } from 'rxjs/operators';
 import { SidebarComponent } from './shared/components/sidebar.component';
-import { GlobalChatLauncherComponent } from './shared/components/global-chat-launcher.component';
-import { GlobalChatSlideOverComponent } from './shared/components/global-chat-slide-over.component';
 import { QuickCaptureFabComponent } from './shared/components/quick-capture-fab.component';
 import { QuickCaptureShortcutDirective } from './shared/directives/quick-capture-shortcut.directive';
 import { QuickCaptureDialogComponent } from './pages/captures/quick-capture-dialog/quick-capture-dialog.component';
@@ -19,8 +17,6 @@ import { AuthService } from './shared/services/auth.service';
   imports: [
     RouterOutlet,
     SidebarComponent,
-    GlobalChatLauncherComponent,
-    GlobalChatSlideOverComponent,
     QuickCaptureFabComponent,
     QuickCaptureShortcutDirective,
     QuickCaptureDialogComponent,
