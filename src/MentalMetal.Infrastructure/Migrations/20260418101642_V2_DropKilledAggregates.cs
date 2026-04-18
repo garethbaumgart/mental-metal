@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -93,7 +93,7 @@ namespace MentalMetal.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            // Forward-only migration — V2 product pivot. No rollback.
+            throw new NotSupportedException("V2 product pivot migration is forward-only and cannot be rolled back.");
         }
     }
 }
