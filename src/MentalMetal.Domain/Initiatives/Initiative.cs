@@ -82,6 +82,7 @@ public sealed class Initiative : AggregateRoot, IUserScoped
     public void RefreshAutoSummary(string summary)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(summary, nameof(summary));
+        EnsureNotTerminal();
 
         AutoSummary = summary.Trim();
         LastSummaryRefreshedAt = DateTimeOffset.UtcNow;

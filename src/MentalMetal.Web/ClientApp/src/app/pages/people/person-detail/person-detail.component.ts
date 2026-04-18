@@ -61,8 +61,8 @@ import { Commitment } from '../../../shared/models/commitment.model';
             }
           </div>
           <div class="flex gap-2">
-            <input pInputText [(ngModel)]="newAlias" class="flex-1" placeholder="Add alias..." (keydown.enter)="addAlias()" />
-            <p-button icon="pi pi-plus" [outlined]="true" size="small" (onClick)="addAlias()" [disabled]="!newAlias.trim()" />
+            <input pInputText [ngModel]="newAlias()" (ngModelChange)="newAlias.set($event)" class="flex-1" placeholder="Add alias..." aria-label="New alias" (keydown.enter)="addAlias()" />
+            <p-button icon="pi pi-plus" [outlined]="true" size="small" (onClick)="addAlias()" [disabled]="!newAlias().trim()" ariaLabel="Add alias" />
           </div>
         </section>
 
@@ -231,7 +231,7 @@ export class PersonDetailComponent implements OnInit {
   protected newType: PersonType | null = null;
 
   // Alias
-  protected newAlias = '';
+  protected readonly newAlias = signal('');
 
   protected readonly typeOptions = [
     { label: 'Direct Report', value: 'DirectReport' as PersonType },
@@ -297,12 +297,12 @@ export class PersonDetailComponent implements OnInit {
 
   protected addAlias(): void {
     const p = this.person();
-    if (!p || !this.newAlias.trim()) return;
+    if (!p || !this.newAlias().trim()) return;
 
-    this.peopleService.addAlias(p.id, this.newAlias.trim()).subscribe({
+    this.peopleService.addAlias(p.id, this.newAlias().trim()).subscribe({
       next: (updated) => {
         this.person.set(updated);
-        this.newAlias = '';
+        this.newAlias.set('');
         this.messageService.add({ severity: 'success', summary: 'Alias added' });
       },
       error: () => {

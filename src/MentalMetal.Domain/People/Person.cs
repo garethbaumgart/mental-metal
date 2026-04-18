@@ -122,10 +122,11 @@ public sealed class Person : AggregateRoot, IUserScoped
 
     private void SetAliasesInternal(IEnumerable<string> aliases)
     {
-        var trimmed = aliases
-            .Where(a => !string.IsNullOrWhiteSpace(a))
-            .Select(a => a.Trim())
-            .ToList();
+        var filtered = aliases.ToList();
+        if (filtered.Any(string.IsNullOrWhiteSpace))
+            throw new ArgumentException("Aliases must not contain null or whitespace entries.");
+
+        var trimmed = filtered.Select(a => a.Trim()).ToList();
 
         // Check for case-insensitive duplicates within the list
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

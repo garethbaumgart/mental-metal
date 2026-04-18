@@ -179,12 +179,19 @@ public class PersonTests
     }
 
     [Fact]
-    public void SetAliases_SkipsEmptyStrings()
+    public void SetAliases_ThrowsOnEmptyStrings()
     {
         var person = Person.Create(UserId, "Alice", PersonType.DirectReport);
-        person.SetAliases(["Ali", "", "  ", "AJ"]);
 
-        Assert.Equal(2, person.Aliases.Count);
+        Assert.Throws<ArgumentException>(() => person.SetAliases(["Ali", "", "AJ"]));
+    }
+
+    [Fact]
+    public void SetAliases_ThrowsOnWhitespaceStrings()
+    {
+        var person = Person.Create(UserId, "Alice", PersonType.DirectReport);
+
+        Assert.Throws<ArgumentException>(() => person.SetAliases(["Ali", "  ", "AJ"]));
     }
 
     [Fact]

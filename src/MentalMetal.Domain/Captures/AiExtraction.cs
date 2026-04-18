@@ -13,7 +13,7 @@ public sealed record AiExtraction
     public IReadOnlyList<string> Decisions { get; init; } = new List<string>();
     public IReadOnlyList<string> Risks { get; init; } = new List<string>();
     public IReadOnlyList<InitiativeTag> InitiativeTags { get; init; } = new List<InitiativeTag>();
-    public DateTimeOffset ExtractedAt { get; init; }
+    public required DateTimeOffset ExtractedAt { get; init; }
 }
 
 public sealed record PersonMention

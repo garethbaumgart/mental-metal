@@ -19,7 +19,7 @@ public sealed class ImportCaptureFromJsonHandler(
 
         var detected = TranscriptFormatDetector.Detect(request.Content);
 
-        var source = request.SourceUrl is not null ? CaptureSource.Bookmarklet : (CaptureSource?)null;
+        var source = !string.IsNullOrWhiteSpace(request.SourceUrl) ? CaptureSource.Bookmarklet : CaptureSource.Upload;
         var capture = Capture.Create(
             currentUserService.UserId,
             detected.NormalizedContent,

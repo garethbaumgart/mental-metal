@@ -99,7 +99,7 @@ import { Initiative, InitiativeStatus } from '../../../shared/models/initiative.
               <p class="text-xs text-muted-color">Last refreshed: {{ initiative()!.lastSummaryRefreshedAt | date:'medium' }}</p>
             }
           } @else {
-            <p class="text-muted-color text-sm">No summary yet. Link captures to this initiative and refresh to generate one.</p>
+            <p class="text-muted-color text-sm">No summary yet. Upload transcripts that mention this initiative and a summary will be generated automatically.</p>
           }
         </section>
       </div>
