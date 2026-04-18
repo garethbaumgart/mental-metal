@@ -1,3 +1,4 @@
+using MentalMetal.Application.Briefings;
 using MentalMetal.Application.Captures;
 using MentalMetal.Application.Captures.AutoExtract;
 using MentalMetal.Application.Captures.ImportCapture;
@@ -7,6 +8,7 @@ using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.Common.Auth;
 using MentalMetal.Application.Initiatives;
 using MentalMetal.Application.People;
+using MentalMetal.Application.People.Dossier;
 using MentalMetal.Application.PersonalAccessTokens;
 using MentalMetal.Application.Users;
 using MentalMetal.Domain.Captures;
@@ -146,6 +148,13 @@ public static class DependencyInjection
         services.AddScoped<ListPersonalAccessTokensHandler>();
         services.AddScoped<RevokePersonalAccessTokenHandler>();
         services.AddScoped<ResolvePatBearerService>();
+
+        // Dossier handler
+        services.AddScoped<GetPersonDossierHandler>();
+
+        // Briefing handlers
+        services.AddScoped<GenerateDailyBriefHandler>();
+        services.AddScoped<GenerateWeeklyBriefHandler>();
 
         // Auto-extraction pipeline
         services.AddScoped<AutoExtractCaptureHandler>();

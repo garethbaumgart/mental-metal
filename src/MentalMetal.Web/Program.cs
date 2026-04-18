@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
+using MentalMetal.Application.Briefings;
 using MentalMetal.Application.Captures;
 using MentalMetal.Application.Captures.AutoExtract;
 using MentalMetal.Web;
@@ -10,6 +11,7 @@ using MentalMetal.Application.Commitments;
 using MentalMetal.Application.Common.Ai;
 using MentalMetal.Application.Initiatives;
 using MentalMetal.Application.People;
+using MentalMetal.Application.People.Dossier;
 using MentalMetal.Application.Users;
 using MentalMetal.Domain.Captures;
 using MentalMetal.Domain.Commitments;
@@ -625,6 +627,88 @@ app.MapPost("/api/people/{id:guid}/archive", async (
     {
         return Results.NotFound();
     }
+}).RequireAuthorization();
+
+// --- People Dossier Endpoints ---
+
+app.MapGet("/api/people/{id:guid}/dossier", async (
+    Guid id,
+    string? mode,
+    int? captureLimit,
+    GetPersonDossierHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(
+            id,
+            mode ?? "default",
+            captureLimit ?? 20,
+            cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (NotFoundException)
+    {
+        return Results.NotFound();
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/people/{id:guid}/dossier/refresh", async (
+    Guid id,
+    string? mode,
+    int? captureLimit,
+    GetPersonDossierHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(
+            id,
+            mode ?? "default",
+            captureLimit ?? 20,
+            cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (NotFoundException)
+    {
+        return Results.NotFound();
+    }
+}).RequireAuthorization();
+
+// --- Briefing Endpoints ---
+
+app.MapGet("/api/briefing/daily", async (
+    GenerateDailyBriefHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    var response = await handler.HandleAsync(cancellationToken);
+    return Results.Ok(response);
+}).RequireAuthorization();
+
+app.MapPost("/api/briefing/daily/refresh", async (
+    GenerateDailyBriefHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    var response = await handler.HandleAsync(cancellationToken);
+    return Results.Ok(response);
+}).RequireAuthorization();
+
+app.MapGet("/api/briefing/weekly", async (
+    DateOnly? weekOf,
+    GenerateWeeklyBriefHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    var response = await handler.HandleAsync(weekOf, cancellationToken);
+    return Results.Ok(response);
+}).RequireAuthorization();
+
+app.MapPost("/api/briefing/weekly/refresh", async (
+    DateOnly? weekOf,
+    GenerateWeeklyBriefHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    var response = await handler.HandleAsync(weekOf, cancellationToken);
+    return Results.Ok(response);
 }).RequireAuthorization();
 
 // --- Initiative Endpoints ---
