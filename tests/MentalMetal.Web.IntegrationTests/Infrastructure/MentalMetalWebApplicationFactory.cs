@@ -62,13 +62,6 @@ public sealed class MentalMetalWebApplicationFactory : WebApplicationFactory<Pro
         await db.Database.ExecuteSqlRawAsync(
             """
             TRUNCATE TABLE
-                "Briefings",
-                "OneOnOneActionItems",
-                "OneOnOneFollowUps",
-                "OneOnOnes",
-                "Observations",
-                "GoalCheckIns",
-                "Goals",
                 "Captures",
                 "RefreshTokens",
                 "Users"

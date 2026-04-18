@@ -43,60 +43,6 @@ public sealed class CreateEndpointValidationTests(PostgresFixture postgres) : In
     }
 
     [Fact]
-    public async Task CreateOneOnOne_WithoutOccurredAt_Returns400WithFieldCode()
-    {
-        var (userId, client) = await AuthedClientAsync();
-        var personId = await SeedPersonAsync(userId);
-
-        var response = await client.PostAsync("/api/one-on-ones", JsonBody(new
-        {
-            personId = personId,
-            notes = "missing occurredAt",
-        }));
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        var (code, field, _) = await ReadProblemAsync(response);
-        Assert.Equal("oneOnOne.validation", code);
-        Assert.Equal("occurredAt", field);
-    }
-
-    [Fact]
-    public async Task CreateCommitment_WithoutDirection_Returns400WithFieldCode()
-    {
-        var (userId, client) = await AuthedClientAsync();
-        var personId = await SeedPersonAsync(userId);
-
-        var response = await client.PostAsync("/api/commitments", JsonBody(new
-        {
-            description = "Ship the thing",
-            personId = personId,
-        }));
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        var (code, field, _) = await ReadProblemAsync(response);
-        Assert.Equal("commitment.validation", code);
-        Assert.Equal("direction", field);
-    }
-
-    [Fact]
-    public async Task CreateObservation_WithOutOfRangeTag_Returns400WithInvalidTagCode()
-    {
-        var (userId, client) = await AuthedClientAsync();
-        var personId = await SeedPersonAsync(userId);
-
-        var response = await client.PostAsync("/api/observations", JsonBody(new
-        {
-            personId = personId,
-            description = "x",
-            tag = 999,
-        }));
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        var (code, _, _) = await ReadProblemAsync(response);
-        Assert.Equal("observation.invalidTag", code);
-    }
-
-    [Fact]
     public async Task CreatePerson_WithEmptyName_Returns400AndDoesNotLeakEfException()
     {
         var (_, client) = await AuthedClientAsync();
