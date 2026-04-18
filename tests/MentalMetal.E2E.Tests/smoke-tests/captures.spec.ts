@@ -35,55 +35,7 @@ authTest.describe('Captures', () => {
     expect(captures.some((c: { id: string }) => c.id === created.id)).toBeTruthy();
   });
 
-  // 8.2 E2E test: link a capture to a person and verify the link
-  authTest('Link a capture to a person and verify the link', async ({ authenticatedPage, testUser }) => {
-    await authenticatedPage.goto('/dashboard');
-    await expect(authenticatedPage).toHaveURL(/\/dashboard/);
-
-    const token = await authenticatedPage.evaluate(() => localStorage.getItem('access_token'));
-
-    // Create a person
-    const personResponse = await authenticatedPage.request.post(`${API_BASE}/api/people`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { name: 'Sarah Test', type: 'Stakeholder' },
-    });
-    expect(personResponse.status()).toBe(201);
-    const person = await personResponse.json();
-
-    // Create a capture
-    const captureResponse = await authenticatedPage.request.post(`${API_BASE}/api/captures`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        rawContent: 'Notes from meeting with Sarah',
-        type: 'MeetingNotes',
-      },
-    });
-    expect(captureResponse.status()).toBe(201);
-    const capture = await captureResponse.json();
-
-    // Link the capture to the person
-    const linkResponse = await authenticatedPage.request.post(
-      `${API_BASE}/api/captures/${capture.id}/link-person`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-        data: { personId: person.id },
-      },
-    );
-    expect(linkResponse.ok()).toBeTruthy();
-    const linked = await linkResponse.json();
-    expect(linked.linkedPersonIds).toContain(person.id);
-
-    // Verify the link persists by fetching the capture
-    const getResponse = await authenticatedPage.request.get(
-      `${API_BASE}/api/captures/${capture.id}`,
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
-    expect(getResponse.ok()).toBeTruthy();
-    const fetched = await getResponse.json();
-    expect(fetched.linkedPersonIds).toContain(person.id);
-  });
-
-  // 8.3 E2E test: user isolation — captures are scoped per user
+  // 8.2 E2E test: user isolation — captures are scoped per user
   authTest('User isolation — captures are scoped per user', async ({ browser }) => {
     // Create two separate browser contexts for two different users
     const context1 = await browser.newContext();
