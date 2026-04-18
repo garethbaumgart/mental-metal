@@ -11,7 +11,6 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { MessageModule } from 'primeng/message';
-import { MessageService } from 'primeng/api';
 
 /**
  * Settings section for Deepgram API key configuration. Shows connection
@@ -79,7 +78,6 @@ import { MessageService } from 'primeng/api';
 })
 export class DeepgramSettingsComponent implements OnInit {
   private readonly http = inject(HttpClient);
-  private readonly messageService = inject(MessageService);
 
   readonly checking = signal(false);
   readonly status = signal<'unknown' | 'connected' | 'not-configured' | 'error'>('unknown');

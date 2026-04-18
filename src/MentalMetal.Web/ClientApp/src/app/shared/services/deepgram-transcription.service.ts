@@ -35,6 +35,7 @@ export class DeepgramTranscriptionService implements OnDestroy {
   private static readonly MAX_RECONNECT_ATTEMPTS = 10;
   private static readonly MAX_TOTAL_RECONNECTS = 20;
   private static readonly MAX_DROPPED_CHUNKS_BEFORE_ERROR = 10;
+  private static readonly MAX_PENDING_CHUNKS = 100; // ~25s at 250ms flush interval
   private static readonly INITIAL_RECONNECT_DELAY_MS = 500;
   private static readonly MAX_RECONNECT_DELAY_MS = 15000;
   private static readonly FLUSH_THROTTLE_MS = 50;
@@ -370,6 +371,10 @@ export class DeepgramTranscriptionService implements OnDestroy {
       this.ws.send(data);
     } else if (this.isReconnecting()) {
       this.pendingAudioChunks.push(data);
+      // Cap buffer to prevent unbounded memory growth during long disconnects
+      while (this.pendingAudioChunks.length > DeepgramTranscriptionService.MAX_PENDING_CHUNKS) {
+        this.pendingAudioChunks.shift();
+      }
     } else if (!this.intentionallyStopped) {
       this.droppedAudioChunks++;
       if (this.droppedAudioChunks >= DeepgramTranscriptionService.MAX_DROPPED_CHUNKS_BEFORE_ERROR && !this.error()) {

@@ -16,14 +16,12 @@ export type AudioCaptureMode = 'microphone' | 'both';
  */
 @Injectable({ providedIn: 'root' })
 export class AudioRecorderService implements OnDestroy {
-  private mediaRecorder: MediaRecorder | null = null;
   private micStream: MediaStream | null = null;
   private systemStream: MediaStream | null = null;
   private mixedStream: MediaStream | null = null;
   private audioContext: AudioContext | null = null;
   private mixingContext: AudioContext | null = null;
   private analyserNode: AnalyserNode | null = null;
-  private chunks: Blob[] = [];
   private timerInterval: ReturnType<typeof setInterval> | null = null;
   private levelAnimationId: number | null = null;
   private isStarting = false;
@@ -124,14 +122,11 @@ export class AudioRecorderService implements OnDestroy {
       this.analyserNode.fftSize = 64;
       source.connect(this.analyserNode);
 
-      this.chunks = [];
-      this.initMediaRecorder(recordingStream);
       this.monitorAudioTracks();
 
       // Start PCM capture for streaming transcription
       await this.startPcmCapture(recordingStream);
 
-      this.mediaRecorder!.start(1000);
       this.state.set('recording');
       this.elapsedSeconds.set(0);
       this.startTimer();
@@ -149,24 +144,6 @@ export class AudioRecorderService implements OnDestroy {
     } finally {
       this.isStarting = false;
     }
-  }
-
-  private initMediaRecorder(stream: MediaStream): void {
-    const mimeType = this.getSupportedMimeType();
-    this.mediaRecorder = new MediaRecorder(
-      stream,
-      mimeType ? { mimeType } : undefined,
-    );
-
-    this.mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) {
-        this.chunks.push(e.data);
-      }
-    };
-
-    this.mediaRecorder.onerror = () => {
-      this.attemptRecovery('MediaRecorder error');
-    };
   }
 
   private monitorAudioTracks(): void {
@@ -237,17 +214,6 @@ export class AudioRecorderService implements OnDestroy {
   }
 
   private async recoverRecording(): Promise<boolean> {
-    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      try {
-        this.mediaRecorder.onerror = null;
-        this.mediaRecorder.ondataavailable = null;
-        this.mediaRecorder.stop();
-      } catch {
-        // Already stopped
-      }
-    }
-    this.mediaRecorder = null;
-
     const micAlive = this.micStream?.getAudioTracks().some((t) => t.readyState === 'live') ?? false;
     if (!micAlive) {
       this.releaseStream(this.micStream);
@@ -298,16 +264,9 @@ export class AudioRecorderService implements OnDestroy {
     this.analyserNode.fftSize = 64;
     source.connect(this.analyserNode);
 
-    this.initMediaRecorder(recordingStream);
     this.monitorAudioTracks();
 
     await this.startPcmCapture(recordingStream);
-
-    try {
-      this.mediaRecorder!.start(1000);
-    } catch {
-      return false;
-    }
 
     this.state.set('recording');
     this.startLevelMetering();
@@ -495,29 +454,12 @@ export class AudioRecorderService implements OnDestroy {
     }
   }
 
-  stop(): Promise<void> {
-    return new Promise((resolve) => {
-      if (!this.mediaRecorder || this.mediaRecorder.state === 'inactive') {
-        this.cleanup();
-        resolve();
-        return;
-      }
-
-      this.mediaRecorder.onstop = () => {
-        this.cleanup();
-        resolve();
-      };
-
-      this.mediaRecorder.stop();
-    });
+  async stop(): Promise<void> {
+    this.cleanup();
   }
 
   discard(): void {
     this.startToken++;
-    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      this.mediaRecorder.onstop = () => {};
-      this.mediaRecorder.stop();
-    }
     this.cleanup();
   }
 
@@ -527,21 +469,6 @@ export class AudioRecorderService implements OnDestroy {
       typeof navigator.mediaDevices !== 'undefined' &&
       typeof navigator.mediaDevices.getDisplayMedia === 'function'
     );
-  }
-
-  private getSupportedMimeType(): string | undefined {
-    const types = [
-      'audio/webm;codecs=opus',
-      'audio/webm',
-      'audio/mp4',
-      'audio/ogg;codecs=opus',
-    ];
-    for (const type of types) {
-      if (MediaRecorder.isTypeSupported(type)) {
-        return type;
-      }
-    }
-    return undefined;
   }
 
   private startTimer(): void {
@@ -640,8 +567,6 @@ export class AudioRecorderService implements OnDestroy {
     }
 
     this.analyserNode = null;
-    this.mediaRecorder = null;
-    this.chunks = [];
     this.state.set('idle');
     this.elapsedSeconds.set(0);
     this.audioLevels.set(new Array(16).fill(0));

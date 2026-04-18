@@ -5,7 +5,6 @@ import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
-import { SelectModule } from 'primeng/select';
 import { PanelModule } from 'primeng/panel';
 import { ToastModule } from 'primeng/toast';
 import { MessageModule } from 'primeng/message';
@@ -14,7 +13,7 @@ import { MessageService } from 'primeng/api';
 import { CapturesService } from '../../../shared/services/captures.service';
 import { AudioRecorderService } from '../../../shared/services/audio-recorder.service';
 import { DeepgramTranscriptionService } from '../../../shared/services/deepgram-transcription.service';
-import { Capture, CaptureType } from '../../../shared/models/capture.model';
+import { Capture } from '../../../shared/models/capture.model';
 
 const ACCEPTED_EXTENSIONS = new Set(['.txt', '.html', '.htm', '.docx']);
 
@@ -31,7 +30,6 @@ type VoiceState = 'idle' | 'recording' | 'done';
     DialogModule,
     InputTextModule,
     TextareaModule,
-    SelectModule,
     PanelModule,
     ToastModule,
     MessageModule,
@@ -125,16 +123,6 @@ type VoiceState = 'idle' | 'recording' | 'done';
                 @if (fileError()) {
                   <span class="text-sm" style="color: var(--p-red-500)">{{ fileError() }}</span>
                 }
-              </div>
-
-              <div class="flex flex-col gap-2">
-                <label for="captureType" class="text-sm font-medium text-muted-color">Type</label>
-                <p-select
-                  id="captureType"
-                  [options]="typeOptions"
-                  [(ngModel)]="selectedType"
-                  class="w-full"
-                />
               </div>
 
               <div class="flex flex-col gap-2">
@@ -265,17 +253,10 @@ export class QuickCaptureDialogComponent implements OnDestroy {
   protected readonly deepgramAvailable = signal(false);
 
   protected rawContent = '';
-  protected selectedType: CaptureType = 'QuickNote';
   protected title = '';
   protected source = '';
 
   protected readonly Math = Math;
-
-  protected readonly typeOptions = [
-    { label: 'Quick Note', value: 'QuickNote' as CaptureType },
-    { label: 'Transcript', value: 'Transcript' as CaptureType },
-    { label: 'Meeting Notes', value: 'MeetingNotes' as CaptureType },
-  ];
 
   constructor() {
     effect(() => {
@@ -318,11 +299,13 @@ export class QuickCaptureDialogComponent implements OnDestroy {
     try {
       await this.recorder.start();
     } catch {
+      this.recorder.onPcmChunk.set(null);
       this.voiceError.set(this.recorder.error() ?? 'Failed to start recording');
       return;
     }
 
     if (this.recorder.state() !== 'recording') {
+      this.recorder.onPcmChunk.set(null);
       this.voiceError.set(this.recorder.error() ?? 'Microphone access denied. Switch to Type mode.');
       return;
     }
@@ -431,7 +414,7 @@ export class QuickCaptureDialogComponent implements OnDestroy {
       this.submitting.set(true);
       this.capturesService.importFile(
         file,
-        this.selectedType,
+        'QuickNote',
         this.title.trim() || undefined,
         this.source.trim() || undefined,
       ).subscribe({
@@ -475,7 +458,6 @@ export class QuickCaptureDialogComponent implements OnDestroy {
 
   private resetDraft(): void {
     this.rawContent = '';
-    this.selectedType = 'QuickNote';
     this.title = '';
     this.source = '';
     this.selectedFile.set(null);

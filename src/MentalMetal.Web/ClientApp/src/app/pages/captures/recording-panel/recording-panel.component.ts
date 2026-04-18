@@ -2,11 +2,13 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   inject,
   OnDestroy,
   output,
   signal,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ButtonModule } from 'primeng/button';
 import { MessageModule } from 'primeng/message';
 import { TextareaModule } from 'primeng/textarea';
@@ -168,6 +170,7 @@ export class RecordingPanelComponent implements OnDestroy {
   protected readonly recorder = inject(AudioRecorderService);
   protected readonly transcription = inject(DeepgramTranscriptionService);
   private readonly capturesService = inject(CapturesService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly saved = output<Capture>();
 
@@ -209,12 +212,14 @@ export class RecordingPanelComponent implements OnDestroy {
         await this.recorder.start();
       }
     } catch {
+      this.recorder.onPcmChunk.set(null);
       this.panelState.set('idle');
       return;
     }
 
     if (this.recorder.state() !== 'recording') {
       // Permission denied or other error
+      this.recorder.onPcmChunk.set(null);
       this.panelState.set('idle');
       return;
     }
@@ -259,6 +264,7 @@ export class RecordingPanelComponent implements OnDestroy {
         source: 'AudioCapture',
         title: `Meeting recording ${new Date().toLocaleDateString()}`,
       })
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (capture) => {
           this.saved.emit(capture);

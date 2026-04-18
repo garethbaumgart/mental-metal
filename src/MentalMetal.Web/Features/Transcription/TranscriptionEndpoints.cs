@@ -126,6 +126,21 @@ public static class TranscriptionEndpoints
             return;
         }
 
+        // Validate Origin header to prevent cross-site WebSocket hijacking
+        var origin = context.Request.Headers.Origin.FirstOrDefault();
+        if (!string.IsNullOrEmpty(origin))
+        {
+            var requestHost = context.Request.Host.ToString();
+            if (!Uri.TryCreate(origin, UriKind.Absolute, out var originUri)
+                || !string.Equals(originUri.Host, context.Request.Host.Host, StringComparison.OrdinalIgnoreCase))
+            {
+                logger.LogWarning("[{SessionId}] Transcription WebSocket rejected: Origin '{Origin}' does not match host '{Host}'",
+                    sessionId, origin, requestHost);
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return;
+            }
+        }
+
         var deepgramSettings = settings.Value;
         if (string.IsNullOrWhiteSpace(deepgramSettings.ApiKey))
         {
