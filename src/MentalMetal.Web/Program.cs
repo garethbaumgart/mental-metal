@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 using MentalMetal.Application.Captures;
+using MentalMetal.Application.Captures.AutoExtract;
 using MentalMetal.Web;
 using MentalMetal.Web.Features.Captures;
 using MentalMetal.Web.Features.Transcription;
@@ -729,11 +730,15 @@ app.MapPost("/api/initiatives/{id:guid}/refresh-summary", async (
 app.MapPost("/api/captures", async (
     CreateCaptureRequest request,
     CreateCaptureHandler handler,
+    AutoExtractCaptureHandler extractHandler,
     CancellationToken cancellationToken) =>
 {
     try
     {
-        var response = await handler.HandleAsync(request, cancellationToken);
+        var created = await handler.HandleAsync(request, cancellationToken);
+
+        // Auto-trigger extraction synchronously (best-effort — failures are recorded on the capture)
+        var response = await extractHandler.HandleAsync(created.Id, cancellationToken);
         return Results.Created($"/api/captures/{response.Id}", response);
     }
     catch (ArgumentException ex)
@@ -780,12 +785,15 @@ app.MapPut("/api/captures/{id:guid}", async (
 
 app.MapPost("/api/captures/{id:guid}/retry", async (
     Guid id,
-    RetryProcessingHandler handler,
+    RetryProcessingHandler retryHandler,
+    AutoExtractCaptureHandler extractHandler,
     CancellationToken cancellationToken) =>
 {
     try
     {
-        var response = await handler.HandleAsync(id, cancellationToken);
+        // Reset to Raw status, then re-run extraction
+        await retryHandler.HandleAsync(id, cancellationToken);
+        var response = await extractHandler.HandleAsync(id, cancellationToken);
         return Results.Ok(response);
     }
     catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
@@ -795,6 +803,52 @@ app.MapPost("/api/captures/{id:guid}/retry", async (
     catch (InvalidOperationException ex) when (ex.Message.Contains("Cannot retry"))
     {
         return Results.Conflict(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/captures/{id:guid}/resolve-person-mention", async (
+    Guid id,
+    ResolvePersonMentionRequest request,
+    ResolvePersonMentionHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/captures/{id:guid}/resolve-initiative-tag", async (
+    Guid id,
+    ResolveInitiativeTagRequest request,
+    ResolveInitiativeTagHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
     }
 }).RequireAuthorization();
 

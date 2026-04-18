@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
@@ -7,9 +7,14 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { PanelModule } from 'primeng/panel';
+import { SelectModule } from 'primeng/select';
 import { MessageService } from 'primeng/api';
 import { CapturesService } from '../../../shared/services/captures.service';
+import { PeopleService } from '../../../shared/services/people.service';
+import { InitiativesService } from '../../../shared/services/initiatives.service';
 import { Capture, CaptureTranscript, CaptureType, ProcessingStatus } from '../../../shared/models/capture.model';
+import { Person } from '../../../shared/models/person.model';
+import { Initiative } from '../../../shared/models/initiative.model';
 import { TranscriptViewerComponent } from '../transcript-viewer/transcript-viewer.component';
 import { SpeakerPickerComponent } from '../speaker-picker/speaker-picker.component';
 
@@ -25,6 +30,7 @@ import { SpeakerPickerComponent } from '../speaker-picker/speaker-picker.compone
     TagModule,
     ToastModule,
     PanelModule,
+    SelectModule,
     TranscriptViewerComponent,
     SpeakerPickerComponent,
   ],
@@ -181,12 +187,69 @@ import { SpeakerPickerComponent } from '../speaker-picker/speaker-picker.compone
               <div class="p-4 rounded-md border extraction-section">
                 <h3 class="font-semibold mb-2">People Mentioned</h3>
                 @for (p of capture()!.aiExtraction!.peopleMentioned; track $index) {
-                  <div class="p-2 mb-1 text-sm">
+                  <div class="p-2 mb-1 text-sm flex items-center gap-2">
                     <span class="font-medium">{{ p.rawName }}</span>
+                    @if (p.context) {
+                      <span class="text-muted-color">— {{ p.context }}</span>
+                    }
                     @if (p.personId) {
-                      <p-tag value="Resolved" severity="success" class="ml-2" />
+                      <p-tag value="Resolved" severity="success" />
                     } @else {
-                      <p-tag value="Unresolved" severity="warn" class="ml-2" />
+                      <p-tag value="Unresolved" severity="warn" />
+                      @if (resolvingPersonName() === p.rawName) {
+                        <p-select
+                          [options]="people()"
+                          optionLabel="name"
+                          optionValue="id"
+                          placeholder="Select person..."
+                          [filter]="true"
+                          filterBy="name"
+                          (onChange)="onPersonSelected(p.rawName, $event.value)"
+                          appendTo="body"
+                          class="ml-2"
+                          [style]="{ 'min-width': '200px' }"
+                        />
+                        <p-button icon="pi pi-times" [text]="true" size="small" (onClick)="resolvingPersonName.set(null)" />
+                      } @else {
+                        <p-button label="Resolve" icon="pi pi-link" size="small" [text]="true" (onClick)="startResolvePerson(p.rawName)" />
+                      }
+                    }
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Initiative Tags -->
+            @if (capture()!.aiExtraction!.initiativeTags.length > 0) {
+              <div class="p-4 rounded-md border extraction-section">
+                <h3 class="font-semibold mb-2">Initiative Tags</h3>
+                @for (t of capture()!.aiExtraction!.initiativeTags; track $index) {
+                  <div class="p-2 mb-1 text-sm flex items-center gap-2">
+                    <span class="font-medium">{{ t.rawName }}</span>
+                    @if (t.context) {
+                      <span class="text-muted-color">— {{ t.context }}</span>
+                    }
+                    @if (t.initiativeId) {
+                      <p-tag value="Linked" severity="success" />
+                    } @else {
+                      <p-tag value="Unlinked" severity="warn" />
+                      @if (resolvingInitiativeName() === t.rawName) {
+                        <p-select
+                          [options]="initiatives()"
+                          optionLabel="title"
+                          optionValue="id"
+                          placeholder="Select initiative..."
+                          [filter]="true"
+                          filterBy="title"
+                          (onChange)="onInitiativeSelected(t.rawName, $event.value)"
+                          appendTo="body"
+                          class="ml-2"
+                          [style]="{ 'min-width': '200px' }"
+                        />
+                        <p-button icon="pi pi-times" [text]="true" size="small" (onClick)="resolvingInitiativeName.set(null)" />
+                      } @else {
+                        <p-button label="Link" icon="pi pi-link" size="small" [text]="true" (onClick)="startResolveInitiative(t.rawName)" />
+                      }
                     }
                   </div>
                 }
@@ -219,6 +282,8 @@ export class CaptureDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly capturesService = inject(CapturesService);
+  private readonly peopleService = inject(PeopleService);
+  private readonly initiativesService = inject(InitiativesService);
   private readonly messageService = inject(MessageService);
 
   readonly capture = signal<Capture | null>(null);
@@ -229,6 +294,22 @@ export class CaptureDetailComponent implements OnInit {
   readonly pickerSpeakerLabel = signal<string | null>(null);
 
   readonly editTitle = signal('');
+
+  // Resolve UI state
+  readonly people = signal<Person[]>([]);
+  readonly initiatives = signal<Initiative[]>([]);
+  readonly resolvingPersonName = signal<string | null>(null);
+  readonly resolvingInitiativeName = signal<string | null>(null);
+
+  readonly hasUnresolvedMentions = computed(() => {
+    const c = this.capture();
+    return c?.aiExtraction?.peopleMentioned.some(p => !p.personId) ?? false;
+  });
+
+  readonly hasUnlinkedTags = computed(() => {
+    const c = this.capture();
+    return c?.aiExtraction?.initiativeTags.some(t => !t.initiativeId) ?? false;
+  });
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -320,6 +401,56 @@ export class CaptureDetailComponent implements OnInit {
       case 'Processed': return 'success';
       case 'Failed': return 'danger';
     }
+  }
+
+  protected startResolvePerson(rawName: string): void {
+    this.resolvingPersonName.set(rawName);
+    if (this.people().length === 0) {
+      this.peopleService.list().subscribe({
+        next: (list) => this.people.set(list),
+      });
+    }
+  }
+
+  protected onPersonSelected(rawName: string, personId: string): void {
+    const c = this.capture();
+    if (!c || !personId) return;
+
+    this.capturesService.resolvePersonMention(c.id, rawName, personId).subscribe({
+      next: (updated) => {
+        this.capture.set(updated);
+        this.resolvingPersonName.set(null);
+        this.messageService.add({ severity: 'success', summary: 'Person resolved' });
+      },
+      error: () => {
+        this.messageService.add({ severity: 'error', summary: 'Failed to resolve person' });
+      },
+    });
+  }
+
+  protected startResolveInitiative(rawName: string): void {
+    this.resolvingInitiativeName.set(rawName);
+    if (this.initiatives().length === 0) {
+      this.initiativesService.list().subscribe({
+        next: (list) => this.initiatives.set(list),
+      });
+    }
+  }
+
+  protected onInitiativeSelected(rawName: string, initiativeId: string): void {
+    const c = this.capture();
+    if (!c || !initiativeId) return;
+
+    this.capturesService.resolveInitiativeTag(c.id, rawName, initiativeId).subscribe({
+      next: (updated) => {
+        this.capture.set(updated);
+        this.resolvingInitiativeName.set(null);
+        this.messageService.add({ severity: 'success', summary: 'Initiative linked' });
+      },
+      error: () => {
+        this.messageService.add({ severity: 'error', summary: 'Failed to link initiative' });
+      },
+    });
   }
 
   private loadCapture(id: string): void {

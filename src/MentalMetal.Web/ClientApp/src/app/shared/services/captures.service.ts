@@ -78,4 +78,12 @@ export class CapturesService {
   updateSpeakers(id: string, request: UpdateCaptureSpeakersRequest): Observable<Capture> {
     return this.http.patch<Capture>(`${this.baseUrl}/${id}/speakers`, request);
   }
+
+  resolvePersonMention(id: string, rawName: string, personId: string): Observable<Capture> {
+    return this.http.post<Capture>(`${this.baseUrl}/${id}/resolve-person-mention`, { rawName, personId });
+  }
+
+  resolveInitiativeTag(id: string, rawName: string, initiativeId: string): Observable<Capture> {
+    return this.http.post<Capture>(`${this.baseUrl}/${id}/resolve-initiative-tag`, { rawName, initiativeId });
+  }
 }
