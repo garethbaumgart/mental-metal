@@ -11,7 +11,6 @@ import { MessageService } from 'primeng/api';
 import { CommitmentsService } from '../../../shared/services/commitments.service';
 import {
   Commitment,
-  CommitmentConfidence,
   CommitmentDirection,
   CommitmentStatus,
 } from '../../../shared/models/commitment.model';
@@ -125,10 +124,14 @@ interface PersonGroup {
               <div class="flex flex-col gap-2 ml-11">
                 @for (commitment of group.commitments; track commitment.id) {
                   <div
+                    role="button"
+                    tabindex="0"
                     class="flex items-center gap-3 py-2 px-3 rounded-lg cursor-pointer commitment-row"
                     [class.overdue-row]="commitment.isOverdue"
                     [class.closed-row]="commitment.status !== 'Open'"
                     (click)="onRowClick(commitment)"
+                    (keydown.enter)="onRowClick(commitment)"
+                    (keydown.space)="$event.preventDefault(); onRowClick(commitment)"
                   >
                     <p-tag
                       class="direction-tag"
