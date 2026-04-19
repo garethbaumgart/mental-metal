@@ -1,9 +1,9 @@
 /**
  * UX Exploration: drives the app as a fresh user, then as a user with seed data.
  * Captures screenshots, click counts, and timings for each primary flow.
- * Output: ./ux-review-output/{screenshots,report.json}
+ * Output: ./ux-review-output/screenshots/
  */
-import { test, expect, Page } from '@playwright/test';
+import { Page } from '@playwright/test';
 import { test as authTest, API_BASE } from './fixtures/auth.fixture';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -12,17 +12,7 @@ const OUT = path.join(__dirname, '..', 'ux-review-output');
 const SHOTS = path.join(OUT, 'screenshots');
 fs.mkdirSync(SHOTS, { recursive: true });
 
-interface Finding {
-  flow: string;
-  step: string;
-  ms?: number;
-  clicks?: number;
-  note?: string;
-  screenshot?: string;
-  url?: string;
-}
-const findings: Finding[] = [];
-const record = (f: Finding) => { findings.push(f); console.log(JSON.stringify(f)); };
+const log = (info: Record<string, unknown>) => console.log(JSON.stringify(info));
 
 async function shot(page: Page, name: string): Promise<string> {
   const file = path.join(SHOTS, `${name}.png`);
@@ -39,11 +29,6 @@ async function api(page: Page, method: string, url: string, body?: unknown) {
   });
   return res;
 }
-
-test.afterAll(async () => {
-  fs.writeFileSync(path.join(OUT, 'report.json'), JSON.stringify(findings, null, 2));
-  console.log(`\n=== UX REVIEW: ${findings.length} findings written to ${OUT}/report.json ===`);
-});
 
 // ---- 1: First-time user experience (empty state) ----
 authTest('FRESH_USER: empty-state walkthrough of every primary surface', async ({ authenticatedPage: page }) => {
@@ -65,7 +50,7 @@ authTest('FRESH_USER: empty-state walkthrough of every primary surface', async (
     const bodyText = await page.locator('body').innerText().catch(() => '');
     const snippet = bodyText.slice(0, 400).replace(/\s+/g, ' ');
     const screenshot = await shot(page, `01-fresh-${name}`);
-    record({ flow: 'fresh-user', step: name, ms, url, screenshot, note: snippet });
+    log({ flow: 'fresh-user', step: name, ms, url, screenshot, note: snippet });
   }
 });
 
@@ -76,7 +61,7 @@ authTest('TIME_TO_CAPTURE: from cold start to text capture saved', async ({ auth
   await page.goto('/dashboard');
   // Look for a quick-capture widget on dashboard
   const quickCaptureOnDash = await page.locator('textarea, input[type="text"]').count();
-  record({ flow: 'capture', step: 'dashboard-has-quick-capture-input', note: `inputs visible on dashboard: ${quickCaptureOnDash}` });
+  log({ flow: 'capture', step: 'dashboard-has-quick-capture-input', note: `inputs visible on dashboard: ${quickCaptureOnDash}` });
   await shot(page, '02a-dashboard-search-for-quick-capture');
 
   // Navigate to capture
@@ -88,7 +73,7 @@ authTest('TIME_TO_CAPTURE: from cold start to text capture saved', async ({ auth
   // Try to create a capture - look for a "New" / "Create" button
   const newButton = page.getByRole('button', { name: /new|create|add|capture/i }).first();
   const newBtnVisible = await newButton.isVisible().catch(() => false);
-  record({ flow: 'capture', step: 'new-capture-button-visible', note: `visible: ${newBtnVisible}` });
+  log({ flow: 'capture', step: 'new-capture-button-visible', note: `visible: ${newBtnVisible}` });
   if (newBtnVisible) {
     await newButton.click(); clicks++;
     await page.waitForTimeout(500);
@@ -110,7 +95,7 @@ authTest('TIME_TO_CAPTURE: from cold start to text capture saved', async ({ auth
     }
   }
   const totalMs = Date.now() - tStart;
-  record({ flow: 'capture', step: 'TOTAL-time-to-first-capture', ms: totalMs, clicks });
+  log({ flow: 'capture', step: 'TOTAL-time-to-first-capture', ms: totalMs, clicks });
 });
 
 // ---- 3: AI extraction round-trip (process -> confirm) ----
@@ -122,7 +107,7 @@ authTest('AI_EXTRACTION: create capture and trigger AI processing', async ({ aut
     rawContent: 'Team committed to deliver the Q3 API spec by Friday. Risk raised on migration timeline. Decision: ship the v2 endpoint behind a flag.',
   });
   const captureBody = await createRes.json().catch(() => ({}));
-  record({ flow: 'ai', step: 'create-capture-api', note: `status=${createRes.status()} id=${captureBody.id}` });
+  log({ flow: 'ai', step: 'create-capture-api', note: `status=${createRes.status()} id=${captureBody.id}` });
 
   await page.goto(`/capture/${captureBody.id}`, { waitUntil: 'networkidle' });
   await shot(page, '03a-capture-detail-fresh');
@@ -130,7 +115,7 @@ authTest('AI_EXTRACTION: create capture and trigger AI processing', async ({ aut
   // Look for "Process with AI" button
   const processBtn = page.getByRole('button', { name: /process|extract|analy/i }).first();
   const processVisible = await processBtn.isVisible().catch(() => false);
-  record({ flow: 'ai', step: 'process-button-visible', note: `visible: ${processVisible}` });
+  log({ flow: 'ai', step: 'process-button-visible', note: `visible: ${processVisible}` });
 
   if (processVisible) {
     const t0 = Date.now();
@@ -141,7 +126,7 @@ authTest('AI_EXTRACTION: create capture and trigger AI processing', async ({ aut
       { timeout: 60000 },
     ).catch(() => {});
     const ms = Date.now() - t0;
-    record({ flow: 'ai', step: 'process-completion-time', ms });
+    log({ flow: 'ai', step: 'process-completion-time', ms });
     await shot(page, '03b-capture-after-process');
   }
 });
@@ -157,16 +142,16 @@ authTest('PEOPLE: create person, navigate to dossier detail view', async ({ auth
     name: 'Test Person', personType: 'Report', role: 'Senior Engineer', relationship: 'Direct report',
   });
   const body = await res.json().catch(() => ({}));
-  record({ flow: 'people', step: 'create-person-api', ms: Date.now() - t0, note: `status=${res.status()} id=${body.id}` });
+  log({ flow: 'people', step: 'create-person-api', ms: Date.now() - t0, note: `status=${res.status()} id=${body.id}` });
 
   if (body.id) {
     const t1 = Date.now();
     await page.goto(`/people/${body.id}`, { waitUntil: 'networkidle' });
-    record({ flow: 'people', step: 'person-detail-load', ms: Date.now() - t1 });
+    log({ flow: 'people', step: 'person-detail-load', ms: Date.now() - t1 });
     await shot(page, '04b-person-detail-dossier');
     // Verify the dossier page loaded with relevant content
     const sections = await page.locator('h2, h3, [role="heading"]').allInnerTexts();
-    record({ flow: 'people', step: 'person-detail-sections', note: sections.join(' | ') });
+    log({ flow: 'people', step: 'person-detail-sections', note: sections.join(' | ') });
   }
 });
 
@@ -174,24 +159,24 @@ authTest('PEOPLE: create person, navigate to dossier detail view', async ({ auth
 authTest('BRIEFING: dashboard load and daily brief content audit', async ({ authenticatedPage: page }) => {
   const t0 = Date.now();
   await page.goto('/dashboard', { waitUntil: 'networkidle' });
-  record({ flow: 'briefing', step: 'dashboard-load', ms: Date.now() - t0 });
+  log({ flow: 'briefing', step: 'dashboard-load', ms: Date.now() - t0 });
   await shot(page, '05a-dashboard');
   const text = await page.locator('body').innerText();
   const hasBriefing = /briefing|today|good (morning|afternoon)|daily brief/i.test(text);
   const hasCommitments = /commitment/i.test(text);
   const hasOverdue = /overdue|due/i.test(text);
-  record({ flow: 'briefing', step: 'dashboard-content-audit', note: `briefing-greeting:${hasBriefing} commitments:${hasCommitments} overdue:${hasOverdue}` });
+  log({ flow: 'briefing', step: 'dashboard-content-audit', note: `briefing-greeting:${hasBriefing} commitments:${hasCommitments} overdue:${hasOverdue}` });
 
   // Daily briefing
   const t1 = Date.now();
   await page.goto('/briefing/daily', { waitUntil: 'networkidle' });
-  record({ flow: 'briefing', step: 'daily-briefing-load', ms: Date.now() - t1 });
+  log({ flow: 'briefing', step: 'daily-briefing-load', ms: Date.now() - t1 });
   await shot(page, '05b-daily-briefing');
 
   // Weekly briefing
   const t2 = Date.now();
   await page.goto('/briefing/weekly', { waitUntil: 'networkidle' });
-  record({ flow: 'briefing', step: 'weekly-briefing-load', ms: Date.now() - t2 });
+  log({ flow: 'briefing', step: 'weekly-briefing-load', ms: Date.now() - t2 });
   await shot(page, '05c-weekly-briefing');
 });
 
@@ -199,12 +184,12 @@ authTest('BRIEFING: dashboard load and daily brief content audit', async ({ auth
 authTest('NAV: sidebar item count and labels', async ({ authenticatedPage: page }) => {
   await page.goto('/dashboard');
   const links = await page.locator('nav a').allInnerTexts();
-  record({ flow: 'nav', step: 'sidebar-items', note: `count=${links.length} labels=${links.join('|')}` });
+  log({ flow: 'nav', step: 'sidebar-items', note: `count=${links.length} labels=${links.join('|')}` });
 
   // Verify expected V2 labels are present
   const expectedLabels = ['Dashboard', 'Daily Brief', 'Weekly Brief', 'Captures', 'People', 'Commitments', 'Initiatives', 'Settings'];
   for (const label of expectedLabels) {
     const found = links.some(l => l.toLowerCase().includes(label.toLowerCase()));
-    record({ flow: 'nav', step: `has-label-${label.toLowerCase().replace(/\s+/g, '-')}`, note: `found: ${found}` });
+    log({ flow: 'nav', step: `has-label-${label.toLowerCase().replace(/\s+/g, '-')}`, note: `found: ${found}` });
   }
 });
