@@ -13,17 +13,91 @@ import { CaptureRecorderComponent } from '../audio-recorder/capture-recorder.com
 import { RecordingPanelComponent } from '../recording-panel/recording-panel.component';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
+interface FileUpload {
+  file: File;
+  status: 'pending' | 'uploading' | 'done' | 'failed';
+  error: string | null;
+}
+
 @Component({
   selector: 'app-captures-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, DatePipe, ButtonModule, SelectModule, TableModule, TagModule, CaptureRecorderComponent, RecordingPanelComponent],
+  styles: [`
+    .drop-zone {
+      border: 2px dashed var(--p-content-border-color);
+      transition: border-color 0.2s, background-color 0.2s;
+    }
+    .drop-zone-active {
+      border-color: var(--p-primary-color);
+      background-color: var(--p-primary-50);
+    }
+  `],
   template: `
     <div class="flex flex-col gap-6">
       <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold">Captures</h1>
         <p-button label="New Capture" icon="pi pi-plus" (onClick)="quickCapture.open()" />
       </div>
+
+      <!-- Drag-Drop Upload Zone -->
+      <div
+        class="drop-zone rounded-lg p-8 flex flex-col items-center gap-3 cursor-pointer"
+        [class.drop-zone-active]="dragOver()"
+        (dragover)="onDragOver($event)"
+        (dragleave)="onDragLeave($event)"
+        (drop)="onDrop($event)"
+        (click)="fileInput.click()"
+        role="button"
+        tabindex="0"
+        (keydown.enter)="fileInput.click()"
+        (keydown.space)="$event.preventDefault(); fileInput.click()"
+        aria-label="Upload files"
+      >
+        <i class="pi pi-cloud-upload text-3xl text-muted-color"></i>
+        <p class="text-sm text-muted-color">
+          Drag &amp; drop .docx, .txt, or .html files here, or click to browse
+        </p>
+        <input
+          #fileInput
+          type="file"
+          class="hidden"
+          multiple
+          accept=".docx,.txt,.html,.htm"
+          (change)="onFilesSelected($event)"
+        />
+      </div>
+
+      <!-- Upload Progress -->
+      @if (uploads().length > 0) {
+        <div class="flex flex-col gap-2 p-4 rounded bg-surface-50">
+          <h3 class="text-sm font-semibold">Uploading files</h3>
+          @for (u of uploads(); track $index) {
+            <div class="flex items-center gap-3">
+              <span class="text-sm flex-1 truncate">{{ u.file.name }}</span>
+              @if (u.status === 'uploading') {
+                <i class="pi pi-spinner pi-spin text-sm"></i>
+                <span class="text-xs text-muted-color">Uploading...</span>
+              } @else if (u.status === 'done') {
+                <i class="pi pi-check text-sm" style="color: var(--p-green-500)"></i>
+                <span class="text-xs text-muted-color">Done</span>
+              } @else if (u.status === 'failed') {
+                <i class="pi pi-times text-sm" style="color: var(--p-red-500)"></i>
+                <span class="text-xs text-muted-color">{{ u.error ?? 'Failed' }}</span>
+                <p-button
+                  icon="pi pi-refresh"
+                  size="small"
+                  [text]="true"
+                  [rounded]="true"
+                  ariaLabel="Retry upload"
+                  (onClick)="retryUpload(u); $event.stopPropagation()"
+                />
+              }
+            </div>
+          }
+        </div>
+      }
 
       <app-recording-panel (saved)="onCaptureCreated($event)" />
       <app-capture-recorder (uploaded)="onCaptureCreated($event)" />
@@ -106,6 +180,11 @@ export class CapturesListComponent implements OnInit {
   readonly loading = signal(true);
   readonly selectedType = signal<CaptureType | null>(null);
   readonly selectedStatus = signal<ProcessingStatus | null>(null);
+  readonly dragOver = signal(false);
+  readonly uploads = signal<FileUpload[]>([]);
+
+  private readonly acceptedExtensions = ['.docx', '.txt', '.html', '.htm'];
+  private pendingUploads = 0;
 
   protected readonly typeFilterOptions = [
     { label: 'Quick Note', value: 'QuickNote' as CaptureType },
@@ -122,10 +201,104 @@ export class CapturesListComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadCaptures();
-    // Refresh when captures are authored from anywhere in the app (FAB / Cmd+K / etc.).
     this.quickCapture.captureCreated$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.loadCaptures();
     });
+  }
+
+  protected onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragOver.set(true);
+  }
+
+  protected onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragOver.set(false);
+  }
+
+  protected onDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragOver.set(false);
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+      this.handleFiles(Array.from(files));
+    }
+  }
+
+  protected onFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      this.handleFiles(Array.from(input.files));
+      input.value = '';
+    }
+  }
+
+  protected retryUpload(upload: FileUpload): void {
+    this.pendingUploads++;
+    this.uploadFile(upload);
+  }
+
+  private handleFiles(files: File[]): void {
+    const validFiles = files.filter((f) =>
+      this.acceptedExtensions.some((ext) => f.name.toLowerCase().endsWith(ext)),
+    );
+    if (validFiles.length === 0) return;
+
+    const newUploads: FileUpload[] = validFiles.map((file) => ({
+      file,
+      status: 'pending' as const,
+      error: null,
+    }));
+
+    this.uploads.update((current) => [...current, ...newUploads]);
+    this.pendingUploads += newUploads.length;
+
+    for (const upload of newUploads) {
+      this.uploadFile(upload);
+    }
+  }
+
+  private uploadFile(upload: FileUpload): void {
+    this.uploads.update((list) =>
+      list.map((u) =>
+        u.file === upload.file ? { ...u, status: 'uploading' as const, error: null } : u,
+      ),
+    );
+
+    this.capturesService.importFile(upload.file).subscribe({
+      next: () => {
+        this.uploads.update((list) =>
+          list.map((u) =>
+            u.file === upload.file ? { ...u, status: 'done' as const } : u,
+          ),
+        );
+        this.onUploadSettled();
+      },
+      error: (err: unknown) => {
+        const message = (err as { error?: { message?: string } })?.error?.message
+          ?? (err as { message?: string })?.message
+          ?? 'Upload failed';
+        this.uploads.update((list) =>
+          list.map((u) =>
+            u.file === upload.file
+              ? { ...u, status: 'failed' as const, error: message }
+              : u,
+          ),
+        );
+        this.onUploadSettled();
+      },
+    });
+  }
+
+  private onUploadSettled(): void {
+    this.pendingUploads--;
+    if (this.pendingUploads <= 0) {
+      this.pendingUploads = 0;
+      this.loadCaptures();
+    }
   }
 
   protected onFilterChange(): void {
