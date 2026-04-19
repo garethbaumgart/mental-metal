@@ -380,8 +380,8 @@ export class CaptureDetailComponent implements OnInit {
     const qs = this.route.snapshot.queryParamMap;
     const hs = qs.get('highlightStart');
     const he = qs.get('highlightEnd');
-    if (hs != null) this.highlightStart.set(parseInt(hs, 10) || null);
-    if (he != null) this.highlightEnd.set(parseInt(he, 10) || null);
+    if (hs != null) { const n = parseInt(hs, 10); this.highlightStart.set(isNaN(n) ? null : n); }
+    if (he != null) { const n = parseInt(he, 10); this.highlightEnd.set(isNaN(n) ? null : n); }
   }
 
   protected goBack(): void {

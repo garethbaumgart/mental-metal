@@ -345,4 +345,49 @@ public class AutoExtractCaptureHandlerTests
         Assert.Equal(ProcessingStatus.Processed, result.ProcessingStatus);
         Assert.Equal("Wrapped in code fences.", result.AiExtraction!.Summary);
     }
+
+    [Fact]
+    public async Task HandleAsync_SourceOffsetsFromAi_PropagatedToSpawnedCommitment()
+    {
+        var capture = CreateRawCapture();
+        var alice = Person.Create(_userId, "Alice Smith", PersonType.DirectReport);
+
+        _captureRepo.GetByIdAsync(capture.Id, Arg.Any<CancellationToken>())
+            .Returns(capture);
+        _personRepo.GetAllAsync(_userId, null, false, Arg.Any<CancellationToken>())
+            .Returns(new List<Person> { alice });
+
+        var aiJson = """
+        {
+          "summary": "Quick sync.",
+          "people_mentioned": [{"raw_name": "Alice Smith", "context": null}],
+          "commitments": [{
+            "description": "Review the PR by EOD",
+            "direction": "TheirsToMe",
+            "person_raw_name": "Alice Smith",
+            "due_date": null,
+            "confidence": "High",
+            "source_start_offset": 42,
+            "source_end_offset": 85
+          }],
+          "decisions": [],
+          "risks": [],
+          "initiative_tags": []
+        }
+        """;
+
+        _aiService.CompleteAsync(Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AiCompletionResult(aiJson, 100, 200, "test-model", AiProvider.Anthropic));
+
+        Commitment? spawnedCommitment = null;
+        await _commitmentRepo.AddAsync(
+            Arg.Do<Commitment>(c => spawnedCommitment = c),
+            Arg.Any<CancellationToken>());
+
+        await _sut.HandleAsync(capture.Id, CancellationToken.None);
+
+        Assert.NotNull(spawnedCommitment);
+        Assert.Equal(42, spawnedCommitment!.SourceStartOffset);
+        Assert.Equal(85, spawnedCommitment!.SourceEndOffset);
+    }
 }

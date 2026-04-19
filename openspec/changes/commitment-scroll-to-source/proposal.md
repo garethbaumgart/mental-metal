@@ -4,7 +4,7 @@ When a user views a commitment and clicks the source capture link, they land on 
 
 ## What Changes
 
-- **AI extraction prompt**: Request character-offset position data (`startOffset`, `endOffset`) for each extracted commitment, referencing the `RawContent` string that's sent to the AI
+- **AI extraction prompt**: Request character-offset position data (`source_start_offset`, `source_end_offset`) for each extracted commitment, referencing the `RawContent` string that's sent to the AI
 - **Domain model**: Add `SourceStartOffset` and `SourceEndOffset` (nullable int) to the `Commitment` aggregate and `ExtractedCommitment` value object
 - **API response**: Include `sourceStartOffset` and `sourceEndOffset` in `CommitmentResponse`
 - **Commitment detail link**: Pass offset as query params when navigating to the capture page (e.g., `/capture/:id?highlightStart=1234&highlightEnd=1456`)
