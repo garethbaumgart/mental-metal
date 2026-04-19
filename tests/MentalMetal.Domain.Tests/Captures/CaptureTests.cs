@@ -41,6 +41,15 @@ public class CaptureTests
         Assert.Equal(CaptureSource.Upload, capture.CaptureSource);
     }
 
+    [Fact]
+    public void Create_WithTypedSource_SetsCaptureSourceToTyped()
+    {
+        var capture = Capture.Create(UserId, "some typed note", CaptureType.QuickNote,
+            source: CaptureSource.Typed);
+
+        Assert.Equal(CaptureSource.Typed, capture.CaptureSource);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]
