@@ -178,6 +178,15 @@ app.Use(async (context, next) =>
     {
         await next();
     }
+    catch (AiNotConfiguredException) when (!context.Response.HasStarted)
+    {
+        context.Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
+        await context.Response.WriteAsJsonAsync(new
+        {
+            error = "AI provider not configured. Configure your AI provider in Settings to enable this feature.",
+            code = "ai.notConfigured"
+        });
+    }
     catch (TasteLimitExceededException ex) when (!context.Response.HasStarted)
     {
         context.Response.StatusCode = StatusCodes.Status429TooManyRequests;

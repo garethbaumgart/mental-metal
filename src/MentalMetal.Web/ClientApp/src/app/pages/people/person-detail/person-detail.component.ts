@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
@@ -171,7 +172,11 @@ import { MarkdownPipe } from '../../../shared/pipes/markdown.pipe';
           } @else if (dossierError()) {
             <div class="p-4 rounded bg-surface-50 text-center">
               <p class="text-sm text-muted-color">{{ dossierError() }}</p>
-              <p-button label="Try Again" size="small" [outlined]="true" (onClick)="loadDossier()" class="mt-2" />
+              @if (dossierAiNotConfigured()) {
+                <a routerLink="/settings" class="inline-block mt-2 text-sm text-primary font-medium">Go to Settings</a>
+              } @else {
+                <p-button label="Try Again" size="small" [outlined]="true" (onClick)="loadDossier()" class="mt-2" />
+              }
             </div>
           }
         </section>
@@ -332,6 +337,7 @@ export class PersonDetailComponent implements OnInit {
   readonly dossier = signal<PersonDossier | null>(null);
   readonly dossierLoading = signal(false);
   readonly dossierError = signal<string | null>(null);
+  readonly dossierAiNotConfigured = signal(false);
   readonly dossierMode = signal<'default' | 'prep'>('default');
 
   // Profile fields
@@ -381,14 +387,20 @@ export class PersonDetailComponent implements OnInit {
 
     this.dossierLoading.set(true);
     this.dossierError.set(null);
+    this.dossierAiNotConfigured.set(false);
     this.briefingService.refreshDossier(p.id, this.dossierMode()).subscribe({
       next: (d) => {
         this.dossier.set(d);
         this.dossierLoading.set(false);
       },
-      error: () => {
+      error: (err: HttpErrorResponse) => {
         this.dossierLoading.set(false);
-        this.dossierError.set('Failed to generate dossier. Is your AI provider configured?');
+        if (err.status === 422 && err.error?.code === 'ai.notConfigured') {
+          this.dossierAiNotConfigured.set(true);
+          this.dossierError.set(err.error.error);
+        } else {
+          this.dossierError.set('Failed to generate dossier.');
+        }
       },
     });
   }
@@ -399,14 +411,20 @@ export class PersonDetailComponent implements OnInit {
 
     this.dossierLoading.set(true);
     this.dossierError.set(null);
+    this.dossierAiNotConfigured.set(false);
     this.briefingService.getDossier(p.id, this.dossierMode()).subscribe({
       next: (d) => {
         this.dossier.set(d);
         this.dossierLoading.set(false);
       },
-      error: () => {
+      error: (err: HttpErrorResponse) => {
         this.dossierLoading.set(false);
-        this.dossierError.set('Failed to generate dossier. Is your AI provider configured?');
+        if (err.status === 422 && err.error?.code === 'ai.notConfigured') {
+          this.dossierAiNotConfigured.set(true);
+          this.dossierError.set(err.error.error);
+        } else {
+          this.dossierError.set('Failed to generate dossier.');
+        }
       },
     });
   }

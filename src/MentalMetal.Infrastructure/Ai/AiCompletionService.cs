@@ -76,12 +76,10 @@ public sealed class AiCompletionService(
 
         // Fall back to taste key
         if (_settings.TasteKey is null)
-            throw new InvalidOperationException(
-                "AI provider is not configured. Please set up your AI provider in settings.");
+            throw new AiNotConfiguredException();
 
         if (!tasteBudgetService.IsEnabled)
-            throw new InvalidOperationException(
-                "AI provider is not configured. Please set up your AI provider in settings.");
+            throw new AiNotConfiguredException();
 
         var remaining = await tasteBudgetService.GetRemainingAsync(user.Id, cancellationToken);
         if (remaining <= 0)
