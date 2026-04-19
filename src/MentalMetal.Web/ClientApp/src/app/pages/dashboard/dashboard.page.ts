@@ -125,6 +125,11 @@ import { toLocalDateKey, todayLocalIso } from './widget-shell';
               <p-skeleton height="2.5rem" />
               <p-skeleton height="2.5rem" />
             </div>
+          } @else if (commitmentsError()) {
+            <div class="flex flex-col items-start gap-2 py-3">
+              <p class="text-sm text-muted-color">{{ commitmentsError() }}</p>
+              <p-button label="Retry" icon="pi pi-refresh" size="small" [text]="true" (onClick)="loadCommitments()" />
+            </div>
           } @else if (commitments().length === 0) {
             <p class="text-sm text-muted-color py-2">No open commitments.</p>
           } @else {
@@ -220,6 +225,11 @@ import { toLocalDateKey, todayLocalIso } from './widget-shell';
               <p-skeleton height="2.5rem" />
               <p-skeleton height="2.5rem" />
             </div>
+          } @else if (peopleError()) {
+            <div class="flex flex-col items-start gap-2 py-3">
+              <p class="text-sm text-muted-color">{{ peopleError() }}</p>
+              <p-button label="Retry" icon="pi pi-refresh" size="small" [text]="true" (onClick)="loadPeople()" />
+            </div>
           } @else if (people().length === 0) {
             <p class="text-sm text-muted-color py-2">No people added yet.</p>
           } @else {
@@ -253,11 +263,13 @@ export class DashboardPage implements OnInit {
   // Commitments state
   protected readonly commitments = signal<Commitment[]>([]);
   protected readonly commitmentsLoading = signal(true);
+  protected readonly commitmentsError = signal<string | null>(null);
   protected readonly acting = signal<string | null>(null);
 
   // People state
   protected readonly people = signal<Person[]>([]);
   protected readonly peopleLoading = signal(true);
+  protected readonly peopleError = signal<string | null>(null);
 
   // Grouped commitments
   protected readonly overdueCommitments = computed(() =>
@@ -318,6 +330,7 @@ export class DashboardPage implements OnInit {
 
   protected loadCommitments(): void {
     this.commitmentsLoading.set(true);
+    this.commitmentsError.set(null);
     this.commitmentsService.list(undefined, 'Open').subscribe({
       next: (list) => {
         this.commitments.set(
@@ -328,12 +341,16 @@ export class DashboardPage implements OnInit {
         );
         this.commitmentsLoading.set(false);
       },
-      error: () => this.commitmentsLoading.set(false),
+      error: () => {
+        this.commitmentsLoading.set(false);
+        this.commitmentsError.set('Failed to load commitments.');
+      },
     });
   }
 
   protected loadPeople(): void {
     this.peopleLoading.set(true);
+    this.peopleError.set(null);
     this.peopleService.list().subscribe({
       next: (list) => {
         // Show most recently updated first, limit to 10
@@ -344,7 +361,10 @@ export class DashboardPage implements OnInit {
         );
         this.peopleLoading.set(false);
       },
-      error: () => this.peopleLoading.set(false),
+      error: () => {
+        this.peopleLoading.set(false);
+        this.peopleError.set('Failed to load people.');
+      },
     });
   }
 
@@ -393,7 +413,7 @@ export class DashboardPage implements OnInit {
   private getEndOfWeek(): string {
     const now = new Date();
     const dayOfWeek = now.getDay();
-    const daysUntilSunday = 7 - dayOfWeek;
+    const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
     const endOfWeek = new Date(now);
     endOfWeek.setDate(now.getDate() + daysUntilSunday);
     return toLocalDateKey(endOfWeek) as string;

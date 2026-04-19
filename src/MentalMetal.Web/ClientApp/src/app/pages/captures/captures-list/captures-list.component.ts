@@ -6,7 +6,6 @@ import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
-import { ProgressBarModule } from 'primeng/progressbar';
 import { CapturesService } from '../../../shared/services/captures.service';
 import { QuickCaptureUiService } from '../../../shared/services/quick-capture-ui.service';
 import { Capture, CaptureType, ProcessingStatus } from '../../../shared/models/capture.model';
@@ -24,7 +23,7 @@ interface FileUpload {
   selector: 'app-captures-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, DatePipe, ButtonModule, SelectModule, TableModule, TagModule, ProgressBarModule, CaptureRecorderComponent, RecordingPanelComponent],
+  imports: [FormsModule, DatePipe, ButtonModule, SelectModule, TableModule, TagModule, CaptureRecorderComponent, RecordingPanelComponent],
   styles: [`
     .drop-zone {
       border: 2px dashed var(--p-content-border-color);
@@ -53,6 +52,7 @@ interface FileUpload {
         role="button"
         tabindex="0"
         (keydown.enter)="fileInput.click()"
+        (keydown.space)="$event.preventDefault(); fileInput.click()"
         aria-label="Upload files"
       >
         <i class="pi pi-cloud-upload text-3xl text-muted-color"></i>
@@ -73,7 +73,7 @@ interface FileUpload {
       @if (uploads().length > 0) {
         <div class="flex flex-col gap-2 p-4 rounded bg-surface-50">
           <h3 class="text-sm font-semibold">Uploading files</h3>
-          @for (u of uploads(); track u.file.name) {
+          @for (u of uploads(); track $index) {
             <div class="flex items-center gap-3">
               <span class="text-sm flex-1 truncate">{{ u.file.name }}</span>
               @if (u.status === 'uploading') {
@@ -184,6 +184,7 @@ export class CapturesListComponent implements OnInit {
   readonly uploads = signal<FileUpload[]>([]);
 
   private readonly acceptedExtensions = ['.docx', '.txt', '.html', '.htm'];
+  private pendingUploads = 0;
 
   protected readonly typeFilterOptions = [
     { label: 'Quick Note', value: 'QuickNote' as CaptureType },
@@ -236,6 +237,7 @@ export class CapturesListComponent implements OnInit {
   }
 
   protected retryUpload(upload: FileUpload): void {
+    this.pendingUploads++;
     this.uploadFile(upload);
   }
 
@@ -252,6 +254,7 @@ export class CapturesListComponent implements OnInit {
     }));
 
     this.uploads.update((current) => [...current, ...newUploads]);
+    this.pendingUploads += newUploads.length;
 
     for (const upload of newUploads) {
       this.uploadFile(upload);
@@ -272,18 +275,30 @@ export class CapturesListComponent implements OnInit {
             u.file === upload.file ? { ...u, status: 'done' as const } : u,
           ),
         );
-        this.loadCaptures();
+        this.onUploadSettled();
       },
-      error: () => {
+      error: (err: unknown) => {
+        const message = (err as { error?: { message?: string } })?.error?.message
+          ?? (err as { message?: string })?.message
+          ?? 'Upload failed';
         this.uploads.update((list) =>
           list.map((u) =>
             u.file === upload.file
-              ? { ...u, status: 'failed' as const, error: 'Upload failed' }
+              ? { ...u, status: 'failed' as const, error: message }
               : u,
           ),
         );
+        this.onUploadSettled();
       },
     });
+  }
+
+  private onUploadSettled(): void {
+    this.pendingUploads--;
+    if (this.pendingUploads <= 0) {
+      this.pendingUploads = 0;
+      this.loadCaptures();
+    }
   }
 
   protected onFilterChange(): void {
