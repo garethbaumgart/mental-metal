@@ -376,4 +376,27 @@ public class AutoExtractCaptureHandlerTests
             Arg.Is<AiCompletionRequest>(r => r.SystemPrompt.Contains("Test User")),
             Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task HandleAsync_UserNotFound_SetsFailedStatus()
+    {
+        var capture = CreateRawCapture();
+
+        var callCount = 0;
+        _captureRepo.GetByIdAsync(capture.Id, Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                callCount++;
+                if (callCount == 1) return capture;
+                var fresh = Capture.Create(_userId, "Test meeting notes", CaptureType.MeetingNotes);
+                fresh.BeginProcessing();
+                return fresh;
+            });
+        _userRepo.GetByIdAsync(_userId, Arg.Any<CancellationToken>())
+            .Returns((User?)null);
+
+        var result = await _sut.HandleAsync(capture.Id, CancellationToken.None);
+
+        Assert.Equal(ProcessingStatus.Failed, result.ProcessingStatus);
+    }
 }
