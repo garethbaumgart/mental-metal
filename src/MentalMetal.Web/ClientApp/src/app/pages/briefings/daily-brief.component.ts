@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
@@ -138,7 +139,11 @@ import { MarkdownPipe } from '../../shared/pipes/markdown.pipe';
       } @else if (error()) {
         <div class="p-8 text-center rounded bg-surface-50">
           <p class="text-muted-color">{{ error() }}</p>
-          <p-button label="Try Again" size="small" [outlined]="true" (onClick)="load()" class="mt-4" />
+          @if (aiNotConfigured()) {
+            <a routerLink="/settings" class="inline-block mt-4 text-sm text-primary font-medium">Go to Settings</a>
+          } @else {
+            <p-button label="Try Again" size="small" [outlined]="true" (onClick)="load()" class="mt-4" />
+          }
         </div>
       }
     </div>
@@ -150,6 +155,7 @@ export class DailyBriefComponent implements OnInit {
   readonly brief = signal<DailyBrief | null>(null);
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
+  readonly aiNotConfigured = signal(false);
 
   ngOnInit(): void {
     this.load();
@@ -158,14 +164,20 @@ export class DailyBriefComponent implements OnInit {
   protected load(): void {
     this.loading.set(true);
     this.error.set(null);
+    this.aiNotConfigured.set(false);
     this.briefingService.getDailyBrief().subscribe({
       next: (b) => {
         this.brief.set(b);
         this.loading.set(false);
       },
-      error: () => {
+      error: (err: HttpErrorResponse) => {
         this.loading.set(false);
-        this.error.set('Failed to generate daily brief. Is your AI provider configured?');
+        if (err.status === 422 && err.error?.code === 'ai.notConfigured') {
+          this.aiNotConfigured.set(true);
+          this.error.set(err.error.error);
+        } else {
+          this.error.set('Failed to generate daily brief.');
+        }
       },
     });
   }
@@ -173,14 +185,20 @@ export class DailyBriefComponent implements OnInit {
   protected refresh(): void {
     this.loading.set(true);
     this.error.set(null);
+    this.aiNotConfigured.set(false);
     this.briefingService.refreshDailyBrief().subscribe({
       next: (b) => {
         this.brief.set(b);
         this.loading.set(false);
       },
-      error: () => {
+      error: (err: HttpErrorResponse) => {
         this.loading.set(false);
-        this.error.set('Failed to refresh daily brief.');
+        if (err.status === 422 && err.error?.code === 'ai.notConfigured') {
+          this.aiNotConfigured.set(true);
+          this.error.set(err.error.error);
+        } else {
+          this.error.set('Failed to refresh daily brief.');
+        }
       },
     });
   }
