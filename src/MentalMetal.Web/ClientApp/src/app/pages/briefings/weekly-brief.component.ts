@@ -60,7 +60,7 @@ import { MarkdownPipe } from '../../shared/pipes/markdown.pipe';
         </p>
 
         <!-- Narrative -->
-        <section class="p-4 rounded bg-surface-50">
+        <section class="p-4 rounded bg-[var(--p-content-hover-background)]">
           <div [innerHTML]="brief()!.narrative | markdown"></div>
         </section>
 
@@ -70,7 +70,7 @@ import { MarkdownPipe } from '../../shared/pipes/markdown.pipe';
             <h2 class="text-lg font-semibold">Cross-Conversation Patterns</h2>
             <ul class="flex flex-col gap-2">
               @for (insight of brief()!.crossConversationInsights; track insight) {
-                <li class="p-3 rounded bg-surface-50 text-sm">{{ insight }}</li>
+                <li class="p-3 rounded bg-[var(--p-content-hover-background)] text-sm">{{ insight }}</li>
               }
             </ul>
           </section>
@@ -82,7 +82,7 @@ import { MarkdownPipe } from '../../shared/pipes/markdown.pipe';
             <h2 class="text-lg font-semibold">Key Decisions</h2>
             <ul class="flex flex-col gap-2">
               @for (d of brief()!.decisions; track d) {
-                <li class="p-3 rounded bg-surface-50 text-sm">{{ d }}</li>
+                <li class="p-3 rounded bg-[var(--p-content-hover-background)] text-sm">{{ d }}</li>
               }
             </ul>
           </section>
@@ -92,19 +92,19 @@ import { MarkdownPipe } from '../../shared/pipes/markdown.pipe';
         <section class="flex flex-col gap-3">
           <h2 class="text-lg font-semibold">Commitment Tracker</h2>
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div class="p-4 rounded bg-surface-50 text-center">
+            <div class="p-4 rounded bg-[var(--p-content-hover-background)] text-center">
               <div class="text-2xl font-bold">{{ brief()!.commitmentStatus.newCount }}</div>
               <div class="text-xs text-muted-color">New</div>
             </div>
-            <div class="p-4 rounded bg-surface-50 text-center">
+            <div class="p-4 rounded bg-[var(--p-content-hover-background)] text-center">
               <div class="text-2xl font-bold">{{ brief()!.commitmentStatus.completedCount }}</div>
               <div class="text-xs text-muted-color">Completed</div>
             </div>
-            <div class="p-4 rounded bg-surface-50 text-center">
+            <div class="p-4 rounded bg-[var(--p-content-hover-background)] text-center">
               <div class="text-2xl font-bold">{{ brief()!.commitmentStatus.overdueCount }}</div>
               <div class="text-xs text-muted-color">Overdue</div>
             </div>
-            <div class="p-4 rounded bg-surface-50 text-center">
+            <div class="p-4 rounded bg-[var(--p-content-hover-background)] text-center">
               <div class="text-2xl font-bold">{{ brief()!.commitmentStatus.totalOpen }}</div>
               <div class="text-xs text-muted-color">Total Open</div>
             </div>
@@ -117,7 +117,7 @@ import { MarkdownPipe } from '../../shared/pipes/markdown.pipe';
             <h2 class="text-lg font-semibold">Risks &amp; Open Threads</h2>
             <ul class="flex flex-col gap-2">
               @for (r of brief()!.risks; track r) {
-                <li class="p-3 rounded bg-surface-50 text-sm">{{ r }}</li>
+                <li class="p-3 rounded bg-[var(--p-content-hover-background)] text-sm">{{ r }}</li>
               }
             </ul>
           </section>
@@ -128,7 +128,7 @@ import { MarkdownPipe } from '../../shared/pipes/markdown.pipe';
           <section class="flex flex-col gap-3">
             <h2 class="text-lg font-semibold">Initiative Activity</h2>
             @for (i of brief()!.initiativeActivity; track i.initiativeId) {
-              <div class="p-3 rounded bg-surface-50 flex flex-col gap-1">
+              <div class="p-3 rounded bg-[var(--p-content-hover-background)] flex flex-col gap-1">
                 <div class="flex items-center justify-between">
                   <a [routerLink]="['/initiatives', i.initiativeId]" class="text-sm font-medium text-primary">
                     {{ i.title }}
@@ -147,7 +147,7 @@ import { MarkdownPipe } from '../../shared/pipes/markdown.pipe';
           Generated {{ brief()!.generatedAt | date: 'medium' }}
         </p>
       } @else if (error()) {
-        <div class="p-8 text-center rounded bg-surface-50">
+        <div class="p-8 text-center rounded bg-[var(--p-content-hover-background)]">
           <p class="text-muted-color">{{ error() }}</p>
           @if (aiNotConfigured()) {
             <a routerLink="/settings" class="inline-block mt-4 text-sm text-primary font-medium">Go to Settings</a>
