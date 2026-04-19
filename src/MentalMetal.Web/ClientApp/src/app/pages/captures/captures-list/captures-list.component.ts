@@ -71,7 +71,7 @@ interface FileUpload {
 
       <!-- Upload Progress -->
       @if (uploads().length > 0) {
-        <div class="flex flex-col gap-2 p-4 rounded bg-surface-50">
+        <div class="flex flex-col gap-2 p-4 rounded bg-[var(--p-content-hover-background)]">
           <h3 class="text-sm font-semibold">Uploading files</h3>
           @for (u of uploads(); track $index) {
             <div class="flex items-center gap-3">

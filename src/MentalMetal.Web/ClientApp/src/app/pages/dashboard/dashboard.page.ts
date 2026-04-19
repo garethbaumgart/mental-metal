@@ -33,7 +33,7 @@ import { toLocalDateKey, todayLocalIso } from './widget-shell';
       </header>
 
       <!-- Daily Brief Section -->
-      <section class="flex flex-col gap-4 p-5 rounded-md bg-surface-50" aria-label="Daily Brief">
+      <section class="flex flex-col gap-4 p-5 rounded-md bg-[var(--p-content-hover-background)]" aria-label="Daily Brief">
         <header class="flex items-center justify-between">
           <h2 class="text-lg font-semibold">Daily Brief</h2>
           <a routerLink="/briefing/daily" class="text-xs font-medium text-primary hover:underline">
@@ -55,7 +55,7 @@ import { toLocalDateKey, todayLocalIso } from './widget-shell';
             <div class="flex flex-col gap-2">
               <h3 class="text-sm font-semibold">New Commitments</h3>
               @for (c of brief()!.freshCommitments; track c.id) {
-                <div class="flex items-center gap-2 p-2 rounded bg-surface-0 text-sm">
+                <div class="flex items-center gap-2 p-2 rounded bg-[var(--p-content-background)] text-sm">
                   <p-tag [value]="c.direction === 'MineToThem' ? 'Mine' : 'Theirs'" severity="secondary" />
                   <span class="flex-1">{{ c.description }}</span>
                   @if (c.personName) {
@@ -70,7 +70,7 @@ import { toLocalDateKey, todayLocalIso } from './widget-shell';
             <div class="flex flex-col gap-2">
               <h3 class="text-sm font-semibold">Due Today</h3>
               @for (c of brief()!.dueToday; track c.id) {
-                <div class="flex items-center gap-2 p-2 rounded bg-surface-0 text-sm">
+                <div class="flex items-center gap-2 p-2 rounded bg-[var(--p-content-background)] text-sm">
                   <span class="flex-1">{{ c.description }}</span>
                   @if (c.personName) {
                     <a [routerLink]="['/people', c.personId]" class="text-xs text-primary">{{ c.personName }}</a>
@@ -84,7 +84,7 @@ import { toLocalDateKey, todayLocalIso } from './widget-shell';
             <div class="flex flex-col gap-2">
               <h3 class="text-sm font-semibold">Overdue</h3>
               @for (c of brief()!.overdue; track c.id) {
-                <div class="flex items-center gap-2 p-2 rounded bg-surface-0 text-sm">
+                <div class="flex items-center gap-2 p-2 rounded bg-[var(--p-content-background)] text-sm">
                   <p-tag value="Overdue" severity="danger" />
                   <span class="flex-1">{{ c.description }}</span>
                   @if (c.dueDate) {
@@ -111,7 +111,7 @@ import { toLocalDateKey, todayLocalIso } from './widget-shell';
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Open Commitments Section -->
-        <section class="flex flex-col gap-3 p-5 rounded-md bg-surface-50" aria-label="Open Commitments">
+        <section class="flex flex-col gap-3 p-5 rounded-md bg-[var(--p-content-hover-background)]" aria-label="Open Commitments">
           <header class="flex items-center justify-between">
             <h2 class="text-lg font-semibold">Open Commitments</h2>
             <a routerLink="/commitments" class="text-xs font-medium text-primary hover:underline">
@@ -137,7 +137,7 @@ import { toLocalDateKey, todayLocalIso } from './widget-shell';
               <div class="flex flex-col gap-1">
                 <span class="text-xs font-semibold uppercase text-muted-color">Overdue</span>
                 @for (c of overdueCommitments(); track c.id) {
-                  <div class="flex items-center gap-2 p-2 rounded bg-surface-0">
+                  <div class="flex items-center gap-2 p-2 rounded bg-[var(--p-content-background)]">
                     <p-tag value="Overdue" severity="danger" />
                     <span class="flex-1 text-sm truncate">{{ c.description }}</span>
                     <p-button icon="pi pi-check" severity="success" [text]="true" [rounded]="true" size="small"
@@ -155,7 +155,7 @@ import { toLocalDateKey, todayLocalIso } from './widget-shell';
               <div class="flex flex-col gap-1">
                 <span class="text-xs font-semibold uppercase text-muted-color">Due Today</span>
                 @for (c of dueTodayCommitments(); track c.id) {
-                  <div class="flex items-center gap-2 p-2 rounded bg-surface-0">
+                  <div class="flex items-center gap-2 p-2 rounded bg-[var(--p-content-background)]">
                     <span class="flex-1 text-sm truncate">{{ c.description }}</span>
                     <p-button icon="pi pi-check" severity="success" [text]="true" [rounded]="true" size="small"
                       ariaLabel="Complete" [disabled]="acting() === c.id" [loading]="acting() === c.id"
@@ -172,7 +172,7 @@ import { toLocalDateKey, todayLocalIso } from './widget-shell';
               <div class="flex flex-col gap-1">
                 <span class="text-xs font-semibold uppercase text-muted-color">Due This Week</span>
                 @for (c of dueThisWeekCommitments(); track c.id) {
-                  <div class="flex items-center gap-2 p-2 rounded bg-surface-0">
+                  <div class="flex items-center gap-2 p-2 rounded bg-[var(--p-content-background)]">
                     <span class="flex-1 text-sm truncate">{{ c.description }}</span>
                     @if (c.dueDate) {
                       <span class="text-xs text-muted-color">{{ formatDueDate(c.dueDate) }}</span>
@@ -192,7 +192,7 @@ import { toLocalDateKey, todayLocalIso } from './widget-shell';
               <div class="flex flex-col gap-1">
                 <span class="text-xs font-semibold uppercase text-muted-color">Later</span>
                 @for (c of laterCommitments(); track c.id) {
-                  <div class="flex items-center gap-2 p-2 rounded bg-surface-0">
+                  <div class="flex items-center gap-2 p-2 rounded bg-[var(--p-content-background)]">
                     <span class="flex-1 text-sm truncate">{{ c.description }}</span>
                     @if (c.dueDate) {
                       <span class="text-xs text-muted-color">{{ formatDueDate(c.dueDate) }}</span>
@@ -211,7 +211,7 @@ import { toLocalDateKey, todayLocalIso } from './widget-shell';
         </section>
 
         <!-- People Quick Access Section -->
-        <section class="flex flex-col gap-3 p-5 rounded-md bg-surface-50" aria-label="People Quick Access">
+        <section class="flex flex-col gap-3 p-5 rounded-md bg-[var(--p-content-hover-background)]" aria-label="People Quick Access">
           <header class="flex items-center justify-between">
             <h2 class="text-lg font-semibold">People</h2>
             <a routerLink="/people" class="text-xs font-medium text-primary hover:underline">
@@ -237,7 +237,7 @@ import { toLocalDateKey, todayLocalIso } from './widget-shell';
               @for (p of people(); track p.id) {
                 <li>
                   <a [routerLink]="['/people', p.id]"
-                     class="flex items-center gap-3 p-2 rounded bg-surface-0 text-sm hover:bg-surface-100">
+                     class="flex items-center gap-3 p-2 rounded bg-[var(--p-content-background)] text-sm hover:bg-[var(--p-content-hover-background)]">
                     <span class="font-medium flex-1">{{ p.name }}</span>
                     <p-tag [value]="formatPersonType(p.type)" severity="info" />
                   </a>

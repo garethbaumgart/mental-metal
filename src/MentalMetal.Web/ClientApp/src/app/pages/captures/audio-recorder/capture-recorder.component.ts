@@ -26,7 +26,7 @@ type RecorderState = 'idle' | 'recording' | 'uploading' | 'error';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ButtonModule, MessageModule],
   template: `
-    <div class="flex flex-col gap-3 rounded border border-surface-200 bg-surface-0 p-4">
+    <div class="flex flex-col gap-3 rounded border border-surface-200 bg-[var(--p-content-background)] p-4">
       <div class="flex items-center gap-3">
         @if (state() === 'idle') {
           <p-button

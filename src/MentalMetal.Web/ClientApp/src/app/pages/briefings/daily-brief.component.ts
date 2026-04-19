@@ -53,7 +53,7 @@ import { MarkdownPipe } from '../../shared/pipes/markdown.pipe';
         </div>
       } @else if (brief()) {
         <!-- Narrative -->
-        <section class="p-4 rounded bg-surface-50">
+        <section class="p-4 rounded bg-[var(--p-content-hover-background)]">
           <div [innerHTML]="brief()!.narrative | markdown"></div>
         </section>
 
@@ -62,7 +62,7 @@ import { MarkdownPipe } from '../../shared/pipes/markdown.pipe';
           <section class="flex flex-col gap-3">
             <h2 class="text-lg font-semibold">New Commitments (from yesterday)</h2>
             @for (c of brief()!.freshCommitments; track c.id) {
-              <div class="flex items-center gap-2 p-3 rounded bg-surface-50">
+              <div class="flex items-center gap-2 p-3 rounded bg-[var(--p-content-hover-background)]">
                 <p-tag [value]="c.direction === 'MineToThem' ? 'Mine' : 'Theirs'" severity="secondary" />
                 <span class="flex-1 text-sm">{{ c.description }}</span>
                 @if (c.personName) {
@@ -78,7 +78,7 @@ import { MarkdownPipe } from '../../shared/pipes/markdown.pipe';
           <section class="flex flex-col gap-3">
             <h2 class="text-lg font-semibold">Due Today</h2>
             @for (c of brief()!.dueToday; track c.id) {
-              <div class="flex items-center gap-2 p-3 rounded bg-surface-50">
+              <div class="flex items-center gap-2 p-3 rounded bg-[var(--p-content-hover-background)]">
                 <p-tag [value]="c.direction === 'MineToThem' ? 'Mine' : 'Theirs'" severity="secondary" />
                 <span class="flex-1 text-sm">{{ c.description }}</span>
                 @if (c.personName) {
@@ -94,7 +94,7 @@ import { MarkdownPipe } from '../../shared/pipes/markdown.pipe';
           <section class="flex flex-col gap-3">
             <h2 class="text-lg font-semibold">Overdue</h2>
             @for (c of brief()!.overdue; track c.id) {
-              <div class="flex items-center gap-2 p-3 rounded bg-surface-50">
+              <div class="flex items-center gap-2 p-3 rounded bg-[var(--p-content-hover-background)]">
                 <p-tag value="Overdue" severity="danger" />
                 <p-tag [value]="c.direction === 'MineToThem' ? 'Mine' : 'Theirs'" severity="secondary" />
                 <span class="flex-1 text-sm">{{ c.description }}</span>
@@ -116,7 +116,7 @@ import { MarkdownPipe } from '../../shared/pipes/markdown.pipe';
             <div class="flex flex-wrap gap-2">
               @for (p of brief()!.peopleActivity; track p.personId) {
                 <a [routerLink]="['/people', p.personId]"
-                   class="flex items-center gap-2 p-2 rounded bg-surface-50 text-sm">
+                   class="flex items-center gap-2 p-2 rounded bg-[var(--p-content-hover-background)] text-sm">
                   <span class="font-medium">{{ p.personName }}</span>
                   <p-tag [value]="p.mentionCount + ' mention' + (p.mentionCount > 1 ? 's' : '')" severity="info" />
                 </a>
@@ -127,7 +127,7 @@ import { MarkdownPipe } from '../../shared/pipes/markdown.pipe';
 
         <!-- Empty State -->
         @if (brief()!.captureCount === 0) {
-          <div class="p-8 text-center rounded bg-surface-50">
+          <div class="p-8 text-center rounded bg-[var(--p-content-hover-background)]">
             <i class="pi pi-inbox text-3xl text-muted-color"></i>
             <p class="mt-2 text-muted-color">No captures from yesterday. Add some meeting notes or transcripts to see your daily brief.</p>
           </div>
@@ -137,7 +137,7 @@ import { MarkdownPipe } from '../../shared/pipes/markdown.pipe';
           {{ brief()!.captureCount }} capture(s) analyzed. Generated {{ brief()!.generatedAt | date: 'medium' }}
         </p>
       } @else if (error()) {
-        <div class="p-8 text-center rounded bg-surface-50">
+        <div class="p-8 text-center rounded bg-[var(--p-content-hover-background)]">
           <p class="text-muted-color">{{ error() }}</p>
           @if (aiNotConfigured()) {
             <a routerLink="/settings" class="inline-block mt-4 text-sm text-primary font-medium">Go to Settings</a>

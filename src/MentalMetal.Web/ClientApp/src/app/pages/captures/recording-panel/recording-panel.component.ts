@@ -32,7 +32,7 @@ type PanelState = 'idle' | 'requesting-permissions' | 'recording' | 'stopping' |
   template: `
     @switch (panelState()) {
       @case ('idle') {
-        <div class="flex items-center gap-3 rounded-lg border p-4" style="border-color: var(--p-content-border-color); background: var(--p-surface-0)">
+        <div class="flex items-center gap-3 rounded-lg border p-4" style="border-color: var(--p-content-border-color); background: var(--p-content-background)">
           <p-button
             label="Record Meeting"
             icon="pi pi-microphone"
@@ -53,14 +53,14 @@ type PanelState = 'idle' | 'requesting-permissions' | 'recording' | 'stopping' |
       }
 
       @case ('requesting-permissions') {
-        <div class="flex items-center gap-3 rounded-lg border p-4" style="border-color: var(--p-content-border-color); background: var(--p-surface-0)">
+        <div class="flex items-center gap-3 rounded-lg border p-4" style="border-color: var(--p-content-border-color); background: var(--p-content-background)">
           <i class="pi pi-spinner pi-spin text-xl text-muted-color"></i>
           <span class="text-muted-color">Requesting permissions...</span>
         </div>
       }
 
       @case ('recording') {
-        <div class="flex flex-col gap-4 rounded-lg border p-4" style="border-color: var(--p-primary-color); background: var(--p-surface-0)">
+        <div class="flex flex-col gap-4 rounded-lg border p-4" style="border-color: var(--p-primary-color); background: var(--p-content-background)">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
               <span class="inline-block h-3 w-3 rounded-full animate-pulse" style="background: var(--p-red-500)"></span>
@@ -101,7 +101,7 @@ type PanelState = 'idle' | 'requesting-permissions' | 'recording' | 'stopping' |
 
           <!-- Interim transcript -->
           @if (transcription.interimText() || transcription.transcript()) {
-            <div class="max-h-48 overflow-y-auto rounded p-3 text-sm" style="background: var(--p-surface-50)">
+            <div class="max-h-48 overflow-y-auto rounded p-3 text-sm" style="background: var(--p-content-hover-background)">
               @if (transcription.transcript()) {
                 <p>{{ transcription.transcript() }}</p>
               }
@@ -122,16 +122,16 @@ type PanelState = 'idle' | 'requesting-permissions' | 'recording' | 'stopping' |
       }
 
       @case ('stopping') {
-        <div class="flex items-center gap-3 rounded-lg border p-4" style="border-color: var(--p-content-border-color); background: var(--p-surface-0)">
+        <div class="flex items-center gap-3 rounded-lg border p-4" style="border-color: var(--p-content-border-color); background: var(--p-content-background)">
           <i class="pi pi-spinner pi-spin text-xl text-muted-color"></i>
           <span class="text-muted-color">Finalising transcript...</span>
         </div>
       }
 
       @case ('review') {
-        <div class="flex flex-col gap-4 rounded-lg border p-4" style="border-color: var(--p-content-border-color); background: var(--p-surface-0)">
+        <div class="flex flex-col gap-4 rounded-lg border p-4" style="border-color: var(--p-content-border-color); background: var(--p-content-background)">
           <h3 class="text-lg font-semibold">Recording Complete</h3>
-          <div class="max-h-64 overflow-y-auto rounded p-3 text-sm" style="background: var(--p-surface-50)">
+          <div class="max-h-64 overflow-y-auto rounded p-3 text-sm" style="background: var(--p-content-hover-background)">
             @if (reviewTranscript()) {
               <p class="whitespace-pre-wrap">{{ reviewTranscript() }}</p>
             } @else {
@@ -158,7 +158,7 @@ type PanelState = 'idle' | 'requesting-permissions' | 'recording' | 'stopping' |
       }
 
       @case ('saving') {
-        <div class="flex items-center gap-3 rounded-lg border p-4" style="border-color: var(--p-content-border-color); background: var(--p-surface-0)">
+        <div class="flex items-center gap-3 rounded-lg border p-4" style="border-color: var(--p-content-border-color); background: var(--p-content-background)">
           <i class="pi pi-spinner pi-spin text-xl text-muted-color"></i>
           <span class="text-muted-color">Saving capture...</span>
         </div>
