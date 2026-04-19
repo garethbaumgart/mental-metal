@@ -117,4 +117,34 @@ public class GenerateWeeklyBriefHandlerTests
         // but the handler should handle it gracefully either way
         Assert.NotNull(result.Narrative);
     }
+
+    [Fact]
+    public async Task HandleAsync_CaptureWithNullExtractionCollections_DoesNotThrow()
+    {
+        // Regression: EF Core JSON deserialization can produce null for Decisions/Risks
+        // even when C# defaults are set. The handler must tolerate this.
+        var capture = Capture.Create(_userId, "Meeting notes.", CaptureType.MeetingNotes);
+        capture.BeginProcessing();
+        capture.CompleteProcessing(new AiExtraction
+        {
+            Summary = "A meeting.",
+            Decisions = null!,
+            Risks = null!,
+            ExtractedAt = DateTimeOffset.UtcNow
+        });
+
+        _captureRepo.GetAllAsync(_userId, null, ProcessingStatus.Processed, Arg.Any<CancellationToken>())
+            .Returns(new List<Capture> { capture });
+        _commitmentRepo.GetAllAsync(_userId, null, null, null, null, null, Arg.Any<CancellationToken>())
+            .Returns(new List<Commitment>());
+        _initiativeRepo.GetAllAsync(_userId, InitiativeStatus.Active, Arg.Any<CancellationToken>())
+            .Returns(new List<Initiative>());
+
+        _aiService.CompleteAsync(Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AiCompletionResult("Brief.", 20, 50, "test-model", AiProvider.Anthropic));
+
+        var result = await _sut.HandleAsync(null, CancellationToken.None);
+
+        Assert.NotNull(result.Narrative);
+    }
 }
