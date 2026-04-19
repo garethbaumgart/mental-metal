@@ -4,7 +4,7 @@
 
 ### Requirement: Create a commitment
 
-The system SHALL allow an authenticated user to create a new Commitment with a description, direction (MineToThem or TheirsToMe), and a PersonId. Description MUST NOT be empty. PersonId MUST be provided. The system SHALL set Status to `Open` and set CreatedAt. Optional fields: DueDate, InitiativeId, SourceCaptureId, Notes. The system SHALL raise a `CommitmentCreated` domain event. The Commitment SHALL be scoped to the authenticated user's UserId.
+The system SHALL allow an authenticated user to create a new Commitment with a description, direction (MineToThem or TheirsToMe), and a PersonId. Description MUST NOT be empty. PersonId MUST be provided. The system SHALL set Status to `Open` and set CreatedAt. Optional fields: DueDate, InitiativeId, SourceCaptureId, SourceStartOffset, SourceEndOffset, Notes. SourceStartOffset and SourceEndOffset are nullable integers representing character positions in the source capture's RawContent. The system SHALL raise a `CommitmentCreated` domain event. The Commitment SHALL be scoped to the authenticated user's UserId.
 
 #### Scenario: Create a commitment I owe to someone
 
@@ -20,6 +20,11 @@ The system SHALL allow an authenticated user to create a new Commitment with a d
 
 - **WHEN** an authenticated user sends a POST to `/api/commitments` with description, direction, personId, initiativeId, and sourceCaptureId
 - **THEN** the system creates a Commitment with all linked IDs and returns HTTP 201
+
+#### Scenario: Create with source offsets
+
+- **WHEN** an authenticated user sends a POST to `/api/commitments` with description, direction, personId, sourceCaptureId, sourceStartOffset 1234, and sourceEndOffset 1456
+- **THEN** the system creates a Commitment with the source offsets stored and returns HTTP 201
 
 #### Scenario: Empty description rejected
 
@@ -72,12 +77,12 @@ The system SHALL allow an authenticated user to retrieve a list of their commitm
 
 ### Requirement: Get commitment by ID
 
-The system SHALL allow an authenticated user to retrieve a single commitment by ID.
+The system SHALL allow an authenticated user to retrieve a single commitment by ID. The response SHALL include `sourceStartOffset` and `sourceEndOffset` fields (nullable integers).
 
 #### Scenario: Get existing commitment
 
 - **WHEN** an authenticated user sends a GET to `/api/commitments/{id}` with a valid commitment ID
-- **THEN** the system returns the commitment with all fields including linked IDs and computed IsOverdue
+- **THEN** the system returns the commitment with all fields including linked IDs, computed IsOverdue, sourceStartOffset, and sourceEndOffset
 
 #### Scenario: Commitment not found
 
