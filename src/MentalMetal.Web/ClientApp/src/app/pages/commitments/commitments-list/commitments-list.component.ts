@@ -42,9 +42,22 @@ interface PersonGroup {
     }
     .overdue-row {
       background: color-mix(in srgb, var(--p-red-50) 50%, transparent);
+      border-left: 3px solid var(--p-red-500);
     }
     .overdue-row:hover {
       background: var(--p-red-50);
+    }
+    .closed-row {
+      opacity: 0.6;
+    }
+    .closed-description {
+      text-decoration: line-through;
+    }
+    .direction-tag {
+      font-size: 0.7rem;
+    }
+    .overdue-date {
+      color: var(--p-red-500);
     }
   `,
   template: `
@@ -114,22 +127,20 @@ interface PersonGroup {
                   <div
                     class="flex items-center gap-3 py-2 px-3 rounded-lg cursor-pointer commitment-row"
                     [class.overdue-row]="commitment.isOverdue"
-                    [class.border-l-3]="commitment.isOverdue"
-                    [style.border-left-color]="commitment.isOverdue ? 'var(--p-red-500)' : undefined"
-                    [style.opacity]="commitment.status !== 'Open' ? '0.6' : undefined"
+                    [class.closed-row]="commitment.status !== 'Open'"
                     (click)="onRowClick(commitment)"
                   >
                     <p-tag
+                      class="direction-tag"
                       [value]="formatDirection(commitment.direction)"
                       [severity]="directionSeverity(commitment.direction)"
-                      [style]="{ 'font-size': '0.7rem' }"
                     />
                     <span
                       class="text-sm flex-1"
-                      [style.text-decoration]="commitment.status !== 'Open' ? 'line-through' : 'none'"
+                      [class.closed-description]="commitment.status !== 'Open'"
                     >{{ commitment.description }}</span>
                     @if (commitment.isOverdue) {
-                      <span class="text-xs font-medium" style="color: var(--p-red-500)">{{ commitment.dueDate }}</span>
+                      <span class="text-xs font-medium overdue-date">{{ commitment.dueDate }}</span>
                     } @else if (commitment.dueDate) {
                       <span class="text-xs text-muted-color">{{ commitment.dueDate }}</span>
                     } @else {
@@ -308,11 +319,13 @@ export class CommitmentsListComponent implements OnInit {
   }
 
   private getInitials(name: string): string {
-    const parts = name.trim().split(/\s+/);
+    const trimmed = name?.trim();
+    if (!trimmed) return '?';
+    const parts = trimmed.split(/\s+/);
     if (parts.length >= 2) {
       return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     }
-    return name.substring(0, 2).toUpperCase();
+    return trimmed.substring(0, 2).toUpperCase();
   }
 
   private loadCommitments(): void {
