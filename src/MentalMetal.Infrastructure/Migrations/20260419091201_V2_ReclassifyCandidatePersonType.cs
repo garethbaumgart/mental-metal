@@ -20,7 +20,8 @@ namespace MentalMetal.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            // Not reversible — we cannot determine which External rows were formerly Candidate.
+            throw new NotSupportedException(
+                "V2 data migration is forward-only — cannot determine which External rows were formerly Candidate.");
         }
     }
 }

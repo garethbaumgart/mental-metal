@@ -116,5 +116,7 @@ public class GenerateDailyBriefHandlerTests
         var result = await _sut.HandleAsync(CancellationToken.None);
 
         Assert.NotNull(result.Narrative);
+        await _aiService.Received(1).CompleteAsync(
+            Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>());
     }
 }

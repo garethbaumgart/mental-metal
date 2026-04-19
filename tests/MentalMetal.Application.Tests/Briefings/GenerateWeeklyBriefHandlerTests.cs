@@ -146,5 +146,7 @@ public class GenerateWeeklyBriefHandlerTests
         var result = await _sut.HandleAsync(null, CancellationToken.None);
 
         Assert.NotNull(result.Narrative);
+        await _aiService.Received(1).CompleteAsync(
+            Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>());
     }
 }
