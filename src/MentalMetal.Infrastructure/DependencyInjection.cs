@@ -73,6 +73,7 @@ public static class DependencyInjection
 
         // AI provider services
         services.AddHttpClient("GoogleAi");
+        services.AddHttpClient("Deepgram");
         services.AddSingleton<IApiKeyEncryptionService, AesApiKeyEncryptionService>();
         services.AddSingleton<AiModelCatalog>();
         services.AddSingleton<IAiModelCatalog>(sp => sp.GetRequiredService<AiModelCatalog>());
@@ -82,6 +83,12 @@ public static class DependencyInjection
         services.AddScoped<IAiCompletionService, AiCompletionService>();
         services.AddScoped<IAiProviderValidator, AiProviderValidator>();
         services.AddScoped<ITasteBudgetService, TasteBudgetService>();
+
+        // Transcription provider services
+        services.AddOptions<DeepgramSettings>()
+            .Bind(configuration.GetSection(DeepgramSettings.SectionName));
+        services.AddScoped<ITranscriptionProviderFactory, TranscriptionProviderFactory>();
+        services.AddScoped<ITranscriptionProviderValidator, DeepgramTranscriptionProviderValidator>();
 
         // Application handlers
         services.AddScoped<RegisterOrLoginUserHandler>();
@@ -97,6 +104,10 @@ public static class DependencyInjection
         services.AddScoped<GetAiProviderStatusHandler>();
         services.AddScoped<ValidateAiProviderHandler>();
         services.AddScoped<RemoveAiProviderHandler>();
+        services.AddScoped<ConfigureTranscriptionProviderHandler>();
+        services.AddScoped<GetTranscriptionProviderStatusHandler>();
+        services.AddScoped<RemoveTranscriptionProviderHandler>();
+        services.AddScoped<ValidateTranscriptionProviderHandler>();
         services.AddSingleton<GetAvailableModelsHandler>();
 
         // Person handlers
@@ -131,11 +142,8 @@ public static class DependencyInjection
         services.AddScoped<UpdateCaptureMetadataHandler>();
         services.AddScoped<RetryProcessingHandler>();
 
-        // Audio capture.
-        // NOTE: IAudioTranscriptionProvider is intentionally NOT registered here — callers
-        // (Program.cs) must register an environment-appropriate implementation. The repo ships
-        // StubAudioTranscriptionProvider which is wired up only in Development so production
-        // audio uploads fail loudly rather than silently serving fake transcripts.
+        // Audio capture — transcription providers are resolved per-request via
+        // ITranscriptionProviderFactory using the user's BYOK config.
         services.AddSingleton<IAudioBlobStore, FileSystemAudioBlobStore>();
         services.AddScoped<UploadAudioCaptureHandler>();
         services.AddScoped<TranscribeCaptureHandler>();

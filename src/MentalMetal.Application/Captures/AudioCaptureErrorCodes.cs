@@ -15,6 +15,7 @@ public static class AudioCaptureErrorCodes
     public const string CaptureNotFound = "capture.notFound";
     public const string SpeakerPersonNotFound = "speaker.personNotFound";
     public const string SpeakerLabelNotFound = "speaker.labelNotFound";
+    public const string TranscriptionNotConfigured = "transcription.notConfigured";
 }
 
 /// <summary>

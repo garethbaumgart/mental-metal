@@ -1,10 +1,9 @@
-namespace MentalMetal.Web.Features.Transcription;
+namespace MentalMetal.Infrastructure.Ai;
 
 public class DeepgramSettings
 {
     public const string SectionName = "Deepgram";
 
-    public string ApiKey { get; set; } = "";
     public string BaseUrl { get; set; } = "api.deepgram.com";
     public string Model { get; set; } = "nova-3";
     public bool Punctuate { get; set; } = true;

@@ -82,6 +82,24 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
                 .HasColumnName("AiProviderMaxTokens");
         });
 
+        builder.OwnsOne(u => u.TranscriptionProviderConfig, tp =>
+        {
+            tp.Property(t => t.Provider)
+                .HasColumnName("TranscriptionProviderProvider")
+                .HasConversion<string>()
+                .HasMaxLength(20);
+
+            tp.Property(t => t.EncryptedApiKey)
+                .HasColumnName("TranscriptionProviderEncryptedApiKey")
+                .IsRequired()
+                .HasMaxLength(1024);
+
+            tp.Property(t => t.Model)
+                .HasColumnName("TranscriptionProviderModel")
+                .IsRequired()
+                .HasMaxLength(100);
+        });
+
         builder.Property(u => u.Timezone)
             .IsRequired()
             .HasMaxLength(100);

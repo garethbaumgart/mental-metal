@@ -12,6 +12,7 @@ public sealed class User : AggregateRoot
     public Password? PasswordHash { get; private set; }
     public UserPreferences Preferences { get; private set; } = null!;
     public AiProviderConfig? AiProviderConfig { get; private set; }
+    public TranscriptionProviderConfig? TranscriptionProviderConfig { get; private set; }
     public string Timezone { get; private set; } = null!;
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset LastLoginAt { get; private set; }
@@ -122,6 +123,21 @@ public sealed class User : AggregateRoot
 
         AiProviderConfig = null;
         RaiseDomainEvent(new AiProviderRemoved(Id));
+    }
+
+    public void ConfigureTranscriptionProvider(TranscriptionProvider provider, string encryptedApiKey, string model)
+    {
+        TranscriptionProviderConfig = new TranscriptionProviderConfig(provider, encryptedApiKey, model);
+        RaiseDomainEvent(new TranscriptionProviderConfigured(Id, provider));
+    }
+
+    public void RemoveTranscriptionProvider()
+    {
+        if (TranscriptionProviderConfig is null)
+            return;
+
+        TranscriptionProviderConfig = null;
+        RaiseDomainEvent(new TranscriptionProviderRemoved(Id));
     }
 
     public void RecordLogin()

@@ -26,3 +26,13 @@ public sealed record AiProviderRemoved(Guid UserId) : IDomainEvent
 {
     public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
 }
+
+public sealed record TranscriptionProviderConfigured(Guid UserId, TranscriptionProvider Provider) : IDomainEvent
+{
+    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+}
+
+public sealed record TranscriptionProviderRemoved(Guid UserId) : IDomainEvent
+{
+    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+}
