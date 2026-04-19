@@ -42,6 +42,11 @@ public sealed record CommitmentLinkedToInitiative(Guid CommitmentId, Guid Initia
     public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
 }
 
+public sealed record CommitmentDirectionChanged(Guid CommitmentId, CommitmentDirection NewDirection) : IDomainEvent
+{
+    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+}
+
 public sealed record CommitmentBecameOverdue(Guid CommitmentId, DateOnly DueDate) : IDomainEvent
 {
     public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;

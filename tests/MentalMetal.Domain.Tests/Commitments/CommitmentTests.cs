@@ -274,14 +274,16 @@ public class CommitmentTests
     }
 
     [Fact]
-    public void UpdateDirection_ChangesDirectionAndUpdatesTimestamp()
+    public void UpdateDirection_ChangesDirectionAndRaisesEvent()
     {
         var commitment = Commitment.Create(UserId, "Test", CommitmentDirection.MineToThem, PersonId);
-        var originalUpdatedAt = commitment.UpdatedAt;
+        commitment.ClearDomainEvents();
 
         commitment.UpdateDirection(CommitmentDirection.TheirsToMe);
 
         Assert.Equal(CommitmentDirection.TheirsToMe, commitment.Direction);
-        Assert.True(commitment.UpdatedAt >= originalUpdatedAt);
+        var domainEvent = Assert.Single(commitment.DomainEvents);
+        var changed = Assert.IsType<CommitmentDirectionChanged>(domainEvent);
+        Assert.Equal(CommitmentDirection.TheirsToMe, changed.NewDirection);
     }
 }

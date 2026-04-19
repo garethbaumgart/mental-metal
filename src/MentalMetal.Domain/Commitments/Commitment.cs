@@ -181,6 +181,8 @@ public sealed class Commitment : AggregateRoot, IUserScoped
     {
         Direction = direction;
         UpdatedAt = DateTimeOffset.UtcNow;
+
+        RaiseDomainEvent(new CommitmentDirectionChanged(Id, direction));
     }
 
     public void UpdateNotes(string? notes)

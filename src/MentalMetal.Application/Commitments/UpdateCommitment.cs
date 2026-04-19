@@ -22,7 +22,11 @@ public sealed class UpdateCommitmentHandler(
             commitment.UpdateDescription(request.Description);
 
         if (request.Direction is { } direction)
+        {
+            if (!Enum.IsDefined(direction))
+                throw new ArgumentException($"Invalid commitment direction: {direction}");
             commitment.UpdateDirection(direction);
+        }
 
         if (request.ClearDueDate)
             commitment.UpdateDueDate(null);
