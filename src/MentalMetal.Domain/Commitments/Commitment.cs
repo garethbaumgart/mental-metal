@@ -48,9 +48,9 @@ public sealed class Commitment : AggregateRoot, IUserScoped
         if (personId == Guid.Empty)
             throw new ArgumentException("PersonId is required.", nameof(personId));
 
-        // Normalize invalid offset pairs to null
-        if (sourceStartOffset is not null && sourceEndOffset is not null
-            && (sourceStartOffset < 0 || sourceEndOffset <= sourceStartOffset))
+        // Normalize invalid or partial offset pairs to null
+        if (sourceStartOffset is null || sourceEndOffset is null
+            || sourceStartOffset < 0 || sourceEndOffset <= sourceStartOffset)
         {
             sourceStartOffset = null;
             sourceEndOffset = null;

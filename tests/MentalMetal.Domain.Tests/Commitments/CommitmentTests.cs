@@ -293,6 +293,17 @@ public class CommitmentTests
     }
 
     [Fact]
+    public void Create_WithOneSidedOffset_NormalizesToNull()
+    {
+        var commitment = Commitment.Create(
+            UserId, "Test", CommitmentDirection.MineToThem, PersonId,
+            sourceStartOffset: 10, sourceEndOffset: null);
+
+        Assert.Null(commitment.SourceStartOffset);
+        Assert.Null(commitment.SourceEndOffset);
+    }
+
+    [Fact]
     public void Create_WithZeroStartOffset_PreservesOffsets()
     {
         var commitment = Commitment.Create(
