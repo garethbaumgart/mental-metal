@@ -1007,6 +1007,27 @@ app.MapGet("/api/commitments/{id:guid}", async (
     return response is not null ? Results.Ok(response) : Results.NotFound();
 }).RequireAuthorization();
 
+app.MapPut("/api/commitments/{id:guid}", async (
+    Guid id,
+    UpdateCommitmentRequest request,
+    UpdateCommitmentHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
 app.MapPost("/api/commitments/{id:guid}/complete", async (
     Guid id,
     CompleteCommitmentRequest request,

@@ -177,6 +177,12 @@ public sealed class Commitment : AggregateRoot, IUserScoped
         RaiseDomainEvent(new CommitmentBecameOverdue(Id, DueDate!.Value));
     }
 
+    public void UpdateDirection(CommitmentDirection direction)
+    {
+        Direction = direction;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
     public void UpdateNotes(string? notes)
     {
         Notes = notes?.Trim();

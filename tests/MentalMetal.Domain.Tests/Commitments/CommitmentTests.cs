@@ -272,4 +272,16 @@ public class CommitmentTests
         var linked = Assert.IsType<CommitmentLinkedToInitiative>(domainEvent);
         Assert.Equal(initiativeId, linked.InitiativeId);
     }
+
+    [Fact]
+    public void UpdateDirection_ChangesDirectionAndUpdatesTimestamp()
+    {
+        var commitment = Commitment.Create(UserId, "Test", CommitmentDirection.MineToThem, PersonId);
+        var originalUpdatedAt = commitment.UpdatedAt;
+
+        commitment.UpdateDirection(CommitmentDirection.TheirsToMe);
+
+        Assert.Equal(CommitmentDirection.TheirsToMe, commitment.Direction);
+        Assert.True(commitment.UpdatedAt >= originalUpdatedAt);
+    }
 }
