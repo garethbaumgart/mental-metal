@@ -31,6 +31,19 @@ public sealed class UploadAudioCaptureHandler(
         var userId = currentUserService.UserId;
         var now = timeProvider.GetUtcNow();
 
+        // 0. Verify transcription provider is configured BEFORE persisting any blob,
+        //    so we don't create orphaned blobs when the provider is missing.
+        IAudioTranscriptionProvider transcriptionProvider;
+        try
+        {
+            transcriptionProvider = await transcriptionProviderFactory.CreateAsync(cancellationToken);
+        }
+        catch (AudioTranscriptionUnavailableException ex)
+        {
+            logger.LogWarning(ex, "Transcription provider not configured for user {UserId}", userId);
+            throw new AudioCaptureException(AudioCaptureErrorCodes.TranscriptionNotConfigured, ex.Message);
+        }
+
         // 1. Persist the audio blob FIRST so we have a reference for the aggregate.
         string blobRef;
         try
@@ -52,19 +65,6 @@ public sealed class UploadAudioCaptureHandler(
 
         try
         {
-            IAudioTranscriptionProvider transcriptionProvider;
-            try
-            {
-                transcriptionProvider = await transcriptionProviderFactory.CreateAsync(cancellationToken);
-            }
-            catch (AudioTranscriptionUnavailableException ex)
-            {
-                logger.LogWarning(ex, "Transcription provider not configured for user {UserId}", userId);
-                capture.MarkTranscriptionFailed(ex.Message, timeProvider.GetUtcNow());
-                await unitOfWork.SaveChangesAsync(cancellationToken);
-                throw new AudioCaptureException(AudioCaptureErrorCodes.TranscriptionNotConfigured, ex.Message);
-            }
-
             await using var blobStream = await blobStore.OpenReadAsync(blobRef, cancellationToken);
             var transcription = await transcriptionProvider.TranscribeAsync(
                 new AudioTranscriptionRequest(blobStream, request.MimeType, request.DurationSeconds),

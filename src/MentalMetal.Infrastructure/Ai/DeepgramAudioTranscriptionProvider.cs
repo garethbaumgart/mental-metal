@@ -36,7 +36,7 @@ public sealed class DeepgramAudioTranscriptionProvider(
             new AuthenticationHeaderValue("Token", apiKey);
 
         using var content = new StreamContent(request.AudioStream);
-        content.Headers.ContentType = new MediaTypeHeaderValue(request.MimeType);
+        content.Headers.ContentType = MediaTypeHeaderValue.Parse(request.MimeType);
 
         HttpResponseMessage response;
         try
@@ -49,41 +49,44 @@ public sealed class DeepgramAudioTranscriptionProvider(
                 "Cannot reach Deepgram transcription service.", ex);
         }
 
-        if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        using (response)
         {
-            throw new AudioTranscriptionUnavailableException(
-                "Deepgram API key is invalid or does not have the required permissions.");
-        }
-
-        response.EnsureSuccessStatusCode();
-
-        var json = await response.Content.ReadAsStringAsync(cancellationToken);
-        var doc = JsonDocument.Parse(json);
-
-        var fullText = "";
-        var segments = new List<AudioTranscriptSegmentDto>();
-
-        var channels = doc.RootElement
-            .GetProperty("results")
-            .GetProperty("channels");
-
-        if (channels.GetArrayLength() > 0)
-        {
-            var alternatives = channels[0].GetProperty("alternatives");
-            if (alternatives.GetArrayLength() > 0)
+            if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
             {
-                var alt = alternatives[0];
-                fullText = alt.GetProperty("transcript").GetString() ?? "";
+                throw new AudioTranscriptionUnavailableException(
+                    "Deepgram API key is invalid or does not have the required permissions.");
+            }
 
-                // Build segments by grouping consecutive words by speaker
-                if (alt.TryGetProperty("words", out var wordsElement))
+            response.EnsureSuccessStatusCode();
+
+            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+            using var doc = JsonDocument.Parse(json);
+
+            var fullText = "";
+            var segments = new List<AudioTranscriptSegmentDto>();
+
+            var channels = doc.RootElement
+                .GetProperty("results")
+                .GetProperty("channels");
+
+            if (channels.GetArrayLength() > 0)
+            {
+                var alternatives = channels[0].GetProperty("alternatives");
+                if (alternatives.GetArrayLength() > 0)
                 {
-                    segments = GroupWordsBySpeaker(wordsElement);
+                    var alt = alternatives[0];
+                    fullText = alt.GetProperty("transcript").GetString() ?? "";
+
+                    // Build segments by grouping consecutive words by speaker
+                    if (alt.TryGetProperty("words", out var wordsElement))
+                    {
+                        segments = GroupWordsBySpeaker(wordsElement);
+                    }
                 }
             }
-        }
 
-        return new AudioTranscriptionResult(fullText, segments);
+            return new AudioTranscriptionResult(fullText, segments);
+        }
     }
 
     private static List<AudioTranscriptSegmentDto> GroupWordsBySpeaker(JsonElement wordsElement)

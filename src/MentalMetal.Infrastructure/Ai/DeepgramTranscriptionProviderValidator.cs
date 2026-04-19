@@ -14,6 +14,9 @@ public sealed class DeepgramTranscriptionProviderValidator(
         string apiKey,
         CancellationToken cancellationToken)
     {
+        if (provider != TranscriptionProvider.Deepgram)
+            return false;
+
         var settings = deepgramSettings.Value;
         var baseUrl = settings.BaseUrl;
         var httpScheme = IsLoopbackAddress(baseUrl) ? "http" : "https";
@@ -26,10 +29,22 @@ public sealed class DeepgramTranscriptionProviderValidator(
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
             timeoutCts.Token, cancellationToken);
 
-        var response = await httpClient.GetAsync(
-            $"{httpScheme}://{baseUrl}/v1/projects", linkedCts.Token);
+        try
+        {
+            using var response = await httpClient.GetAsync(
+                $"{httpScheme}://{baseUrl}/v1/projects", linkedCts.Token);
 
-        return response.IsSuccessStatusCode;
+            return response.IsSuccessStatusCode;
+        }
+        catch (HttpRequestException)
+        {
+            return false;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // Timeout — not caller cancellation
+            return false;
+        }
     }
 
     private static bool IsLoopbackAddress(string baseUrl)

@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Text;
 using MentalMetal.Application.Common.Ai;
 using MentalMetal.Domain.Users;
+using MentalMetal.Infrastructure.Ai;
 using Microsoft.Extensions.Options;
 
 namespace MentalMetal.Web.Features.Transcription;

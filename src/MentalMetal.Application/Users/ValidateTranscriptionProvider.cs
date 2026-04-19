@@ -31,6 +31,10 @@ public sealed class ValidateTranscriptionProviderHandler(
                 ? new ValidateTranscriptionProviderResponse(true, null)
                 : new ValidateTranscriptionProviderResponse(false, "Invalid API key.");
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception)
         {
             return new ValidateTranscriptionProviderResponse(false,

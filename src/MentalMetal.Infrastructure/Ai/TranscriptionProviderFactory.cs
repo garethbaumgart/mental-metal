@@ -22,7 +22,16 @@ public sealed class TranscriptionProviderFactory(
             ?? throw new AudioTranscriptionUnavailableException(
                 "Transcription provider not configured. Add your Deepgram API key in Settings.");
 
-        var apiKey = encryptionService.Decrypt(config.EncryptedApiKey);
+        string apiKey;
+        try
+        {
+            apiKey = encryptionService.Decrypt(config.EncryptedApiKey);
+        }
+        catch (Exception ex)
+        {
+            throw new AudioTranscriptionUnavailableException(
+                "Failed to decrypt transcription provider API key. The key may need to be reconfigured.", ex);
+        }
         var settings = deepgramSettings.Value;
 
         return new DeepgramAudioTranscriptionProvider(apiKey, config.Model, settings, httpClientFactory);

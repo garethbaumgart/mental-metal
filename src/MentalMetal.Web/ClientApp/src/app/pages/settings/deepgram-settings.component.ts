@@ -175,6 +175,7 @@ export class DeepgramSettingsComponent implements OnInit {
           this.validating.set(true);
           return this.http
             .post<ValidateResponse>('/api/users/me/transcription-provider/validate', {
+              provider: 'Deepgram',
               apiKey: this.apiKey,
             })
             .pipe(catchError(() => of({ success: false, error: 'Connection failed' } as ValidateResponse)));
@@ -205,9 +206,7 @@ export class DeepgramSettingsComponent implements OnInit {
 
   canSave(): boolean {
     const hasModel = !!this.model.trim();
-    const keyValid =
-      (this.isConfigured() && !this.apiKey) ||
-      (!!this.apiKey && this.validationResult() === 'success');
+    const keyValid = !!this.apiKey && this.validationResult() === 'success';
     return hasModel && keyValid && !this.validating();
   }
 
@@ -218,7 +217,7 @@ export class DeepgramSettingsComponent implements OnInit {
     this.http
       .put('/api/users/me/transcription-provider', {
         provider: 'Deepgram',
-        apiKey: this.apiKey || undefined,
+        apiKey: this.apiKey,
         model: this.model.trim(),
       })
       .subscribe({

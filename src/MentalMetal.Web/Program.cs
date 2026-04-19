@@ -6,6 +6,7 @@ using MentalMetal.Application.Captures;
 using MentalMetal.Application.Captures.AutoExtract;
 using MentalMetal.Web;
 using MentalMetal.Web.Features.Captures;
+using MentalMetal.Infrastructure.Ai;
 using MentalMetal.Web.Features.Transcription;
 using MentalMetal.Application.Commitments;
 using MentalMetal.Application.Common.Ai;
@@ -40,9 +41,6 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 builder.Services.AddInfrastructure(builder.Configuration);
-
-builder.Services.AddOptions<DeepgramSettings>()
-    .Bind(builder.Configuration.GetSection(DeepgramSettings.SectionName));
 
 builder.Services.AddOptions<MentalMetal.Web.Features.Captures.AudioUploadOptions>()
     .Bind(builder.Configuration.GetSection(MentalMetal.Web.Features.Captures.AudioUploadOptions.SectionName))
