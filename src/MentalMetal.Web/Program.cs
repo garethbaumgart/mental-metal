@@ -178,12 +178,12 @@ app.Use(async (context, next) =>
     {
         await next();
     }
-    catch (AiNotConfiguredException) when (!context.Response.HasStarted)
+    catch (AiNotConfiguredException ex) when (!context.Response.HasStarted)
     {
         context.Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
         await context.Response.WriteAsJsonAsync(new
         {
-            error = "AI provider not configured. Configure your AI provider in Settings to enable this feature.",
+            error = ex.Message,
             code = "ai.notConfigured"
         });
     }
