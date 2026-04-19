@@ -48,6 +48,14 @@ public sealed class Commitment : AggregateRoot, IUserScoped
         if (personId == Guid.Empty)
             throw new ArgumentException("PersonId is required.", nameof(personId));
 
+        // Normalize invalid offset pairs to null
+        if (sourceStartOffset is not null && sourceEndOffset is not null
+            && (sourceStartOffset < 0 || sourceEndOffset <= sourceStartOffset))
+        {
+            sourceStartOffset = null;
+            sourceEndOffset = null;
+        }
+
         var now = DateTimeOffset.UtcNow;
 
         var commitment = new Commitment

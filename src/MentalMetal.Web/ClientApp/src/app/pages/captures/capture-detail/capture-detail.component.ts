@@ -1,4 +1,4 @@
-import { afterNextRender, ChangeDetectionStrategy, Component, computed, ElementRef, inject, OnInit, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, OnInit, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
@@ -54,12 +54,6 @@ import { SpeakerPickerComponent } from '../speaker-picker/speaker-picker.compone
     .error-title { color: var(--p-red-700); }
     .error-detail { color: var(--p-red-600); }
     .risk-icon { color: var(--p-yellow-500); }
-    .source-highlight {
-      background: color-mix(in srgb, var(--p-yellow-100) 70%, transparent);
-      border-bottom: 2px solid var(--p-yellow-500);
-      padding: 1px 2px;
-      border-radius: 2px;
-    }
   `],
   providers: [MessageService],
   template: `
@@ -354,7 +348,7 @@ export class CaptureDetailComponent implements OnInit {
   readonly resolvingInitiativeName = signal<string | null>(null);
 
   constructor() {
-    afterNextRender(() => {
+    effect(() => {
       const el = this.highlightMark()?.nativeElement;
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });

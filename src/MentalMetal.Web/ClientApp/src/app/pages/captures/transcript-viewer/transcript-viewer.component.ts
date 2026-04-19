@@ -1,4 +1,4 @@
-import { afterNextRender, ChangeDetectionStrategy, Component, computed, ElementRef, input, output, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, input, output, viewChild } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import {
   CaptureTranscript,
@@ -29,14 +29,6 @@ interface SegmentHighlight {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ButtonModule],
-  styles: `
-    .source-highlight {
-      background: color-mix(in srgb, var(--p-yellow-100) 70%, transparent);
-      border-bottom: 2px solid var(--p-yellow-500);
-      padding: 1px 2px;
-      border-radius: 2px;
-    }
-  `,
   template: `
     @if (groups().length === 0) {
       <p class="text-sm text-muted-color">No transcript available.</p>
@@ -85,7 +77,7 @@ export class TranscriptViewerComponent {
   readonly highlightMark = viewChild<ElementRef<HTMLElement>>('highlightMark');
 
   constructor() {
-    afterNextRender(() => {
+    effect(() => {
       const el = this.highlightMark()?.nativeElement;
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
