@@ -4,6 +4,14 @@ namespace MentalMetal.Application.Commitments;
 
 public sealed record CompleteCommitmentRequest(string? Notes = null);
 
+public sealed record UpdateCommitmentRequest(
+    string? Description = null,
+    CommitmentDirection? Direction = null,
+    DateOnly? DueDate = null,
+    bool ClearDueDate = false,
+    string? Notes = null,
+    bool ClearNotes = false);
+
 public sealed record CommitmentResponse(
     Guid Id,
     Guid UserId,

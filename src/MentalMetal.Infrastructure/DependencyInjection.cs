@@ -131,6 +131,7 @@ public static class DependencyInjection
         // Commitment handlers
         services.AddScoped<GetCommitmentByIdHandler>();
         services.AddScoped<GetUserCommitmentsHandler>();
+        services.AddScoped<UpdateCommitmentHandler>();
         services.AddScoped<CompleteCommitmentHandler>();
         services.AddScoped<DismissCommitmentHandler>();
         services.AddScoped<ReopenCommitmentHandler>();

@@ -272,4 +272,18 @@ public class CommitmentTests
         var linked = Assert.IsType<CommitmentLinkedToInitiative>(domainEvent);
         Assert.Equal(initiativeId, linked.InitiativeId);
     }
+
+    [Fact]
+    public void UpdateDirection_ChangesDirectionAndRaisesEvent()
+    {
+        var commitment = Commitment.Create(UserId, "Test", CommitmentDirection.MineToThem, PersonId);
+        commitment.ClearDomainEvents();
+
+        commitment.UpdateDirection(CommitmentDirection.TheirsToMe);
+
+        Assert.Equal(CommitmentDirection.TheirsToMe, commitment.Direction);
+        var domainEvent = Assert.Single(commitment.DomainEvents);
+        var changed = Assert.IsType<CommitmentDirectionChanged>(domainEvent);
+        Assert.Equal(CommitmentDirection.TheirsToMe, changed.NewDirection);
+    }
 }
