@@ -42,7 +42,7 @@ import { ThemeService } from '../services/theme.service';
     }
   `],
   template: `
-    <div class="flex items-center gap-3 p-5 border-b sidebar-border">
+    <div class="flex items-center gap-3 h-14 px-4 border-b sidebar-border shrink-0">
       <i class="pi pi-bolt text-xl sidebar-brand"></i>
       <span class="text-lg font-semibold">Mental Metal</span>
     </div>
