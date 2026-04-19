@@ -17,7 +17,7 @@ public sealed class UploadAudioCaptureHandler(
     ICaptureRepository captureRepository,
     ICurrentUserService currentUserService,
     IAudioBlobStore blobStore,
-    IAudioTranscriptionProvider transcriptionProvider,
+    ITranscriptionProviderFactory transcriptionProviderFactory,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider,
     ILogger<UploadAudioCaptureHandler> logger)
@@ -52,6 +52,19 @@ public sealed class UploadAudioCaptureHandler(
 
         try
         {
+            IAudioTranscriptionProvider transcriptionProvider;
+            try
+            {
+                transcriptionProvider = await transcriptionProviderFactory.CreateAsync(cancellationToken);
+            }
+            catch (AudioTranscriptionUnavailableException ex)
+            {
+                logger.LogWarning(ex, "Transcription provider not configured for user {UserId}", userId);
+                capture.MarkTranscriptionFailed(ex.Message, timeProvider.GetUtcNow());
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+                throw new AudioCaptureException(AudioCaptureErrorCodes.TranscriptionNotConfigured, ex.Message);
+            }
+
             await using var blobStream = await blobStore.OpenReadAsync(blobRef, cancellationToken);
             var transcription = await transcriptionProvider.TranscribeAsync(
                 new AudioTranscriptionRequest(blobStream, request.MimeType, request.DurationSeconds),

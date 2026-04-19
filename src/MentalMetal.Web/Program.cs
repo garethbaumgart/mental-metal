@@ -49,9 +49,9 @@ builder.Services.AddOptions<MentalMetal.Web.Features.Captures.AudioUploadOptions
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
-// IAudioTranscriptionProvider — Development-only stub. Production environments must register
-// a real provider (future work); attempting to upload audio without one will fail at request
-// time with a clear DI error rather than silently returning fake transcripts.
+// IAudioTranscriptionProvider — Production uses ITranscriptionProviderFactory (BYOK).
+// In Development, also register the stub as a fallback so existing dev flows
+// continue working even without a user-configured Deepgram key.
 if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddSingleton<
@@ -424,6 +424,42 @@ app.MapPost("/api/users/me/ai-provider/validate", async (
 
 app.MapDelete("/api/users/me/ai-provider", async (
     RemoveAiProviderHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    await handler.HandleAsync(cancellationToken);
+    return Results.NoContent();
+}).RequireAuthorization();
+
+// --- Transcription Provider Endpoints ---
+
+app.MapGet("/api/users/me/transcription-provider", async (
+    GetTranscriptionProviderStatusHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    var status = await handler.HandleAsync(cancellationToken);
+    return Results.Ok(status);
+}).RequireAuthorization();
+
+app.MapPut("/api/users/me/transcription-provider", async (
+    ConfigureTranscriptionProviderRequest request,
+    ConfigureTranscriptionProviderHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    await handler.HandleAsync(request, cancellationToken);
+    return Results.NoContent();
+}).RequireAuthorization();
+
+app.MapPost("/api/users/me/transcription-provider/validate", async (
+    ValidateTranscriptionProviderRequest request,
+    ValidateTranscriptionProviderHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    var result = await handler.HandleAsync(request, cancellationToken);
+    return Results.Ok(result);
+}).RequireAuthorization();
+
+app.MapDelete("/api/users/me/transcription-provider", async (
+    RemoveTranscriptionProviderHandler handler,
     CancellationToken cancellationToken) =>
 {
     await handler.HandleAsync(cancellationToken);

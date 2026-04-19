@@ -2,6 +2,8 @@ using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Security.Claims;
 using System.Text;
+using MentalMetal.Application.Common.Ai;
+using MentalMetal.Domain.Users;
 using Microsoft.Extensions.Options;
 
 namespace MentalMetal.Web.Features.Transcription;
@@ -25,21 +27,37 @@ public static class TranscriptionEndpoints
 
     private static async Task<IResult> HandleStatus(
         IOptions<DeepgramSettings> settings,
+        IUserRepository userRepository,
+        ICurrentUserService currentUserService,
+        IApiKeyEncryptionService encryptionService,
         IHttpClientFactory httpClientFactory,
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
     {
         var logger = loggerFactory.CreateLogger("TranscriptionEndpoints");
-        var apiKey = settings.Value.ApiKey;
 
-        if (string.IsNullOrWhiteSpace(apiKey))
+        var user = await userRepository.GetByIdAsync(
+            currentUserService.UserId, cancellationToken);
+        if (user is null)
         {
             return Results.Ok(new
             {
                 available = false,
-                reason = "Transcription service is not configured.",
+                reason = "User not found.",
             });
         }
+
+        var config = user.TranscriptionProviderConfig;
+        if (config is null)
+        {
+            return Results.Ok(new
+            {
+                available = false,
+                reason = "Transcription provider not configured. Add your Deepgram API key in Settings.",
+            });
+        }
+
+        var apiKey = encryptionService.Decrypt(config.EncryptedApiKey);
 
         try
         {
@@ -141,14 +159,24 @@ public static class TranscriptionEndpoints
             }
         }
 
-        var deepgramSettings = settings.Value;
-        if (string.IsNullOrWhiteSpace(deepgramSettings.ApiKey))
+        // Resolve the user's Deepgram API key from their TranscriptionProviderConfig
+        var userRepository = context.RequestServices.GetRequiredService<IUserRepository>();
+        var currentUserService = context.RequestServices.GetRequiredService<ICurrentUserService>();
+        var encryptionService = context.RequestServices.GetRequiredService<IApiKeyEncryptionService>();
+
+        var appUser = await userRepository.GetByIdAsync(
+            currentUserService.UserId, context.RequestAborted);
+
+        if (appUser?.TranscriptionProviderConfig is null)
         {
-            logger.LogWarning("[{SessionId}] Transcription WebSocket rejected: Deepgram API key not configured", sessionId);
+            logger.LogWarning("[{SessionId}] Transcription WebSocket rejected: no transcription provider configured", sessionId);
             context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
-            await context.Response.WriteAsync("Transcription service not configured.");
+            await context.Response.WriteAsync("Transcription provider not configured. Add your Deepgram API key in Settings.");
             return;
         }
+
+        var deepgramApiKey = encryptionService.Decrypt(appUser.TranscriptionProviderConfig.EncryptedApiKey);
+        var deepgramSettings = settings.Value;
 
         using var clientWs = await context.WebSockets.AcceptWebSocketAsync();
         var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "unknown";
@@ -174,9 +202,12 @@ public static class TranscriptionEndpoints
             }
         }
 
+        // Use the user's configured model for the streaming session
+        var streamModel = appUser.TranscriptionProviderConfig.Model;
+
         var queryParams = new List<string>
         {
-            $"model={Uri.EscapeDataString(deepgramSettings.Model)}",
+            $"model={Uri.EscapeDataString(streamModel)}",
             $"punctuate={deepgramSettings.Punctuate.ToString().ToLowerInvariant()}",
             $"interim_results={deepgramSettings.InterimResults.ToString().ToLowerInvariant()}",
             $"language={Uri.EscapeDataString(deepgramSettings.Language)}",
@@ -210,7 +241,7 @@ public static class TranscriptionEndpoints
         var deepgramUrl = $"{wsScheme}://{deepgramSettings.BaseUrl}/v1/listen?{string.Join("&", queryParams)}";
 
         using var deepgramWs = new ClientWebSocket();
-        deepgramWs.Options.SetRequestHeader("Authorization", $"Token {deepgramSettings.ApiKey}");
+        deepgramWs.Options.SetRequestHeader("Authorization", $"Token {deepgramApiKey}");
         deepgramWs.Options.KeepAliveInterval = TimeSpan.FromSeconds(15);
 
         try

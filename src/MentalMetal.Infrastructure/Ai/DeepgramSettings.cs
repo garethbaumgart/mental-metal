@@ -1,11 +1,5 @@
-namespace MentalMetal.Web.Features.Transcription;
+namespace MentalMetal.Infrastructure.Ai;
 
-/// <summary>
-/// Web-layer settings for the Deepgram live transcription WebSocket proxy.
-/// The API key is no longer stored here — it comes from the user's
-/// <c>TranscriptionProviderConfig</c> (BYOK). Only streaming-specific
-/// settings remain.
-/// </summary>
 public class DeepgramSettings
 {
     public const string SectionName = "Deepgram";
