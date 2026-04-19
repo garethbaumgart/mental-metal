@@ -819,7 +819,11 @@ app.MapPost("/api/captures", async (
 {
     try
     {
-        var created = await handler.HandleAsync(request, cancellationToken);
+        // Default to Typed source when not explicitly provided
+        var effectiveRequest = request.Source is null
+            ? request with { Source = CaptureSource.Typed }
+            : request;
+        var created = await handler.HandleAsync(effectiveRequest, cancellationToken);
 
         // Auto-trigger extraction synchronously (best-effort — failures are recorded on the capture)
         var response = await extractHandler.HandleAsync(created.Id, cancellationToken);
