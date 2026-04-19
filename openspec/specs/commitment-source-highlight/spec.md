@@ -1,5 +1,7 @@
 # Commitment Source Highlight
 
+> **Offset conventions**: All offsets are 0-based character indices into the capture's `RawContent` string. `SourceEndOffset` is exclusive (the character at `endOffset` is not included). These map as: AI JSON (`source_start_offset`/`source_end_offset`) → Domain (`SourceStartOffset`/`SourceEndOffset`) → API (`sourceStartOffset`/`sourceEndOffset`) → Query params (`highlightStart`/`highlightEnd`).
+
 ## Requirements
 
 ### Requirement: Navigate from commitment to highlighted source text
@@ -57,9 +59,14 @@ The transcript viewer component SHALL, when highlight offsets are provided as in
 - **THEN** both segments render their respective overlapping portions inside `<mark>` elements
 - **AND** the first highlighted segment is scrolled into view
 
+#### Scenario: Offsets clamped to segment boundaries
+
+- **WHEN** the transcript viewer receives highlight offsets that partially exceed the total segment text length
+- **THEN** the system clamps the end offset to the total text length and highlights the valid portion
+
 #### Scenario: No matching segment found
 
-- **WHEN** the transcript viewer receives highlight offsets that don't map to any segment (e.g., offsets beyond total text length)
+- **WHEN** the transcript viewer receives highlight offsets that don't map to any segment (e.g., offsets entirely beyond total text length)
 - **THEN** the transcript renders normally without any highlighting
 
 ### Requirement: Highlight styling
