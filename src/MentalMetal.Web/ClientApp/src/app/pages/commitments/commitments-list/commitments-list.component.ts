@@ -110,7 +110,7 @@ interface PersonGroup {
                 <p-avatar
                   [label]="group.initials"
                   shape="circle"
-                  [style]="{ 'background-color': avatarColor(group.personId), color: '#ffffff' }"
+                  [style]="{ 'background-color': avatarColor(group.personId), color: 'var(--p-surface-0)' }"
                 />
                 <div>
                   <div class="font-semibold">{{ group.personName }}</div>
@@ -130,8 +130,8 @@ interface PersonGroup {
                     [class.overdue-row]="commitment.isOverdue"
                     [class.closed-row]="commitment.status !== 'Open'"
                     (click)="onRowClick(commitment)"
-                    (keydown.enter)="onRowClick(commitment)"
-                    (keydown.space)="$event.preventDefault(); onRowClick(commitment)"
+                    (keydown.enter)="$event.target === $event.currentTarget && onRowClick(commitment)"
+                    (keydown.space)="$event.target === $event.currentTarget && ($event.preventDefault(), onRowClick(commitment))"
                   >
                     <p-tag
                       class="direction-tag"
@@ -157,6 +157,7 @@ interface PersonGroup {
                           [text]="true"
                           size="small"
                           pTooltip="Complete"
+                          ariaLabel="Complete"
                           (onClick)="onComplete(commitment)"
                         />
                         <p-button
@@ -165,6 +166,7 @@ interface PersonGroup {
                           [text]="true"
                           size="small"
                           pTooltip="Dismiss"
+                          ariaLabel="Dismiss"
                           (onClick)="onDismiss(commitment)"
                         />
                       } @else {
@@ -174,6 +176,7 @@ interface PersonGroup {
                           [text]="true"
                           size="small"
                           pTooltip="Reopen"
+                          ariaLabel="Reopen"
                           (onClick)="onReopen(commitment)"
                         />
                       }
@@ -254,8 +257,8 @@ export class CommitmentsListComponent implements OnInit {
   protected readonly overdueFilterOptions = [{ label: 'Overdue only', value: true }];
 
   private readonly avatarColors = [
-    '#3f51b5', '#2e7d32', '#e65100', '#7b1fa2', '#00695c',
-    '#c62828', '#1565c0', '#4e342e', '#283593', '#00838f',
+    'var(--p-indigo-500)', 'var(--p-green-700)', 'var(--p-orange-800)', 'var(--p-purple-700)', 'var(--p-teal-700)',
+    'var(--p-red-800)', 'var(--p-blue-700)', 'var(--p-stone-700)', 'var(--p-indigo-800)', 'var(--p-cyan-700)',
   ];
 
   ngOnInit(): void {
