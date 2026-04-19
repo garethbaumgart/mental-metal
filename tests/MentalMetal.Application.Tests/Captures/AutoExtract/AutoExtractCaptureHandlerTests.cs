@@ -18,6 +18,7 @@ public class AutoExtractCaptureHandlerTests
     private readonly IPersonRepository _personRepo = Substitute.For<IPersonRepository>();
     private readonly IInitiativeRepository _initiativeRepo = Substitute.For<IInitiativeRepository>();
     private readonly ICommitmentRepository _commitmentRepo = Substitute.For<ICommitmentRepository>();
+    private readonly IUserRepository _userRepo = Substitute.For<IUserRepository>();
     private readonly IAiCompletionService _aiService = Substitute.For<IAiCompletionService>();
     private readonly ITasteBudgetService _tasteBudget = Substitute.For<ITasteBudgetService>();
     private readonly ICurrentUserService _currentUser = Substitute.For<ICurrentUserService>();
@@ -35,10 +36,12 @@ public class AutoExtractCaptureHandlerTests
             .Returns(new List<Person>());
         _initiativeRepo.GetAllAsync(_userId, InitiativeStatus.Active, Arg.Any<CancellationToken>())
             .Returns(new List<Initiative>());
+        _userRepo.GetByIdAsync(_userId, Arg.Any<CancellationToken>())
+            .Returns(User.Register("ext-auth-id", "test@example.com", "Test User", null));
 
         _sut = new AutoExtractCaptureHandler(
             _captureRepo, _personRepo, _initiativeRepo, _commitmentRepo,
-            _aiService, _tasteBudget, _currentUser,
+            _userRepo, _aiService, _tasteBudget, _currentUser,
             new NameResolutionService(), new InitiativeTaggingService(),
             _unitOfWork, _logger);
     }
@@ -344,5 +347,33 @@ public class AutoExtractCaptureHandlerTests
 
         Assert.Equal(ProcessingStatus.Processed, result.ProcessingStatus);
         Assert.Equal("Wrapped in code fences.", result.AiExtraction!.Summary);
+    }
+
+    [Fact]
+    public async Task HandleAsync_SystemPromptIncludesUserName()
+    {
+        var capture = CreateRawCapture();
+        _captureRepo.GetByIdAsync(capture.Id, Arg.Any<CancellationToken>())
+            .Returns(capture);
+
+        var aiJson = """
+        {
+          "summary": "Quick sync.",
+          "people_mentioned": [],
+          "commitments": [],
+          "decisions": [],
+          "risks": [],
+          "initiative_tags": []
+        }
+        """;
+
+        _aiService.CompleteAsync(Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AiCompletionResult(aiJson, 100, 200, "test-model", AiProvider.Anthropic));
+
+        await _sut.HandleAsync(capture.Id, CancellationToken.None);
+
+        await _aiService.Received(1).CompleteAsync(
+            Arg.Is<AiCompletionRequest>(r => r.SystemPrompt.Contains("Test User")),
+            Arg.Any<CancellationToken>());
     }
 }

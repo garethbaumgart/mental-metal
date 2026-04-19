@@ -5,20 +5,24 @@ namespace MentalMetal.Application.Captures.AutoExtract;
 /// </summary>
 public static class ExtractionPromptBuilder
 {
-    public static string SystemPrompt => """
+    public static string BuildSystemPrompt(string userName) => $$"""
         You are an AI assistant that extracts structured information from meeting transcripts and notes.
         You MUST return ONLY valid JSON — no markdown, no commentary, no code fences.
+
+        These notes were written or recorded by {{userName}}. All commitment directions are
+        from {{userName}}'s perspective.
 
         Extract the following from the provided text:
 
         1. **people_mentioned**: People referenced by name. For each person provide:
            - "raw_name": The name as it appears in the text
            - "context": A brief phrase describing their role or mention context (or null)
+           - Do NOT include {{userName}} in this list — they are the note-taker, not a mentioned person.
 
         2. **commitments**: Action items, promises, or obligations. For each:
            - "description": Clear description of the commitment
-           - "direction": "MineToThem" if the user (the note-taker / meeting organiser) committed to do something for someone else, or "TheirsToMe" if someone else committed to do something for the user
-           - "person_raw_name": The name of the other party involved (or null if unclear)
+           - "direction": "MineToThem" if {{userName}} committed to do something for someone else, or "TheirsToMe" if someone else committed to do something for {{userName}}
+           - "person_raw_name": The name of the OTHER party (not {{userName}}). If {{userName}} is the one who committed, person_raw_name is who they committed TO. If someone else committed, person_raw_name is who committed.
            - "due_date": ISO 8601 date if a deadline was mentioned (or null)
            - "confidence": One of "High", "Medium", or "Low"
              - High = explicit verbal promise with a specific person and timeframe (e.g. "Alice will send the report by Friday")

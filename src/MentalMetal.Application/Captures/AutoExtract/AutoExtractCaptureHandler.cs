@@ -24,6 +24,7 @@ public sealed class AutoExtractCaptureHandler(
     IPersonRepository personRepository,
     IInitiativeRepository initiativeRepository,
     ICommitmentRepository commitmentRepository,
+    IUserRepository userRepository,
     IAiCompletionService aiCompletionService,
     ITasteBudgetService tasteBudgetService,
     ICurrentUserService currentUserService,
@@ -61,9 +62,13 @@ public sealed class AutoExtractCaptureHandler(
             if (tasteBudgetService.IsEnabled)
                 await tasteBudgetService.DecrementAsync(userId, cancellationToken);
 
-            // 1. Call AI provider
+            // 1. Load user name for prompt context
+            var user = await userRepository.GetByIdAsync(userId, cancellationToken)
+                ?? throw new InvalidOperationException("Authenticated user not found.");
+
+            // 2. Call AI provider
             var aiRequest = new AiCompletionRequest(
-                ExtractionPromptBuilder.SystemPrompt,
+                ExtractionPromptBuilder.BuildSystemPrompt(user.Name),
                 ExtractionPromptBuilder.BuildUserPrompt(capture.RawContent),
                 MaxTokens: 4096,
                 Temperature: 0.1f);
