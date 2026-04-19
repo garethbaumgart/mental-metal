@@ -116,4 +116,51 @@ public class UpdateCommitmentTests
         await Assert.ThrowsAsync<ArgumentException>(
             () => _sut.HandleAsync(commitment.Id, new UpdateCommitmentRequest(Description: ""), CancellationToken.None));
     }
+
+    [Fact]
+    public async Task HandleAsync_UpdateNotes_SetsNotes()
+    {
+        var commitment = Commitment.Create(_userId, "Test", CommitmentDirection.MineToThem, _personId);
+        _commitmentRepo.GetByIdAsync(commitment.Id, Arg.Any<CancellationToken>())
+            .Returns(commitment);
+
+        var result = await _sut.HandleAsync(
+            commitment.Id,
+            new UpdateCommitmentRequest(Notes: "Follow up next week"),
+            CancellationToken.None);
+
+        Assert.Equal("Follow up next week", result.Notes);
+    }
+
+    [Fact]
+    public async Task HandleAsync_ClearNotes_RemovesNotes()
+    {
+        var commitment = Commitment.Create(_userId, "Test", CommitmentDirection.MineToThem, _personId);
+        commitment.UpdateNotes("Existing notes");
+        _commitmentRepo.GetByIdAsync(commitment.Id, Arg.Any<CancellationToken>())
+            .Returns(commitment);
+
+        var result = await _sut.HandleAsync(
+            commitment.Id,
+            new UpdateCommitmentRequest(ClearNotes: true),
+            CancellationToken.None);
+
+        Assert.Null(result.Notes);
+    }
+
+    [Fact]
+    public async Task HandleAsync_ClearDueDateTakesPrecedenceOverDueDate()
+    {
+        var commitment = Commitment.Create(_userId, "Test", CommitmentDirection.MineToThem, _personId,
+            new DateOnly(2026, 5, 1));
+        _commitmentRepo.GetByIdAsync(commitment.Id, Arg.Any<CancellationToken>())
+            .Returns(commitment);
+
+        var result = await _sut.HandleAsync(
+            commitment.Id,
+            new UpdateCommitmentRequest(DueDate: new DateOnly(2026, 6, 1), ClearDueDate: true),
+            CancellationToken.None);
+
+        Assert.Null(result.DueDate);
+    }
 }
