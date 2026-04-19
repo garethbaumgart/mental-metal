@@ -1,24 +1,52 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { AvatarModule } from 'primeng/avatar';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
-import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { CommitmentsService } from '../../../shared/services/commitments.service';
-import { Commitment, CommitmentConfidence, CommitmentDirection, CommitmentStatus } from '../../../shared/models/commitment.model';
+import {
+  Commitment,
+  CommitmentConfidence,
+  CommitmentDirection,
+  CommitmentStatus,
+} from '../../../shared/models/commitment.model';
 import { PeopleService } from '../../../shared/services/people.service';
 import { Person } from '../../../shared/models/person.model';
+
+interface PersonGroup {
+  personId: string;
+  personName: string;
+  initials: string;
+  commitments: Commitment[];
+  overdueCount: number;
+  totalCount: number;
+}
 
 @Component({
   selector: 'app-commitments-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, ButtonModule, SelectModule, TableModule, TagModule, ToastModule, TooltipModule],
+  imports: [FormsModule, AvatarModule, ButtonModule, SelectModule, TagModule, ToastModule, TooltipModule],
   providers: [MessageService],
+  styles: `
+    .commitment-row {
+      border-color: var(--p-content-border-color);
+    }
+    .commitment-row:hover {
+      background: var(--p-content-hover-background);
+    }
+    .overdue-row {
+      background: color-mix(in srgb, var(--p-red-50) 50%, transparent);
+    }
+    .overdue-row:hover {
+      background: var(--p-red-50);
+    }
+  `,
   template: `
     <p-toast />
     <div class="flex flex-col gap-6">
@@ -63,62 +91,85 @@ import { Person } from '../../../shared/models/person.model';
           <p class="text-muted-color">No commitments found. Commitments are created automatically from transcript extraction.</p>
         </div>
       } @else {
-        <p-table
-          [value]="commitments()"
-          [rows]="20"
-          [paginator]="commitments().length > 20"
-          [rowHover]="true"
-          styleClass="p-datatable-sm"
-        >
-          <ng-template #header>
-            <tr>
-              <th>Direction</th>
-              <th>Description</th>
-              <th>Person</th>
-              <th>Confidence</th>
-              <th>Status</th>
-              <th>Due Date</th>
-              <th>Actions</th>
-            </tr>
-          </ng-template>
-          <ng-template #body let-commitment>
-            <tr class="cursor-pointer" (click)="onRowClick(commitment)">
-              <td>
-                <p-tag [value]="formatDirection(commitment.direction)" [severity]="directionSeverity(commitment.direction)" />
-              </td>
-              <td class="font-medium">
-                {{ commitment.description.length > 60 ? commitment.description.substring(0, 60) + '...' : commitment.description }}
-              </td>
-              <td class="text-muted-color text-sm">{{ personName(commitment.personId) }}</td>
-              <td>
-                <p-tag [value]="commitment.confidence" [severity]="confidenceSeverity(commitment.confidence)" />
-              </td>
-              <td>
-                <p-tag [value]="formatStatus(commitment.status)" [severity]="statusSeverity(commitment.status)" />
-                @if (commitment.isOverdue) {
-                  <p-tag value="Overdue" severity="danger" class="ml-1" />
-                }
-              </td>
-              <td class="text-muted-color text-sm">
-                @if (commitment.dueDate) {
-                  {{ commitment.dueDate }}
-                } @else {
-                  -
-                }
-              </td>
-              <td>
-                <div class="flex gap-1" (click)="$event.stopPropagation()">
-                  @if (commitment.status === 'Open') {
-                    <p-button icon="pi pi-check" severity="success" [text]="true" size="small" pTooltip="Complete" (onClick)="onComplete(commitment)" />
-                    <p-button icon="pi pi-eye-slash" severity="secondary" [text]="true" size="small" pTooltip="Dismiss" (onClick)="onDismiss(commitment)" />
-                  } @else {
-                    <p-button icon="pi pi-replay" severity="info" [text]="true" size="small" pTooltip="Reopen" (onClick)="onReopen(commitment)" />
-                  }
+        <div class="flex flex-col gap-6">
+          @for (group of personGroups(); track group.personId) {
+            <div>
+              <div class="flex items-center gap-3 mb-3">
+                <p-avatar
+                  [label]="group.initials"
+                  shape="circle"
+                  [style]="{ 'background-color': avatarColor(group.personId), color: '#ffffff' }"
+                />
+                <div>
+                  <div class="font-semibold">{{ group.personName }}</div>
+                  <div class="text-xs text-muted-color">
+                    {{ group.totalCount }} commitment{{ group.totalCount !== 1 ? 's' : '' }}@if (group.overdueCount > 0) {
+                      <span> · {{ group.overdueCount }} overdue</span>
+                    }
+                  </div>
                 </div>
-              </td>
-            </tr>
-          </ng-template>
-        </p-table>
+              </div>
+              <div class="flex flex-col gap-2 ml-11">
+                @for (commitment of group.commitments; track commitment.id) {
+                  <div
+                    class="flex items-center gap-3 py-2 px-3 rounded-lg cursor-pointer commitment-row"
+                    [class.overdue-row]="commitment.isOverdue"
+                    [class.border-l-3]="commitment.isOverdue"
+                    [style.border-left-color]="commitment.isOverdue ? 'var(--p-red-500)' : undefined"
+                    [style.opacity]="commitment.status !== 'Open' ? '0.6' : undefined"
+                    (click)="onRowClick(commitment)"
+                  >
+                    <p-tag
+                      [value]="formatDirection(commitment.direction)"
+                      [severity]="directionSeverity(commitment.direction)"
+                      [style]="{ 'font-size': '0.7rem' }"
+                    />
+                    <span
+                      class="text-sm flex-1"
+                      [style.text-decoration]="commitment.status !== 'Open' ? 'line-through' : 'none'"
+                    >{{ commitment.description }}</span>
+                    @if (commitment.isOverdue) {
+                      <span class="text-xs font-medium" style="color: var(--p-red-500)">{{ commitment.dueDate }}</span>
+                    } @else if (commitment.dueDate) {
+                      <span class="text-xs text-muted-color">{{ commitment.dueDate }}</span>
+                    } @else {
+                      <span class="text-xs text-muted-color">No date</span>
+                    }
+                    <div class="flex gap-1" (click)="$event.stopPropagation()">
+                      @if (commitment.status === 'Open') {
+                        <p-button
+                          icon="pi pi-check"
+                          severity="success"
+                          [text]="true"
+                          size="small"
+                          pTooltip="Complete"
+                          (onClick)="onComplete(commitment)"
+                        />
+                        <p-button
+                          icon="pi pi-eye-slash"
+                          severity="secondary"
+                          [text]="true"
+                          size="small"
+                          pTooltip="Dismiss"
+                          (onClick)="onDismiss(commitment)"
+                        />
+                      } @else {
+                        <p-button
+                          icon="pi pi-replay"
+                          severity="info"
+                          [text]="true"
+                          size="small"
+                          pTooltip="Reopen"
+                          (onClick)="onReopen(commitment)"
+                        />
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
       }
     </div>
   `,
@@ -137,6 +188,43 @@ export class CommitmentsListComponent implements OnInit {
   readonly selectedStatus = signal<CommitmentStatus | null>(null);
   readonly selectedOverdue = signal<boolean | null>(null);
 
+  readonly personGroups = computed<PersonGroup[]>(() => {
+    const commitments = this.commitments();
+    const people = this.peopleMap();
+
+    const groupMap = new Map<string, Commitment[]>();
+    for (const c of commitments) {
+      const existing = groupMap.get(c.personId);
+      if (existing) {
+        existing.push(c);
+      } else {
+        groupMap.set(c.personId, [c]);
+      }
+    }
+
+    const groups: PersonGroup[] = [];
+    for (const [personId, personCommitments] of groupMap) {
+      const name = people.get(personId) ?? 'Unknown';
+      groups.push({
+        personId,
+        personName: name,
+        initials: this.getInitials(name),
+        commitments: personCommitments,
+        overdueCount: personCommitments.filter((c) => c.isOverdue).length,
+        totalCount: personCommitments.length,
+      });
+    }
+
+    // Sort: groups with overdue items first, then by name
+    groups.sort((a, b) => {
+      if (a.overdueCount > 0 && b.overdueCount === 0) return -1;
+      if (a.overdueCount === 0 && b.overdueCount > 0) return 1;
+      return a.personName.localeCompare(b.personName);
+    });
+
+    return groups;
+  });
+
   protected readonly directionFilterOptions = [
     { label: 'I owe them', value: 'MineToThem' as CommitmentDirection },
     { label: 'They owe me', value: 'TheirsToMe' as CommitmentDirection },
@@ -149,8 +237,11 @@ export class CommitmentsListComponent implements OnInit {
     { label: 'Dismissed', value: 'Dismissed' as CommitmentStatus },
   ];
 
-  protected readonly overdueFilterOptions = [
-    { label: 'Overdue only', value: true },
+  protected readonly overdueFilterOptions = [{ label: 'Overdue only', value: true }];
+
+  private readonly avatarColors = [
+    '#3f51b5', '#2e7d32', '#e65100', '#7b1fa2', '#00695c',
+    '#c62828', '#1565c0', '#4e342e', '#283593', '#00838f',
   ];
 
   ngOnInit(): void {
@@ -166,95 +257,96 @@ export class CommitmentsListComponent implements OnInit {
     this.router.navigate(['/commitments', commitment.id]);
   }
 
-  protected personName(personId: string): string {
-    return this.peopleMap().get(personId) ?? 'Unknown';
-  }
-
   protected formatDirection(direction: CommitmentDirection): string {
     switch (direction) {
-      case 'MineToThem': return 'I owe them';
-      case 'TheirsToMe': return 'They owe me';
+      case 'MineToThem':
+        return 'I owe';
+      case 'TheirsToMe':
+        return 'They owe';
     }
   }
 
   protected directionSeverity(direction: CommitmentDirection): 'info' | 'warn' {
     switch (direction) {
-      case 'MineToThem': return 'warn';
-      case 'TheirsToMe': return 'info';
+      case 'MineToThem':
+        return 'warn';
+      case 'TheirsToMe':
+        return 'info';
     }
   }
 
-  protected formatStatus(status: CommitmentStatus): string {
-    return status;
-  }
-
-  protected statusSeverity(status: CommitmentStatus): 'info' | 'success' | 'secondary' | 'warn' {
-    switch (status) {
-      case 'Open': return 'info';
-      case 'Completed': return 'success';
-      case 'Cancelled': return 'secondary';
-      case 'Dismissed': return 'warn';
+  protected avatarColor(personId: string): string {
+    let hash = 0;
+    for (let i = 0; i < personId.length; i++) {
+      hash = (hash * 31 + personId.charCodeAt(i)) | 0;
     }
-  }
-
-  protected confidenceSeverity(confidence: CommitmentConfidence): 'success' | 'warn' | 'secondary' {
-    switch (confidence) {
-      case 'High': return 'success';
-      case 'Medium': return 'warn';
-      case 'Low': return 'secondary';
-    }
+    return this.avatarColors[Math.abs(hash) % this.avatarColors.length];
   }
 
   protected onComplete(commitment: Commitment): void {
     this.commitmentsService.complete(commitment.id).subscribe({
       next: () => this.loadCommitments(),
-      error: () => this.messageService.add({ severity: 'error', summary: 'Failed to complete commitment' }),
+      error: () =>
+        this.messageService.add({ severity: 'error', summary: 'Failed to complete commitment' }),
     });
   }
 
   protected onDismiss(commitment: Commitment): void {
     this.commitmentsService.dismiss(commitment.id).subscribe({
       next: () => this.loadCommitments(),
-      error: () => this.messageService.add({ severity: 'error', summary: 'Failed to dismiss commitment' }),
+      error: () =>
+        this.messageService.add({ severity: 'error', summary: 'Failed to dismiss commitment' }),
     });
   }
 
   protected onReopen(commitment: Commitment): void {
     this.commitmentsService.reopen(commitment.id).subscribe({
       next: () => this.loadCommitments(),
-      error: () => this.messageService.add({ severity: 'error', summary: 'Failed to reopen commitment' }),
+      error: () =>
+        this.messageService.add({ severity: 'error', summary: 'Failed to reopen commitment' }),
     });
+  }
+
+  private getInitials(name: string): string {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
   }
 
   private loadCommitments(): void {
     this.loading.set(true);
-    this.commitmentsService.list(
-      this.selectedDirection() ?? undefined,
-      this.selectedStatus() ?? undefined,
-      undefined,
-      undefined,
-      this.selectedOverdue() ?? undefined,
-    ).subscribe({
-      next: (commitments) => {
-        this.commitments.set(commitments);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.commitments.set([]);
-        this.loading.set(false);
-        this.messageService.add({ severity: 'error', summary: 'Failed to load commitments' });
-      },
-    });
+    this.commitmentsService
+      .list(
+        this.selectedDirection() ?? undefined,
+        this.selectedStatus() ?? undefined,
+        undefined,
+        undefined,
+        this.selectedOverdue() ?? undefined,
+      )
+      .subscribe({
+        next: (commitments) => {
+          this.commitments.set(commitments);
+          this.loading.set(false);
+        },
+        error: () => {
+          this.commitments.set([]);
+          this.loading.set(false);
+          this.messageService.add({ severity: 'error', summary: 'Failed to load commitments' });
+        },
+      });
   }
 
   private loadPeople(): void {
     this.peopleService.list(undefined, true).subscribe({
       next: (people: Person[]) => {
         const map = new Map<string, string>();
-        people.forEach(p => map.set(p.id, p.name));
+        people.forEach((p) => map.set(p.id, p.name));
         this.peopleMap.set(map);
       },
-      error: () => this.messageService.add({ severity: 'error', summary: 'Failed to load people' }),
+      error: () =>
+        this.messageService.add({ severity: 'error', summary: 'Failed to load people' }),
     });
   }
 }
