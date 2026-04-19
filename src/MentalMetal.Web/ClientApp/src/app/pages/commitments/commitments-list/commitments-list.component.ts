@@ -130,8 +130,8 @@ interface PersonGroup {
                     [class.overdue-row]="commitment.isOverdue"
                     [class.closed-row]="commitment.status !== 'Open'"
                     (click)="onRowClick(commitment)"
-                    (keydown.enter)="$event.target === $event.currentTarget && onRowClick(commitment)"
-                    (keydown.space)="$event.target === $event.currentTarget && ($event.preventDefault(), onRowClick(commitment))"
+                    (keydown.enter)="onRowKeydown($event, commitment)"
+                    (keydown.space)="onRowKeydown($event, commitment)"
                   >
                     <p-tag
                       class="direction-tag"
@@ -272,6 +272,12 @@ export class CommitmentsListComponent implements OnInit {
 
   protected onRowClick(commitment: Commitment): void {
     this.router.navigate(['/commitments', commitment.id]);
+  }
+
+  protected onRowKeydown(event: Event, commitment: Commitment): void {
+    if (event.target !== event.currentTarget) return;
+    event.preventDefault();
+    this.onRowClick(commitment);
   }
 
   protected formatDirection(direction: CommitmentDirection): string {
