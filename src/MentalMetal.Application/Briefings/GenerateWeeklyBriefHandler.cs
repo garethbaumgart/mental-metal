@@ -84,8 +84,8 @@ public sealed class GenerateWeeklyBriefHandler(
             c.Title,
             c.CapturedAt,
             c.AiExtraction?.Summary,
-            c.AiExtraction?.Decisions.ToList() ?? [],
-            c.AiExtraction?.Risks.ToList() ?? [])).ToList();
+            c.AiExtraction?.Decisions?.ToList() ?? [],
+            c.AiExtraction?.Risks?.ToList() ?? [])).ToList();
 
         var initiativeContexts = initiativeActivity.Select(i => new InitiativeContextForBrief(
             i.Title,
@@ -113,13 +113,13 @@ public sealed class GenerateWeeklyBriefHandler(
         // Collect all decisions and risks from the week's captures
         var allDecisions = weekCaptures
             .Where(c => c.AiExtraction is not null)
-            .SelectMany(c => c.AiExtraction!.Decisions)
+            .SelectMany(c => c.AiExtraction!.Decisions ?? [])
             .Distinct()
             .ToList();
 
         var allRisks = weekCaptures
             .Where(c => c.AiExtraction is not null)
-            .SelectMany(c => c.AiExtraction!.Risks)
+            .SelectMany(c => c.AiExtraction!.Risks ?? [])
             .Distinct()
             .ToList();
 

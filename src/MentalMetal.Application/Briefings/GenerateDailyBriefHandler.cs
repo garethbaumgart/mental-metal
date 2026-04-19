@@ -80,8 +80,8 @@ public sealed class GenerateDailyBriefHandler(
             c.Title,
             c.CapturedAt,
             c.AiExtraction?.Summary,
-            c.AiExtraction?.Decisions.ToList() ?? [],
-            c.AiExtraction?.Risks.ToList() ?? [])).ToList();
+            c.AiExtraction?.Decisions?.ToList() ?? [],
+            c.AiExtraction?.Risks?.ToList() ?? [])).ToList();
 
         var dueTodayContexts = dueToday.Select(c => new CommitmentContextForBrief(
             c.Description,
