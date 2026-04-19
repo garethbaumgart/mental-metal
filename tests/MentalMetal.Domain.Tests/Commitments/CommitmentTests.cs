@@ -259,6 +259,26 @@ public class CommitmentTests
     }
 
     [Fact]
+    public void Create_WithSourceOffsets_SetsOffsets()
+    {
+        var commitment = Commitment.Create(
+            UserId, "Test", CommitmentDirection.MineToThem, PersonId,
+            sourceStartOffset: 100, sourceEndOffset: 200);
+
+        Assert.Equal(100, commitment.SourceStartOffset);
+        Assert.Equal(200, commitment.SourceEndOffset);
+    }
+
+    [Fact]
+    public void Create_WithoutSourceOffsets_OffsetsAreNull()
+    {
+        var commitment = Commitment.Create(UserId, "Test", CommitmentDirection.MineToThem, PersonId);
+
+        Assert.Null(commitment.SourceStartOffset);
+        Assert.Null(commitment.SourceEndOffset);
+    }
+
+    [Fact]
     public void LinkToInitiative_SetsInitiativeIdAndRaisesEvent()
     {
         var commitment = Commitment.Create(UserId, "Test", CommitmentDirection.MineToThem, PersonId);

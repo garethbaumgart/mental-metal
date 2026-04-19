@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
@@ -75,7 +75,10 @@ import { Commitment, CommitmentConfidence, CommitmentDirection, CommitmentStatus
             @if (commitment()!.sourceCaptureId) {
               <div class="flex gap-4 py-2 border-b detail-row">
                 <span class="text-sm font-medium text-muted-color w-32">Source</span>
-                <a class="text-sm text-primary" [routerLink]="['/capture', commitment()!.sourceCaptureId]">View source capture</a>
+                <a class="text-sm text-primary"
+                   [routerLink]="['/capture', commitment()!.sourceCaptureId]"
+                   [queryParams]="sourceHighlightParams()"
+                >View source capture</a>
               </div>
             }
             @if (commitment()!.initiativeId) {
@@ -128,6 +131,13 @@ export class CommitmentDetailComponent implements OnInit {
   readonly loading = signal(true);
   readonly personName = signal('Loading...');
   readonly initiativeName = signal('');
+  readonly sourceHighlightParams = computed(() => {
+    const c = this.commitment();
+    if (c?.sourceStartOffset != null && c?.sourceEndOffset != null) {
+      return { highlightStart: c.sourceStartOffset, highlightEnd: c.sourceEndOffset };
+    }
+    return {};
+  });
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');

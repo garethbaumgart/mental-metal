@@ -51,6 +51,12 @@ internal sealed record CommitmentDto
 
     [JsonPropertyName("confidence")]
     public string? Confidence { get; init; }
+
+    [JsonPropertyName("source_start_offset")]
+    public int? SourceStartOffset { get; init; }
+
+    [JsonPropertyName("source_end_offset")]
+    public int? SourceEndOffset { get; init; }
 }
 
 internal sealed record InitiativeTagDto

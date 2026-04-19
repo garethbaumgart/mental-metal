@@ -145,7 +145,9 @@ public sealed class AutoExtractCaptureHandler(
                         dueDateOnly,
                         initiativeId: null,
                         capture.Id,
-                        confidence);
+                        confidence,
+                        c.SourceStartOffset,
+                        c.SourceEndOffset);
 
                     await commitmentRepository.AddAsync(commitment, cancellationToken);
                     spawnedCommitmentId = commitment.Id;
@@ -159,6 +161,8 @@ public sealed class AutoExtractCaptureHandler(
                     PersonId = personId,
                     DueDate = dueDate,
                     Confidence = confidence,
+                    SourceStartOffset = c.SourceStartOffset,
+                    SourceEndOffset = c.SourceEndOffset,
                     SpawnedCommitmentId = spawnedCommitmentId
                 });
             }

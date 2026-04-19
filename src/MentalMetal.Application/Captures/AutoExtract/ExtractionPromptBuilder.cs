@@ -24,6 +24,8 @@ public static class ExtractionPromptBuilder
              - High = explicit verbal promise with a specific person and timeframe (e.g. "Alice will send the report by Friday")
              - Medium = clear intent but missing person or timeframe (e.g. "We need to update the docs")
              - Low = ambiguous or speculative (e.g. "Maybe we should look into that")
+           - "source_start_offset": 0-based character index where this commitment starts in the input text
+           - "source_end_offset": character index where this commitment ends in the input text (exclusive)
 
         3. **decisions**: Concrete decisions made during the discussion. Short sentences.
 
@@ -44,7 +46,7 @@ public static class ExtractionPromptBuilder
         {
           "summary": "string",
           "people_mentioned": [{"raw_name": "string", "context": "string|null"}],
-          "commitments": [{"description": "string", "direction": "MineToThem|TheirsToMe", "person_raw_name": "string|null", "due_date": "string|null", "confidence": "High|Medium|Low"}],
+          "commitments": [{"description": "string", "direction": "MineToThem|TheirsToMe", "person_raw_name": "string|null", "due_date": "string|null", "confidence": "High|Medium|Low", "source_start_offset": 0, "source_end_offset": 0}],
           "decisions": ["string"],
           "risks": ["string"],
           "initiative_tags": [{"raw_name": "string", "context": "string|null"}]

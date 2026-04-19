@@ -48,6 +48,9 @@ public sealed class CommitmentConfiguration : IEntityTypeConfiguration<Commitmen
         builder.HasIndex(c => c.InitiativeId);
         builder.HasIndex(c => c.SourceCaptureId);
 
+        builder.Property(c => c.SourceStartOffset);
+        builder.Property(c => c.SourceEndOffset);
+
         builder.Ignore(c => c.IsOverdue);
     }
 }

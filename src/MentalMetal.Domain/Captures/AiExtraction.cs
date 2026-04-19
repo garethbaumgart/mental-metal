@@ -30,6 +30,8 @@ public sealed record ExtractedCommitment
     public Guid? PersonId { get; init; }
     public DateTimeOffset? DueDate { get; init; }
     public required CommitmentConfidence Confidence { get; init; }
+    public int? SourceStartOffset { get; init; }
+    public int? SourceEndOffset { get; init; }
     public Guid? SpawnedCommitmentId { get; init; }
 }
 
