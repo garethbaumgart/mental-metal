@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, input, output, viewChild } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import {
   CaptureTranscript,
@@ -16,6 +16,12 @@ export interface SpeakerGroup {
   startSeconds: number;
   endSeconds: number;
   segments: TranscriptSegment[];
+}
+
+interface SegmentHighlight {
+  before: string;
+  highlighted: string;
+  after: string;
 }
 
 @Component({
@@ -50,7 +56,11 @@ export interface SpeakerGroup {
             </div>
             <div class="flex flex-col gap-1">
               @for (seg of group.segments; track $index) {
-                <p class="text-sm leading-relaxed">{{ seg.text }}</p>
+                @if (segmentHighlight(seg); as hl) {
+                  <p class="text-sm leading-relaxed">{{ hl.before }}<mark #highlightMark class="source-highlight">{{ hl.highlighted }}</mark>{{ hl.after }}</p>
+                } @else {
+                  <p class="text-sm leading-relaxed">{{ seg.text }}</p>
+                }
               }
             </div>
           </div>
@@ -61,13 +71,60 @@ export interface SpeakerGroup {
 })
 export class TranscriptViewerComponent {
   readonly transcript = input.required<CaptureTranscript | null>();
+  readonly highlightStart = input<number | null>(null);
+  readonly highlightEnd = input<number | null>(null);
   readonly linkRequested = output<string>();
+  readonly highlightMark = viewChild<ElementRef<HTMLElement>>('highlightMark');
+
+  constructor() {
+    effect(() => {
+      const el = this.highlightMark()?.nativeElement;
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+  }
 
   protected readonly groups = computed<SpeakerGroup[]>(() => {
     const t = this.transcript();
     if (!t) return [];
     return groupBySpeaker(t.segments);
   });
+
+  /** Maps cumulative character offsets to determine per-segment highlights. */
+  private readonly segmentOffsets = computed(() => {
+    const t = this.transcript();
+    if (!t) return new Map<TranscriptSegment, number>();
+    const offsets = new Map<TranscriptSegment, number>();
+    let cursor = 0;
+    for (const seg of t.segments) {
+      offsets.set(seg, cursor);
+      cursor += seg.text.length + 1; // +1 for newline separator
+    }
+    return offsets;
+  });
+
+  protected segmentHighlight(seg: TranscriptSegment): SegmentHighlight | null {
+    const start = this.highlightStart();
+    const end = this.highlightEnd();
+    if (start == null || end == null || start >= end) return null;
+
+    const offsets = this.segmentOffsets();
+    const segStart = offsets.get(seg);
+    if (segStart == null) return null;
+    const segEnd = segStart + seg.text.length;
+
+    // Check if highlight range overlaps this segment
+    const overlapStart = Math.max(start - segStart, 0);
+    const overlapEnd = Math.min(end - segStart, seg.text.length);
+    if (overlapStart >= overlapEnd) return null;
+
+    return {
+      before: seg.text.substring(0, overlapStart),
+      highlighted: seg.text.substring(overlapStart, overlapEnd),
+      after: seg.text.substring(overlapEnd),
+    };
+  }
 
   protected formatTime(seconds: number): string {
     const mm = Math.floor(seconds / 60)

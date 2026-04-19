@@ -259,6 +259,62 @@ public class CommitmentTests
     }
 
     [Fact]
+    public void Create_WithSourceOffsets_SetsOffsets()
+    {
+        var commitment = Commitment.Create(
+            UserId, "Test", CommitmentDirection.MineToThem, PersonId,
+            sourceStartOffset: 100, sourceEndOffset: 200);
+
+        Assert.Equal(100, commitment.SourceStartOffset);
+        Assert.Equal(200, commitment.SourceEndOffset);
+    }
+
+    [Fact]
+    public void Create_WithoutSourceOffsets_OffsetsAreNull()
+    {
+        var commitment = Commitment.Create(UserId, "Test", CommitmentDirection.MineToThem, PersonId);
+
+        Assert.Null(commitment.SourceStartOffset);
+        Assert.Null(commitment.SourceEndOffset);
+    }
+
+    [Theory]
+    [InlineData(-1, 10)]
+    [InlineData(10, 5)]
+    [InlineData(10, 10)]
+    public void Create_WithInvalidOffsets_NormalizesToNull(int start, int end)
+    {
+        var commitment = Commitment.Create(
+            UserId, "Test", CommitmentDirection.MineToThem, PersonId,
+            sourceStartOffset: start, sourceEndOffset: end);
+
+        Assert.Null(commitment.SourceStartOffset);
+        Assert.Null(commitment.SourceEndOffset);
+    }
+
+    [Fact]
+    public void Create_WithOneSidedOffset_NormalizesToNull()
+    {
+        var commitment = Commitment.Create(
+            UserId, "Test", CommitmentDirection.MineToThem, PersonId,
+            sourceStartOffset: 10, sourceEndOffset: null);
+
+        Assert.Null(commitment.SourceStartOffset);
+        Assert.Null(commitment.SourceEndOffset);
+    }
+
+    [Fact]
+    public void Create_WithZeroStartOffset_PreservesOffsets()
+    {
+        var commitment = Commitment.Create(
+            UserId, "Test", CommitmentDirection.MineToThem, PersonId,
+            sourceStartOffset: 0, sourceEndOffset: 50);
+
+        Assert.Equal(0, commitment.SourceStartOffset);
+        Assert.Equal(50, commitment.SourceEndOffset);
+    }
+
+    [Fact]
     public void LinkToInitiative_SetsInitiativeIdAndRaisesEvent()
     {
         var commitment = Commitment.Create(UserId, "Test", CommitmentDirection.MineToThem, PersonId);

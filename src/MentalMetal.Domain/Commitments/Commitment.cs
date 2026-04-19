@@ -10,6 +10,8 @@ public sealed class Commitment : AggregateRoot, IUserScoped
     public Guid PersonId { get; private set; }
     public Guid? InitiativeId { get; private set; }
     public Guid? SourceCaptureId { get; private set; }
+    public int? SourceStartOffset { get; private set; }
+    public int? SourceEndOffset { get; private set; }
     public CommitmentConfidence Confidence { get; private set; }
     public DateOnly? DueDate { get; private set; }
     public CommitmentStatus Status { get; private set; }
@@ -34,7 +36,9 @@ public sealed class Commitment : AggregateRoot, IUserScoped
         DateOnly? dueDate = null,
         Guid? initiativeId = null,
         Guid? sourceCaptureId = null,
-        CommitmentConfidence confidence = CommitmentConfidence.High)
+        CommitmentConfidence confidence = CommitmentConfidence.High,
+        int? sourceStartOffset = null,
+        int? sourceEndOffset = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(description, nameof(description));
 
@@ -43,6 +47,14 @@ public sealed class Commitment : AggregateRoot, IUserScoped
 
         if (personId == Guid.Empty)
             throw new ArgumentException("PersonId is required.", nameof(personId));
+
+        // Normalize invalid or partial offset pairs to null
+        if (sourceStartOffset is null || sourceEndOffset is null
+            || sourceStartOffset < 0 || sourceEndOffset <= sourceStartOffset)
+        {
+            sourceStartOffset = null;
+            sourceEndOffset = null;
+        }
 
         var now = DateTimeOffset.UtcNow;
 
@@ -55,6 +67,8 @@ public sealed class Commitment : AggregateRoot, IUserScoped
             PersonId = personId,
             InitiativeId = initiativeId,
             SourceCaptureId = sourceCaptureId,
+            SourceStartOffset = sourceStartOffset,
+            SourceEndOffset = sourceEndOffset,
             Confidence = confidence,
             DueDate = dueDate,
             Status = CommitmentStatus.Open,

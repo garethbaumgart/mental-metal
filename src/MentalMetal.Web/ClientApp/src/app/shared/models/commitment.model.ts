@@ -12,6 +12,8 @@ export interface Commitment {
   personId: string;
   initiativeId: string | null;
   sourceCaptureId: string | null;
+  sourceStartOffset: number | null;
+  sourceEndOffset: number | null;
   confidence: CommitmentConfidence;
   dueDate: string | null;
   status: CommitmentStatus;

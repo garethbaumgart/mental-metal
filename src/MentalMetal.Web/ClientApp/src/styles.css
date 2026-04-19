@@ -8,3 +8,11 @@
      PrimeNG tokens (--p-primary-color, --p-surface-*, etc.) are
      automatically available as Tailwind utilities via tailwindcss-primeui. */
 }
+
+/* Shared highlight style for scrolling to source text from commitments */
+.source-highlight {
+  background: color-mix(in srgb, var(--p-yellow-100) 70%, transparent);
+  border-bottom: 2px solid var(--p-yellow-500);
+  padding: 1px 2px;
+  border-radius: 2px;
+}

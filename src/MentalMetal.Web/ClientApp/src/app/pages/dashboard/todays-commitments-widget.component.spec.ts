@@ -42,6 +42,8 @@ describe('TodaysCommitmentsWidgetComponent', () => {
       personId: 'p1',
       initiativeId: null,
       sourceCaptureId: null,
+      sourceStartOffset: null,
+      sourceEndOffset: null,
       confidence: 'High',
       dueDate: today(),
       status: 'Open',

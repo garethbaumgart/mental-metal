@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, OnInit, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
@@ -113,7 +113,11 @@ import { SpeakerPickerComponent } from '../speaker-picker/speaker-picker.compone
         <!-- Raw Content -->
         <section class="flex flex-col gap-4">
           <h2 class="text-xl font-semibold">Content</h2>
-          <div class="p-4 rounded-md border content-block whitespace-pre-wrap text-sm">{{ capture()!.rawContent }}</div>
+          @if (highlightRange(); as range) {
+            <div class="p-4 rounded-md border content-block whitespace-pre-wrap text-sm">{{ contentBefore() }}<mark #highlightMark class="source-highlight">{{ contentHighlighted() }}</mark>{{ contentAfter() }}</div>
+          } @else {
+            <div class="p-4 rounded-md border content-block whitespace-pre-wrap text-sm">{{ capture()!.rawContent }}</div>
+          }
         </section>
 
         <!-- Transcript (audio captures only) -->
@@ -122,7 +126,12 @@ import { SpeakerPickerComponent } from '../speaker-picker/speaker-picker.compone
             <div class="flex items-center justify-between">
               <h2 class="text-xl font-semibold">Transcript</h2>
             </div>
-            <app-transcript-viewer [transcript]="transcript()" (linkRequested)="openSpeakerPicker($event)" />
+            <app-transcript-viewer
+              [transcript]="transcript()"
+              [highlightStart]="highlightStart()"
+              [highlightEnd]="highlightEnd()"
+              (linkRequested)="openSpeakerPicker($event)"
+            />
             @if (pickerSpeakerLabel(); as label) {
               <app-speaker-picker [speakerLabel]="label" (linked)="onSpeakerLinked($event)" (cancelled)="pickerSpeakerLabel.set(null)" />
             }
@@ -286,8 +295,45 @@ export class CaptureDetailComponent implements OnInit {
   private readonly initiativesService = inject(InitiativesService);
   private readonly messageService = inject(MessageService);
 
+  readonly highlightMark = viewChild<ElementRef<HTMLElement>>('highlightMark');
+
   readonly capture = signal<Capture | null>(null);
   readonly loading = signal(true);
+
+  readonly highlightStart = signal<number | null>(null);
+  readonly highlightEnd = signal<number | null>(null);
+
+  readonly highlightRange = computed(() => {
+    const start = this.highlightStart();
+    const end = this.highlightEnd();
+    const raw = this.capture()?.rawContent;
+    if (start == null || end == null || !raw || start >= end || start < 0) return null;
+    const clampedEnd = Math.min(end, raw.length);
+    const clampedStart = Math.min(start, clampedEnd);
+    if (clampedStart >= clampedEnd) return null;
+    return { start: clampedStart, end: clampedEnd };
+  });
+
+  readonly contentBefore = computed(() => {
+    const range = this.highlightRange();
+    const raw = this.capture()?.rawContent;
+    if (!range || !raw) return '';
+    return raw.substring(0, range.start);
+  });
+
+  readonly contentHighlighted = computed(() => {
+    const range = this.highlightRange();
+    const raw = this.capture()?.rawContent;
+    if (!range || !raw) return '';
+    return raw.substring(range.start, range.end);
+  });
+
+  readonly contentAfter = computed(() => {
+    const range = this.highlightRange();
+    const raw = this.capture()?.rawContent;
+    if (!range || !raw) return '';
+    return raw.substring(range.end);
+  });
   readonly savingMetadata = signal(false);
   readonly retrying = signal(false);
   readonly transcript = signal<CaptureTranscript | null>(null);
@@ -300,6 +346,15 @@ export class CaptureDetailComponent implements OnInit {
   readonly initiatives = signal<Initiative[]>([]);
   readonly resolvingPersonName = signal<string | null>(null);
   readonly resolvingInitiativeName = signal<string | null>(null);
+
+  constructor() {
+    effect(() => {
+      const el = this.highlightMark()?.nativeElement;
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+  }
 
   readonly hasUnresolvedMentions = computed(() => {
     const c = this.capture();
@@ -316,6 +371,11 @@ export class CaptureDetailComponent implements OnInit {
     if (id) {
       this.loadCapture(id);
     }
+    const qs = this.route.snapshot.queryParamMap;
+    const hs = qs.get('highlightStart');
+    const he = qs.get('highlightEnd');
+    if (hs != null) { const n = parseInt(hs, 10); this.highlightStart.set(isNaN(n) ? null : n); }
+    if (he != null) { const n = parseInt(he, 10); this.highlightEnd.set(isNaN(n) ? null : n); }
   }
 
   protected goBack(): void {
