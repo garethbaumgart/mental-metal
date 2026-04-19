@@ -25,7 +25,7 @@ test.describe('Transcription Provider Settings', () => {
       `${API_BASE}/api/users/me/transcription-provider/validate`,
       {
         headers: { Authorization: `Bearer ${testUser.accessToken}` },
-        data: { apiKey: 'invalid-key-12345' },
+        data: { provider: 'Deepgram', apiKey: 'invalid-key-12345' },
       },
     );
 
@@ -70,6 +70,6 @@ test.describe('Transcription Provider Settings', () => {
 
     expect(response.ok()).toBeFalsy();
     const body = await response.json();
-    expect(body.code).toBe('transcription.notConfigured');
+    expect(body.errorCode).toBe('transcription.notConfigured');
   });
 });
