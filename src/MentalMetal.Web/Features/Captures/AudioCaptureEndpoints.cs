@@ -1,6 +1,8 @@
 using System.Globalization;
 using MentalMetal.Application.Captures;
+using MentalMetal.Application.Captures.AutoExtract;
 using MentalMetal.Domain.Captures;
+using MentalMetal.Domain.Users;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -21,6 +23,8 @@ public static class AudioCaptureEndpoints
             HttpRequest httpRequest,
             IOptions<AudioUploadOptions> optionsAccessor,
             UploadAudioCaptureHandler handler,
+            BackgroundExtractionTrigger extractionTrigger,
+            ICurrentUserService currentUser,
             CancellationToken cancellationToken) =>
         {
             var options = optionsAccessor.Value;
@@ -62,6 +66,9 @@ public static class AudioCaptureEndpoints
                         string.IsNullOrWhiteSpace(title) ? null : title,
                         CaptureSource.AudioCapture),
                     cancellationToken);
+
+                // Fire extraction in the background after transcription completes
+                extractionTrigger.FireAndForget(response.Id, currentUser.UserId);
                 return Results.Created($"/api/captures/{response.Id}", response);
             }
             catch (AudioCaptureException ex)

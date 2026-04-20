@@ -11,6 +11,7 @@ import { MessageModule } from 'primeng/message';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { CapturesService } from '../../../shared/services/captures.service';
+import { CaptureProcessingTrackerService } from '../../../shared/services/capture-processing-tracker.service';
 import { AudioRecorderService } from '../../../shared/services/audio-recorder.service';
 import { DeepgramTranscriptionService } from '../../../shared/services/deepgram-transcription.service';
 import { Capture } from '../../../shared/models/capture.model';
@@ -234,6 +235,7 @@ type VoiceState = 'idle' | 'recording' | 'done';
 })
 export class QuickCaptureDialogComponent implements OnDestroy {
   private readonly capturesService = inject(CapturesService);
+  private readonly processingTracker = inject(CaptureProcessingTrackerService);
   private readonly messageService = inject(MessageService);
   private readonly router = inject(Router);
   protected readonly recorder = inject(AudioRecorderService);
@@ -420,13 +422,15 @@ export class QuickCaptureDialogComponent implements OnDestroy {
       ).subscribe({
         next: (result) => {
           this.submitting.set(false);
+          this.processingTracker.track(result.id);
           this.messageService.add({
-            severity: 'success',
-            summary: 'File imported successfully',
+            severity: 'info',
+            summary: 'Capture saved',
+            detail: 'Processing in background...',
+            life: 3000,
           });
           this.resetDraft();
           this.visible.set(false);
-          this.router.navigate(['/capture', result.id]);
         },
         error: (err) => {
           this.submitting.set(false);
@@ -444,6 +448,13 @@ export class QuickCaptureDialogComponent implements OnDestroy {
       }).subscribe({
         next: (capture) => {
           this.submitting.set(false);
+          this.processingTracker.track(capture.id);
+          this.messageService.add({
+            severity: 'info',
+            summary: 'Capture saved',
+            detail: 'Processing in background...',
+            life: 3000,
+          });
           this.created.emit(capture);
           this.resetDraft();
           this.visible.set(false);

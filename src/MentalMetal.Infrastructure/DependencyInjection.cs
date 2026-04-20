@@ -166,6 +166,7 @@ public static class DependencyInjection
         services.AddScoped<GenerateWeeklyBriefHandler>();
 
         // Auto-extraction pipeline
+        services.AddSingleton<BackgroundExtractionTrigger>();
         services.AddScoped<AutoExtractCaptureHandler>();
         services.AddScoped<NameResolutionService>();
         services.AddScoped<InitiativeTaggingService>();

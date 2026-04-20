@@ -1,6 +1,7 @@
 using MentalMetal.Application.Captures.AutoExtract;
 using MentalMetal.Application.Captures.ImportCapture;
 using MentalMetal.Domain.Captures;
+using MentalMetal.Domain.Users;
 
 namespace MentalMetal.Web.Features.Captures;
 
@@ -12,7 +13,8 @@ public static class ImportCaptureEndpoints
             HttpRequest httpRequest,
             ImportCaptureFromJsonHandler jsonHandler,
             ImportCaptureFromFileHandler fileHandler,
-            AutoExtractCaptureHandler extractHandler,
+            BackgroundExtractionTrigger extractionTrigger,
+            ICurrentUserService currentUser,
             CancellationToken cancellationToken) =>
         {
             try
@@ -39,9 +41,9 @@ public static class ImportCaptureEndpoints
                     captureId = id;
                 }
 
-                // Auto-trigger extraction (best-effort, skip if no capture was created)
+                // Fire extraction in the background — response returns immediately
                 if (captureId.HasValue && captureId.Value != Guid.Empty)
-                    await extractHandler.HandleAsync(captureId.Value, cancellationToken);
+                    extractionTrigger.FireAndForget(captureId.Value, currentUser.UserId);
 
                 return result;
             }
