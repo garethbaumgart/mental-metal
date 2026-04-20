@@ -1,4 +1,4 @@
-export type PersonType = 'DirectReport' | 'Peer' | 'Stakeholder' | 'External';
+export type PersonType = 'DirectReport' | 'Peer' | 'Stakeholder' | 'Candidate' | 'External';
 
 export interface Person {
   id: string;

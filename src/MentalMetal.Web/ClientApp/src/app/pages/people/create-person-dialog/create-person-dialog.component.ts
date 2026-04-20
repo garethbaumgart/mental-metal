@@ -102,6 +102,7 @@ export class CreatePersonDialogComponent {
     { label: 'Direct Report', value: 'DirectReport' as PersonType },
     { label: 'Peer', value: 'Peer' as PersonType },
     { label: 'Stakeholder', value: 'Stakeholder' as PersonType },
+    { label: 'Candidate', value: 'Candidate' as PersonType },
     { label: 'External', value: 'External' as PersonType },
   ];
 
