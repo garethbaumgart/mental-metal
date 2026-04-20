@@ -6,6 +6,7 @@ import {
   CommitmentDirection,
   CommitmentStatus,
   CompleteCommitmentRequest,
+  UpdateCommitmentRequest,
 } from '../models/commitment.model';
 
 @Injectable({ providedIn: 'root' })
@@ -53,5 +54,9 @@ export class CommitmentsService {
 
   reopen(id: string): Observable<Commitment> {
     return this.http.post<Commitment>(`${this.baseUrl}/${id}/reopen`, {});
+  }
+
+  update(id: string, request: UpdateCommitmentRequest): Observable<Commitment> {
+    return this.http.put<Commitment>(`${this.baseUrl}/${id}`, request);
   }
 }
