@@ -6,6 +6,7 @@ import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
+import { finalize } from 'rxjs';
 import { CommitmentsService } from '../../../shared/services/commitments.service';
 import { PeopleService } from '../../../shared/services/people.service';
 import { InitiativesService } from '../../../shared/services/initiatives.service';
@@ -198,16 +199,14 @@ export class CommitmentDetailComponent implements OnInit {
     if (!c) return;
     const newDirection = c.direction === 'MineToThem' ? 'TheirsToMe' : 'MineToThem';
     this.togglingDirection.set(true);
-    this.commitmentsService.update(c.id, { direction: newDirection }).subscribe({
+    this.commitmentsService.update(c.id, { direction: newDirection }).pipe(
+      finalize(() => this.togglingDirection.set(false)),
+    ).subscribe({
       next: (updated) => {
         this.commitment.set(updated);
-        this.togglingDirection.set(false);
         this.messageService.add({ severity: 'success', summary: 'Direction updated' });
       },
-      error: () => {
-        this.togglingDirection.set(false);
-        this.messageService.add({ severity: 'error', summary: 'Failed to update direction' });
-      },
+      error: () => this.messageService.add({ severity: 'error', summary: 'Failed to update direction' }),
     });
   }
 
