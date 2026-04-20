@@ -209,7 +209,7 @@ export class DeepgramTranscriptionService implements OnDestroy {
       this.pendingAudioChunks = [];
       const reason = closeReason
         ? `Transcription service unavailable: ${closeReason}`
-        : 'Could not connect to transcription service. Please try again.';
+        : 'Could not connect to transcription service. Check your Deepgram API key in Settings, or try again.';
       this.error.set(reason);
       return;
     }
