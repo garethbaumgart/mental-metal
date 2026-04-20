@@ -265,12 +265,21 @@ export class CapturesListComponent implements OnInit, OnDestroy {
   }
 
   private pollForUpdates(): void {
-    this.capturesService.list(this.selectedType() ?? undefined, this.selectedStatus() ?? undefined).subscribe({
-      next: (captures) => {
-        this.captures.set(captures);
-        const hasProcessing = captures.some(
+    // Poll unfiltered to detect processing items even if current filters hide them
+    this.capturesService.list().subscribe({
+      next: (allCaptures) => {
+        const hasProcessing = allCaptures.some(
           (c) => c.processingStatus === 'Raw' || c.processingStatus === 'Processing',
         );
+
+        // Apply current filters for display
+        const filtered = allCaptures.filter((c) => {
+          if (this.selectedType() && c.captureType !== this.selectedType()) return false;
+          if (this.selectedStatus() && c.processingStatus !== this.selectedStatus()) return false;
+          return true;
+        });
+        this.captures.set(filtered);
+
         if (!hasProcessing) {
           this.cleanPollCount++;
           if (this.cleanPollCount >= 2) {
