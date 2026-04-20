@@ -4,7 +4,7 @@
 
 ### Requirement: TranscriptionProviderConfig value object
 
-The system SHALL define a `TranscriptionProviderConfig` value object with: `Provider` (enum: Deepgram), `EncryptedApiKey` (string), and `Model` (string). The value object SHALL be embedded on the `User` aggregate. `EncryptedApiKey` MUST NOT be empty. `Model` MUST NOT be empty.
+The system SHALL define a `TranscriptionProviderConfig` value object with: `Provider` (enum: Deepgram), `EncryptedApiKey` (string), and `Model` (string). The value object SHALL be embedded on the `User` aggregate. `EncryptedApiKey` MUST NOT be empty or whitespace-only. `Model` MUST NOT be empty or whitespace-only.
 
 #### Scenario: TranscriptionProviderConfig creation with valid inputs
 
@@ -86,7 +86,7 @@ The system SHALL encrypt transcription provider API keys using the same `IApiKey
 
 ### Requirement: Configure transcription provider API endpoint
 
-The system SHALL expose `PUT /api/users/me/transcription-provider` to configure the user's transcription provider. The request body SHALL include `provider` (string), `apiKey` (plaintext string), and `model` (string). The endpoint SHALL encrypt the API key before passing to the domain.
+The system SHALL expose `PUT /api/users/me/transcription-provider` to configure the user's transcription provider. The request body SHALL include `provider` (case-insensitive string matching a supported `TranscriptionProvider` enum value, currently only `"Deepgram"`), `apiKey` (plaintext string), and `model` (string). The endpoint SHALL encrypt the API key before passing to the domain.
 
 #### Scenario: Successful configuration
 
