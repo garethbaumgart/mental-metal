@@ -90,6 +90,7 @@ export class PeopleListComponent implements OnInit {
     { label: 'Direct Report', value: 'DirectReport' as PersonType },
     { label: 'Peer', value: 'Peer' as PersonType },
     { label: 'Stakeholder', value: 'Stakeholder' as PersonType },
+    { label: 'Candidate', value: 'Candidate' as PersonType },
     { label: 'External', value: 'External' as PersonType },
   ];
 
@@ -114,15 +115,17 @@ export class PeopleListComponent implements OnInit {
       case 'DirectReport': return 'Direct Report';
       case 'Peer': return 'Peer';
       case 'Stakeholder': return 'Stakeholder';
+      case 'Candidate': return 'Candidate';
       case 'External': return 'External';
     }
   }
 
-  protected typeSeverity(type: PersonType): 'info' | 'warn' | 'success' | 'secondary' {
+  protected typeSeverity(type: PersonType): 'info' | 'warn' | 'success' | 'secondary' | 'contrast' {
     switch (type) {
       case 'DirectReport': return 'info';
       case 'Peer': return 'success';
       case 'Stakeholder': return 'warn';
+      case 'Candidate': return 'contrast';
       case 'External': return 'secondary';
     }
   }
