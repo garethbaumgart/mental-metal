@@ -50,7 +50,7 @@ public sealed class FileSystemAudioBlobStore(IOptions<AudioBlobStoreOptions> opt
 
     private static string MimeToExtension(string? mimeType) => mimeType switch
     {
-        "audio/webm" => ".webm",
+        "audio/webm" or "video/webm" => ".webm",
         "audio/mp4" or "audio/x-m4a" => ".m4a",
         "audio/mpeg" => ".mp3",
         "audio/wav" or "audio/x-wav" => ".wav",
