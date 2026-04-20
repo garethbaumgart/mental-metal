@@ -202,7 +202,7 @@ export class CommitmentsListComponent implements OnInit {
   private readonly peopleMap = signal<Map<string, string>>(new Map());
 
   readonly selectedDirection = signal<CommitmentDirection | null>(null);
-  readonly selectedStatus = signal<CommitmentStatus | null>(null);
+  readonly selectedStatus = signal<CommitmentStatus | null>('Open');
   readonly selectedOverdue = signal<boolean | null>(null);
 
   readonly personGroups = computed<PersonGroup[]>(() => {
