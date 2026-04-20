@@ -23,4 +23,17 @@ public class AudioUploadOptionsTests
 
         Assert.Contains(mimeType, options.AllowedMimeTypes, StringComparer.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void DefaultAllowedMimeTypes_ExactSet()
+    {
+        var options = new AudioUploadOptions();
+        var expected = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "audio/webm", "audio/mp4", "audio/mpeg", "audio/wav", "audio/ogg", "video/webm"
+        };
+
+        Assert.Equal(expected.Count, options.AllowedMimeTypes.Count);
+        Assert.All(options.AllowedMimeTypes, mime => Assert.Contains(mime, expected));
+    }
 }
