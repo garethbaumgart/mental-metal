@@ -14,8 +14,8 @@ namespace MentalMetal.Infrastructure.Migrations
                 UPDATE "Commitments" SET "Direction" = CASE
                     WHEN "Direction" = 'MineToThem' THEN 'TheirsToMe'
                     WHEN "Direction" = 'TheirsToMe' THEN 'MineToThem'
-                    ELSE "Direction"
                 END
+                WHERE "Direction" IN ('MineToThem', 'TheirsToMe')
                 """);
         }
 
@@ -26,8 +26,8 @@ namespace MentalMetal.Infrastructure.Migrations
                 UPDATE "Commitments" SET "Direction" = CASE
                     WHEN "Direction" = 'MineToThem' THEN 'TheirsToMe'
                     WHEN "Direction" = 'TheirsToMe' THEN 'MineToThem'
-                    ELSE "Direction"
                 END
+                WHERE "Direction" IN ('MineToThem', 'TheirsToMe')
                 """);
         }
     }
