@@ -4,7 +4,9 @@ import { DatePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
+import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
+import { finalize } from 'rxjs';
 import { CommitmentsService } from '../../../shared/services/commitments.service';
 import { PeopleService } from '../../../shared/services/people.service';
 import { InitiativesService } from '../../../shared/services/initiatives.service';
@@ -14,7 +16,7 @@ import { Commitment, CommitmentConfidence, CommitmentDirection, CommitmentStatus
   selector: 'app-commitment-detail',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, ButtonModule, TagModule, ToastModule, RouterLink],
+  imports: [DatePipe, ButtonModule, TagModule, ToastModule, TooltipModule, RouterLink],
   providers: [MessageService],
   styles: [`
     .detail-row {
@@ -60,9 +62,23 @@ import { Commitment, CommitmentConfidence, CommitmentDirection, CommitmentStatus
               <span class="text-sm font-medium text-muted-color w-32">Person</span>
               <span class="text-sm">{{ personName() }}</span>
             </div>
-            <div class="flex gap-4 py-2 border-b detail-row">
+            <div class="flex gap-4 py-2 border-b detail-row items-center">
               <span class="text-sm font-medium text-muted-color w-32">Direction</span>
-              <span class="text-sm">{{ formatDirection(commitment()!.direction) }}</span>
+              <div class="flex items-center gap-2">
+                <p-tag
+                  [value]="formatDirection(commitment()!.direction)"
+                  [severity]="directionSeverity(commitment()!.direction)"
+                />
+                <p-button
+                  icon="pi pi-arrow-right-arrow-left"
+                  [text]="true"
+                  size="small"
+                  pTooltip="Switch direction"
+                  ariaLabel="Switch direction"
+                  [loading]="togglingDirection()"
+                  (onClick)="onToggleDirection()"
+                />
+              </div>
             </div>
             <div class="flex gap-4 py-2 border-b detail-row">
               <span class="text-sm font-medium text-muted-color w-32">Confidence</span>
@@ -129,6 +145,7 @@ export class CommitmentDetailComponent implements OnInit {
 
   readonly commitment = signal<Commitment | null>(null);
   readonly loading = signal(true);
+  readonly togglingDirection = signal(false);
   readonly personName = signal('Loading...');
   readonly initiativeName = signal('');
   readonly sourceHighlightParams = computed(() => {
@@ -174,6 +191,22 @@ export class CommitmentDetailComponent implements OnInit {
         this.messageService.add({ severity: 'success', summary: 'Commitment dismissed' });
       },
       error: () => this.messageService.add({ severity: 'error', summary: 'Failed to dismiss' }),
+    });
+  }
+
+  protected onToggleDirection(): void {
+    const c = this.commitment();
+    if (!c) return;
+    const newDirection = c.direction === 'MineToThem' ? 'TheirsToMe' : 'MineToThem';
+    this.togglingDirection.set(true);
+    this.commitmentsService.update(c.id, { direction: newDirection }).pipe(
+      finalize(() => this.togglingDirection.set(false)),
+    ).subscribe({
+      next: (updated) => {
+        this.commitment.set(updated);
+        this.messageService.add({ severity: 'success', summary: 'Direction updated' });
+      },
+      error: () => this.messageService.add({ severity: 'error', summary: 'Failed to update direction' }),
     });
   }
 

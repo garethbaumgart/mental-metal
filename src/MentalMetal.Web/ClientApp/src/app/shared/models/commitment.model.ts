@@ -28,3 +28,12 @@ export interface Commitment {
 export interface CompleteCommitmentRequest {
   notes?: string;
 }
+
+export interface UpdateCommitmentRequest {
+  description?: string;
+  direction?: CommitmentDirection;
+  dueDate?: string;
+  clearDueDate?: boolean;
+  notes?: string;
+  clearNotes?: boolean;
+}
