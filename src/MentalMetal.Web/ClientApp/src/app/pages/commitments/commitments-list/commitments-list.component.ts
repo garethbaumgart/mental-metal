@@ -100,7 +100,11 @@ interface PersonGroup {
       } @else if (commitments().length === 0) {
         <div class="flex flex-col items-center gap-4 p-12">
           <i class="pi pi-check-square text-4xl text-muted-color"></i>
-          <p class="text-muted-color">No commitments found. Commitments are created automatically from transcript extraction.</p>
+          @if (hasActiveFilters()) {
+            <p class="text-muted-color">No commitments match the current filters. Try adjusting or clearing the filters above.</p>
+          } @else {
+            <p class="text-muted-color">No commitments found. Commitments are created automatically from transcript extraction.</p>
+          }
         </div>
       } @else {
         <div class="flex flex-col gap-6">
@@ -202,8 +206,12 @@ export class CommitmentsListComponent implements OnInit {
   private readonly peopleMap = signal<Map<string, string>>(new Map());
 
   readonly selectedDirection = signal<CommitmentDirection | null>(null);
-  readonly selectedStatus = signal<CommitmentStatus | null>(null);
+  readonly selectedStatus = signal<CommitmentStatus | null>('Open');
   readonly selectedOverdue = signal<boolean | null>(null);
+
+  readonly hasActiveFilters = computed(() =>
+    this.selectedDirection() !== null || this.selectedStatus() !== null || this.selectedOverdue() !== null,
+  );
 
   readonly personGroups = computed<PersonGroup[]>(() => {
     const commitments = this.commitments();
