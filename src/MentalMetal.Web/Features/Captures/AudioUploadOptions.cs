@@ -21,5 +21,7 @@ public sealed class AudioUploadOptions
         "audio/mp4",
         "audio/mpeg",
         "audio/wav",
+        "audio/ogg",
+        "video/webm",  // getDisplayMedia (tab capture) produces video/webm even for audio-only
     };
 }
