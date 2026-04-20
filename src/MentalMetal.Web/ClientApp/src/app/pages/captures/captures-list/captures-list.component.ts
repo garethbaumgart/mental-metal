@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
@@ -7,6 +7,7 @@ import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { CapturesService } from '../../../shared/services/captures.service';
+import { CaptureProcessingTrackerService } from '../../../shared/services/capture-processing-tracker.service';
 import { QuickCaptureUiService } from '../../../shared/services/quick-capture-ui.service';
 import { Capture, CaptureType, ProcessingStatus } from '../../../shared/models/capture.model';
 import { CaptureRecorderComponent } from '../audio-recorder/capture-recorder.component';
@@ -32,6 +33,15 @@ interface FileUpload {
     .drop-zone-active {
       border-color: var(--p-primary-color);
       background-color: var(--p-primary-50);
+    }
+    .processing-queue {
+      background-color: var(--p-primary-50);
+      border: 1px solid var(--p-content-border-color);
+      border-radius: 8px;
+      padding: 14px;
+    }
+    :host-context(.dark) .processing-queue {
+      background-color: var(--p-primary-950);
     }
   `],
   template: `
@@ -102,6 +112,24 @@ interface FileUpload {
       <app-recording-panel (saved)="onCaptureCreated($event)" />
       <app-capture-recorder (uploaded)="onCaptureCreated($event)" />
 
+      <!-- Currently Processing Queue (Option 5) -->
+      @if (processingCaptures().length > 0) {
+        <div class="processing-queue" aria-label="Currently processing">
+          <div class="text-xs font-semibold uppercase text-muted-color mb-3">Currently Processing</div>
+          @for (c of processingCaptures(); track c.id) {
+            <div class="flex items-center gap-3 py-2">
+              <i class="pi pi-spinner pi-spin text-sm" style="color: var(--p-primary-color)"></i>
+              <span class="flex-1 text-sm font-medium truncate">
+                {{ c.title || contentPreview(c.rawContent) }}
+              </span>
+              <span class="text-xs text-muted-color">
+                {{ c.processingStatus === 'Raw' ? 'Queued...' : 'Extracting...' }}
+              </span>
+            </div>
+          }
+        </div>
+      }
+
       <div class="flex items-center gap-4">
         <p-select
           [options]="typeFilterOptions"
@@ -125,16 +153,16 @@ interface FileUpload {
         <div class="flex justify-center p-8">
           <i class="pi pi-spinner pi-spin text-2xl"></i>
         </div>
-      } @else if (captures().length === 0) {
+      } @else if (completedCaptures().length === 0 && processingCaptures().length === 0) {
         <div class="flex flex-col items-center gap-4 p-12">
           <i class="pi pi-pencil text-4xl text-muted-color"></i>
           <p class="text-muted-color">No captures found. Create your first capture to get started.</p>
         </div>
-      } @else {
+      } @else if (completedCaptures().length > 0) {
         <p-table
-          [value]="captures()"
+          [value]="completedCaptures()"
           [rows]="20"
-          [paginator]="captures().length > 20"
+          [paginator]="completedCaptures().length > 20"
           [rowHover]="true"
           styleClass="p-datatable-sm"
         >
@@ -153,13 +181,7 @@ interface FileUpload {
                 <p-tag [value]="formatType(capture.captureType)" [severity]="typeSeverity(capture.captureType)" />
               </td>
               <td>
-                @if (capture.processingStatus === 'Processing') {
-                  <p-tag severity="warn">
-                    <i class="pi pi-spinner pi-spin mr-1"></i> Processing
-                  </p-tag>
-                } @else {
-                  <p-tag [value]="formatStatus(capture.processingStatus)" [severity]="statusSeverity(capture.processingStatus)" />
-                }
+                <p-tag [value]="formatStatus(capture.processingStatus)" [severity]="statusSeverity(capture.processingStatus)" />
               </td>
               <td class="text-muted-color text-sm">{{ capture.capturedAt | date:'short' }}</td>
             </tr>
@@ -170,8 +192,9 @@ interface FileUpload {
     </div>
   `,
 })
-export class CapturesListComponent implements OnInit {
+export class CapturesListComponent implements OnInit, OnDestroy {
   private readonly capturesService = inject(CapturesService);
+  private readonly processingTracker = inject(CaptureProcessingTrackerService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly quickCapture = inject(QuickCaptureUiService);
@@ -183,8 +206,24 @@ export class CapturesListComponent implements OnInit {
   readonly dragOver = signal(false);
   readonly uploads = signal<FileUpload[]>([]);
 
+  /** Captures currently being processed (Raw or Processing status). */
+  protected readonly processingCaptures = computed(() =>
+    this.captures().filter((c) =>
+      c.processingStatus === 'Raw' || c.processingStatus === 'Processing',
+    ),
+  );
+
+  /** Captures that are done processing (Processed or Failed). */
+  protected readonly completedCaptures = computed(() =>
+    this.captures().filter((c) =>
+      c.processingStatus !== 'Raw' && c.processingStatus !== 'Processing',
+    ),
+  );
+
   private readonly acceptedExtensions = ['.docx', '.txt', '.html', '.htm'];
   private pendingUploads = 0;
+  private pollInterval: ReturnType<typeof setInterval> | null = null;
+  private cleanPollCount = 0;
 
   protected readonly typeFilterOptions = [
     { label: 'Quick Note', value: 'QuickNote' as CaptureType },
@@ -201,8 +240,46 @@ export class CapturesListComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadCaptures();
-    this.quickCapture.captureCreated$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-      this.loadCaptures();
+    this.quickCapture.captureCreated$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((capture) => {
+      // Optimistic queue entry: immediately add the new capture to the list
+      this.captures.update((list) => [capture, ...list]);
+      this.startPolling();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.stopPolling();
+  }
+
+  private startPolling(): void {
+    if (this.pollInterval) return;
+    this.cleanPollCount = 0;
+    this.pollInterval = setInterval(() => this.pollForUpdates(), 3000);
+  }
+
+  private stopPolling(): void {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
+    }
+  }
+
+  private pollForUpdates(): void {
+    this.capturesService.list(this.selectedType() ?? undefined, this.selectedStatus() ?? undefined).subscribe({
+      next: (captures) => {
+        this.captures.set(captures);
+        const hasProcessing = captures.some(
+          (c) => c.processingStatus === 'Raw' || c.processingStatus === 'Processing',
+        );
+        if (!hasProcessing) {
+          this.cleanPollCount++;
+          if (this.cleanPollCount >= 2) {
+            this.stopPolling();
+          }
+        } else {
+          this.cleanPollCount = 0;
+        }
+      },
     });
   }
 
@@ -269,12 +346,14 @@ export class CapturesListComponent implements OnInit {
     );
 
     this.capturesService.importFile(upload.file).subscribe({
-      next: () => {
+      next: (result) => {
         this.uploads.update((list) =>
           list.map((u) =>
             u.file === upload.file ? { ...u, status: 'done' as const } : u,
           ),
         );
+        // Track the uploaded capture for background processing
+        this.processingTracker.track(result.id);
         this.onUploadSettled();
       },
       error: (err: unknown) => {
@@ -298,6 +377,7 @@ export class CapturesListComponent implements OnInit {
     if (this.pendingUploads <= 0) {
       this.pendingUploads = 0;
       this.loadCaptures();
+      this.startPolling();
     }
   }
 
@@ -309,8 +389,10 @@ export class CapturesListComponent implements OnInit {
     this.router.navigate(['/capture', capture.id]);
   }
 
-  protected onCaptureCreated(_capture: Capture): void {
-    this.loadCaptures();
+  protected onCaptureCreated(capture: Capture): void {
+    this.processingTracker.track(capture.id);
+    this.captures.update((list) => [capture, ...list]);
+    this.startPolling();
   }
 
   protected contentPreview(content: string): string {
@@ -359,6 +441,11 @@ export class CapturesListComponent implements OnInit {
       next: (captures) => {
         this.captures.set(captures);
         this.loading.set(false);
+
+        // Start polling if there are processing items
+        if (captures.some((c) => c.processingStatus === 'Raw' || c.processingStatus === 'Processing')) {
+          this.startPolling();
+        }
       },
       error: () => this.loading.set(false),
     });

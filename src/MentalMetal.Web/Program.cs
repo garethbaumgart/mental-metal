@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using MentalMetal.Application.Briefings;
 using MentalMetal.Application.Captures;
 using MentalMetal.Application.Captures.AutoExtract;
+using MentalMetal.Domain.Users;
 using MentalMetal.Web;
 using MentalMetal.Web.Features.Captures;
 using MentalMetal.Infrastructure.Ai;
@@ -857,7 +858,8 @@ app.MapPost("/api/initiatives/{id:guid}/refresh-summary", async (
 app.MapPost("/api/captures", async (
     CreateCaptureRequest request,
     CreateCaptureHandler handler,
-    AutoExtractCaptureHandler extractHandler,
+    BackgroundExtractionTrigger extractionTrigger,
+    ICurrentUserService currentUser,
     CancellationToken cancellationToken) =>
 {
     try
@@ -868,9 +870,9 @@ app.MapPost("/api/captures", async (
             : request;
         var created = await handler.HandleAsync(effectiveRequest, cancellationToken);
 
-        // Auto-trigger extraction synchronously (best-effort — failures are recorded on the capture)
-        var response = await extractHandler.HandleAsync(created.Id, cancellationToken);
-        return Results.Created($"/api/captures/{response.Id}", response);
+        // Fire extraction in the background — response returns immediately with Raw status
+        extractionTrigger.FireAndForget(created.Id, currentUser.UserId);
+        return Results.Created($"/api/captures/{created.Id}", created);
     }
     catch (ArgumentException ex)
     {
