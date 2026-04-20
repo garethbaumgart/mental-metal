@@ -28,9 +28,13 @@ public sealed class BackgroundExtractionTrigger(
                 backgroundUserScope.SetUserId(userId);
 
                 var handler = scope.ServiceProvider.GetRequiredService<AutoExtractCaptureHandler>();
-                await handler.HandleAsync(captureId, CancellationToken.None);
+                var result = await handler.HandleAsync(captureId, CancellationToken.None);
 
-                logger.LogInformation("Background extraction completed for capture {CaptureId}", captureId);
+                if (result.ProcessingStatus == Domain.Captures.ProcessingStatus.Failed)
+                    logger.LogWarning("Background extraction finished with Failed status for capture {CaptureId}: {Reason}",
+                        captureId, result.FailureReason);
+                else
+                    logger.LogInformation("Background extraction completed for capture {CaptureId}", captureId);
             }
             catch (Exception ex)
             {

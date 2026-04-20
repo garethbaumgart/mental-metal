@@ -1,7 +1,7 @@
 import { DestroyRef, inject, Injectable } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subject, interval, Subscription } from 'rxjs';
-import { switchMap, filter } from 'rxjs/operators';
+import { Subject, interval, Subscription, EMPTY } from 'rxjs';
+import { switchMap, filter, catchError } from 'rxjs/operators';
 import { CapturesService } from './captures.service';
 import { Capture } from '../models/capture.model';
 
@@ -42,7 +42,7 @@ export class CaptureProcessingTrackerService {
     this.pollSubscription = interval(5000)
       .pipe(
         filter(() => this.trackedIds.size > 0),
-        switchMap(() => this.capturesService.list()),
+        switchMap(() => this.capturesService.list().pipe(catchError(() => EMPTY))),
       )
       .subscribe({
         next: (captures) => {
@@ -64,9 +64,6 @@ export class CaptureProcessingTrackerService {
           if (this.trackedIds.size === 0) {
             this.stopPolling();
           }
-        },
-        error: () => {
-          // Polling failure is non-fatal — will retry on next interval
         },
       });
   }

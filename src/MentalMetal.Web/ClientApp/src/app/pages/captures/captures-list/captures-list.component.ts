@@ -153,7 +153,7 @@ interface FileUpload {
         <div class="flex justify-center p-8">
           <i class="pi pi-spinner pi-spin text-2xl"></i>
         </div>
-      } @else if (completedCaptures().length === 0 && processingCaptures().length === 0) {
+      } @else if (captures().length === 0) {
         <div class="flex flex-col items-center gap-4 p-12">
           <i class="pi pi-pencil text-4xl text-muted-color"></i>
           <p class="text-muted-color">No captures found. Create your first capture to get started.</p>
@@ -222,8 +222,9 @@ export class CapturesListComponent implements OnInit, OnDestroy {
 
   private readonly acceptedExtensions = ['.docx', '.txt', '.html', '.htm'];
   private pendingUploads = 0;
-  private pollInterval: ReturnType<typeof setInterval> | null = null;
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
   private cleanPollCount = 0;
+  private pollInFlight = false;
 
   protected readonly typeFilterOptions = [
     { label: 'Quick Note', value: 'QuickNote' as CaptureType },
@@ -252,22 +253,25 @@ export class CapturesListComponent implements OnInit, OnDestroy {
   }
 
   private startPolling(): void {
-    if (this.pollInterval) return;
+    if (this.pollTimer) return;
     this.cleanPollCount = 0;
-    this.pollInterval = setInterval(() => this.pollForUpdates(), 3000);
+    this.pollTimer = setInterval(() => this.pollForUpdates(), 3000);
   }
 
   private stopPolling(): void {
-    if (this.pollInterval) {
-      clearInterval(this.pollInterval);
-      this.pollInterval = null;
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
     }
   }
 
   private pollForUpdates(): void {
+    if (this.pollInFlight) return; // Skip if previous request still pending
+    this.pollInFlight = true;
     // Poll unfiltered to detect processing items even if current filters hide them
     this.capturesService.list().subscribe({
       next: (allCaptures) => {
+        this.pollInFlight = false;
         const hasProcessing = allCaptures.some(
           (c) => c.processingStatus === 'Raw' || c.processingStatus === 'Processing',
         );
@@ -288,6 +292,9 @@ export class CapturesListComponent implements OnInit, OnDestroy {
         } else {
           this.cleanPollCount = 0;
         }
+      },
+      error: () => {
+        this.pollInFlight = false;
       },
     });
   }
