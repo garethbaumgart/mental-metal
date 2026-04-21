@@ -19,7 +19,7 @@ The existing extraction prompt instructs the AI to return a structured JSON resp
 
 **Non-Goals:**
 - Client-side heuristic detection before submission
-- User override UI for the detected type (manual type selection already exists in Advanced section)
+- User override UI for the detected type (manual type selection in Quick Capture is a separate UI gap, out of scope)
 - Reclassification of `AudioRecording` captures (set by the audio pipeline, must not be overwritten)
 - Retroactive reclassification of already-processed captures
 
@@ -37,7 +37,7 @@ The existing extraction prompt instructs the AI to return a structured JSON resp
 
 ### 2. Domain method `Reclassify(CaptureType)` on Capture aggregate
 
-**Decision:** Add a domain method that changes `CaptureType` and raises a `CaptureReclassified` event. The method SHALL only be callable when `ProcessingStatus` is `Processing` (i.e., during the extraction pipeline), and SHALL reject reclassification to `AudioRecording`.
+**Decision:** Add a domain method that changes `CaptureType` and raises a `CaptureReclassified` event. The method SHALL only be callable when `ProcessingStatus` is `Processing` (i.e., during the extraction pipeline, before `CompleteProcessing` transitions the capture to `Processed`), and SHALL reject reclassification to `AudioRecording`.
 
 **Alternatives considered:**
 - Direct property setter -- rejected: violates DDD encapsulation; no event, no guard
@@ -78,7 +78,7 @@ The field is added to the JSON schema at the end of the response object. Fallbac
 ## Risks / Trade-offs
 
 - **[Risk] AI misclassifies content** -- Mitigation: keep original type as fallback if `detected_type` is null or unrecognized; the AI prompt includes clear classification criteria; users can still manually set type via Advanced section before capture
-- **[Risk] EF migration on AiExtraction owned entity** -- Mitigation: this is a simple nullable column addition with no data migration; existing rows get NULL for `DetectedCaptureType`
+- **[Risk] EF JSONB serialization of new field** -- Mitigation: `AiExtraction` is persisted as JSONB via `ToJson()`, so adding `DetectedCaptureType` requires no schema migration; existing rows simply lack the field and deserialize as null
 - **[Trade-off] No retroactive reclassification** -- Existing captures keep their original type. Acceptable because only newly processed captures benefit, and the backlog of mislabelled captures is small.
 
 ## Open Questions

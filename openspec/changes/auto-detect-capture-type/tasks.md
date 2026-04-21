@@ -14,11 +14,11 @@
 
 ## 3. Infrastructure Layer
 
-- [ ] 3.1 Add EF Core migration for `DetectedCaptureType` column on the AiExtraction owned entity (nullable enum column)
-- [ ] 3.2 Update EF Core configuration if needed to map `AiExtraction.DetectedCaptureType`
+- [ ] 3.1 Verify no EF Core migration is required -- `AiExtraction` is persisted as JSONB via `ToJson()`, so `DetectedCaptureType` is stored as a new JSON field rather than a separate column
+- [ ] 3.2 Verify EF Core JSON mapping correctly serializes/deserializes `AiExtraction.DetectedCaptureType` (nullable enum in JSONB)
 
 ## 4. Frontend
 
-- [ ] 4.1 Add `detectedCaptureType` field to the capture response model/DTO in the Angular app
-- [ ] 4.2 Update capture detail view to display a "Detected as: {type}" indicator when `detectedCaptureType` is present and differs from the capture's original type
+- [ ] 4.1 Add `detectedCaptureType` field to the nested `AiExtraction` model/interface in the Angular app (under `aiExtraction`, not as a top-level field on `Capture`)
+- [ ] 4.2 Update capture detail view to display a "Detected as: {type}" indicator when `aiExtraction.detectedCaptureType` is present
 - [ ] 4.3 Write frontend unit test for the detected type indicator display logic

@@ -15,7 +15,7 @@ When a user pastes a meeting transcript into Quick Capture, the system always cr
 
 - No client-side heuristic detection (all classification happens server-side during AI extraction)
 - No new AI call or separate classification endpoint -- detection piggybacks on the existing extraction call
-- No user override UI for the detected type in this change (existing Advanced section already allows manual type selection at creation time)
+- No user override UI for the detected type in this change (manual type selection in Quick Capture is a separate UI gap and out of scope for this proposal)
 - `AudioRecording` is excluded from auto-detection -- it is set by the audio capture pipeline and should not be reclassified
 
 ## Capabilities
@@ -36,6 +36,6 @@ _None_ -- this change extends existing capabilities rather than introducing a wh
 - **Application layer** (`ExtractionPromptBuilder`): Updated system prompt to request `detected_type`
 - **Application layer** (`ExtractionResponseDto`): New `DetectedType` field
 - **Application layer** (`AutoExtractCaptureHandler`): Reclassify capture after extraction
-- **Infrastructure layer**: EF migration for `DetectedCaptureType` on `AiExtraction` (owned entity column)
+- **Infrastructure layer**: No EF migration needed -- `AiExtraction` is persisted as JSONB, so `DetectedCaptureType` is a new JSON field
 - **Frontend**: Capture detail view shows detected type badge/indicator
 - **No breaking changes** -- existing captures keep their current type; only newly processed captures get reclassified
