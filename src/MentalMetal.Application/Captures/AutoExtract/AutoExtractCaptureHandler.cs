@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using MentalMetal.Application.Briefings;
 using MentalMetal.Application.Common;
 using MentalMetal.Application.Common.Ai;
 using MentalMetal.Domain.Captures;
@@ -27,6 +28,7 @@ public sealed class AutoExtractCaptureHandler(
     IAiCompletionService aiCompletionService,
     ITasteBudgetService tasteBudgetService,
     ICurrentUserService currentUserService,
+    IBriefCacheService briefCacheService,
     NameResolutionService nameResolution,
     InitiativeTaggingService initiativeTagging,
     IUnitOfWork unitOfWork,
@@ -195,6 +197,9 @@ public sealed class AutoExtractCaptureHandler(
 
             capture.CompleteProcessing(extraction);
             await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            // Invalidate cached briefs so the next request includes this capture
+            briefCacheService.InvalidateForUser(userId);
 
             return CaptureResponse.From(capture);
         }

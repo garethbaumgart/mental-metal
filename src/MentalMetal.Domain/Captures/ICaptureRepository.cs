@@ -16,6 +16,13 @@ public interface ICaptureRepository
         ProcessingStatus? statusFilter,
         CancellationToken cancellationToken);
 
+    Task<IReadOnlyList<Capture>> GetByDateRangeAsync(
+        Guid userId,
+        DateTimeOffset from,
+        DateTimeOffset to,
+        ProcessingStatus? statusFilter,
+        CancellationToken cancellationToken);
+
     Task AddAsync(Capture capture, CancellationToken cancellationToken);
 
     /// <summary>

@@ -19,6 +19,7 @@ using MentalMetal.Domain.People;
 using MentalMetal.Domain.Users;
 using MentalMetal.Infrastructure.Ai;
 using MentalMetal.Infrastructure.Auth;
+using MentalMetal.Infrastructure.Caching;
 using MentalMetal.Infrastructure.Persistence;
 using MentalMetal.Infrastructure.Repositories;
 using MentalMetal.Infrastructure.Parsers;
@@ -54,6 +55,10 @@ public static class DependencyInjection
             .Validate(s => !string.IsNullOrWhiteSpace(s.EncryptionKey),
                 "AiProvider:EncryptionKey is required. Generate with: openssl rand -base64 32")
             .ValidateOnStart();
+
+        // Caching
+        services.AddMemoryCache();
+        services.AddSingleton<IBriefCacheService, MemoryBriefCacheService>();
 
         // Infrastructure services
         services.AddHttpContextAccessor();

@@ -1,3 +1,4 @@
+using MentalMetal.Application.Briefings;
 using MentalMetal.Application.Captures.AutoExtract;
 using MentalMetal.Application.Common;
 using MentalMetal.Application.Common.Ai;
@@ -21,6 +22,7 @@ public class AutoExtractCaptureHandlerTests
     private readonly IAiCompletionService _aiService = Substitute.For<IAiCompletionService>();
     private readonly ITasteBudgetService _tasteBudget = Substitute.For<ITasteBudgetService>();
     private readonly ICurrentUserService _currentUser = Substitute.For<ICurrentUserService>();
+    private readonly IBriefCacheService _briefCacheService = Substitute.For<IBriefCacheService>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ILogger<AutoExtractCaptureHandler> _logger = NullLogger<AutoExtractCaptureHandler>.Instance;
 
@@ -38,7 +40,7 @@ public class AutoExtractCaptureHandlerTests
 
         _sut = new AutoExtractCaptureHandler(
             _captureRepo, _personRepo, _initiativeRepo, _commitmentRepo,
-            _aiService, _tasteBudget, _currentUser,
+            _aiService, _tasteBudget, _currentUser, _briefCacheService,
             new NameResolutionService(), new InitiativeTaggingService(),
             _unitOfWork, _logger);
     }

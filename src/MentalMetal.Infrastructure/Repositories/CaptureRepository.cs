@@ -31,6 +31,22 @@ public sealed class CaptureRepository(MentalMetalDbContext dbContext) : ICapture
         return await query.OrderByDescending(c => c.CapturedAt).ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Capture>> GetByDateRangeAsync(
+        Guid userId,
+        DateTimeOffset from,
+        DateTimeOffset to,
+        ProcessingStatus? statusFilter,
+        CancellationToken cancellationToken)
+    {
+        var query = dbContext.Captures.AsNoTracking()
+            .Where(c => c.UserId == userId && c.CapturedAt >= from && c.CapturedAt < to);
+
+        if (statusFilter is not null)
+            query = query.Where(c => c.ProcessingStatus == statusFilter.Value);
+
+        return await query.OrderByDescending(c => c.CapturedAt).ToListAsync(cancellationToken);
+    }
+
     public async Task AddAsync(Capture capture, CancellationToken cancellationToken) =>
         await dbContext.Captures.AddAsync(capture, cancellationToken);
 
