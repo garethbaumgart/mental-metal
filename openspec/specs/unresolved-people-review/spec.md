@@ -4,11 +4,11 @@
 
 ### Requirement: Quick-create person and resolve mention
 
-The system SHALL allow an authenticated user to create a new Person and resolve an unresolved person mention in a single operation by sending a POST to `/api/captures/{captureId}/resolve-person-mention/quick-create` with `rawName`, `personName`, and `personType`. The system SHALL create the Person, add the raw name as an alias (if different from the person name), update the extraction's PersonMention with the new PersonId, link the capture to the new person, and spawn any skipped commitments for that person. The operation SHALL be atomic -- if any step fails, no changes are persisted.
+The system SHALL allow an authenticated user to create a new Person and resolve an unresolved person mention in a single operation by sending a POST to `/api/captures/{id}/resolve-person-mention/quick-create` with `rawName`, `personName`, and `personType`. The system SHALL create the Person, add the raw name as an alias (if different from the person name), update the extraction's PersonMention with the new PersonId, link the capture to the new person, and spawn any skipped commitments for that person. The operation SHALL be atomic -- if any step fails, no changes are persisted.
 
 #### Scenario: Quick-create a new person from unresolved mention
 
-- **WHEN** an authenticated user sends a POST to `/api/captures/{captureId}/resolve-person-mention/quick-create` with rawName "Sarah", personName "Sarah Chen", and personType "Stakeholder"
+- **WHEN** an authenticated user sends a POST to `/api/captures/{id}/resolve-person-mention/quick-create` with rawName "Sarah", personName "Sarah Chen", and personType "Stakeholder"
 - **THEN** the system creates a Person named "Sarah Chen" with type Stakeholder
 - **AND** adds "Sarah" as an alias on the new Person
 - **AND** updates the extraction's PersonMention for "Sarah" with the new PersonId
@@ -96,7 +96,7 @@ The frontend capture detail view SHALL display a prominent banner when the extra
 
 ### Requirement: Link-to-existing person flow
 
-The frontend SHALL provide a person search/select flow for the "Link to Existing" action on unresolved person mentions. The flow SHALL show a searchable dropdown of the user's existing people. Selecting a person SHALL call the existing `POST /api/captures/{captureId}/resolve-person-mention` endpoint with the raw name and selected PersonId.
+The frontend SHALL provide a person search/select flow for the "Link to Existing" action on unresolved person mentions. The flow SHALL show a searchable dropdown of the user's existing people. Selecting a person SHALL call the existing `POST /api/captures/{id}/resolve-person-mention` endpoint with the raw name and selected PersonId.
 
 #### Scenario: Link unresolved mention to existing person
 
@@ -112,7 +112,7 @@ The frontend SHALL provide a person search/select flow for the "Link to Existing
 
 ### Requirement: Quick-create person dialog
 
-The frontend SHALL provide a quick-create dialog for the "Quick Create" action on unresolved person mentions. The dialog SHALL pre-fill the person name with the raw name from the extraction and default the person type to Stakeholder. The user SHALL be able to edit the name and select a different person type before confirming. Confirming SHALL call the `POST /api/captures/{captureId}/resolve-person-mention/quick-create` endpoint.
+The frontend SHALL provide a quick-create dialog for the "Quick Create" action on unresolved person mentions. The dialog SHALL pre-fill the person name with the raw name from the extraction and default the person type to Stakeholder. The user SHALL be able to edit the name and select a different person type before confirming. Confirming SHALL call the `POST /api/captures/{id}/resolve-person-mention/quick-create` endpoint.
 
 #### Scenario: Quick-create dialog pre-filled
 

@@ -114,7 +114,7 @@ The system prompt SHALL instruct the AI to include `source_start_offset` (0-base
 
 ### Requirement: AiExtraction value object
 
-The system SHALL define an `AiExtraction` value object embedded on the Capture aggregate with the following properties: Summary (string, required), Commitments (list of extracted commitments with description, direction, person hint, PersonRawName, optional due date, and optional source character offsets: SourceStartOffset and SourceEndOffset, optional SpawnedCommitmentId), Delegations (list of extracted delegations with description, person hint, and optional due date), Observations (list of extracted observations with description, person hint, and tag), Decisions (list of strings), RisksIdentified (list of strings), SuggestedPersonLinks (list of person name hints), SuggestedInitiativeLinks (list of initiative name hints), ConfidenceScore (decimal, 0.0-1.0), and DetectedCaptureType (nullable CaptureType indicating the AI's content classification).
+The system SHALL define an `AiExtraction` value object embedded on the Capture aggregate with the following properties: Summary (string, required), Commitments (list of extracted commitments with description, direction, person hint, PersonRawName, optional due date, and optional source character offsets: SourceStartOffset and SourceEndOffset, optional SpawnedCommitmentId), Delegations (list of extracted delegations with description, person hint, and optional due date), Observations (list of extracted observations with description, person hint, and tag), Decisions (list of strings), RisksIdentified (list of strings), PeopleMentioned (list of person mentions with RawName string and optional PersonId — null when unresolved), SuggestedPersonLinks (list of person name hints), SuggestedInitiativeLinks (list of initiative name hints), ConfidenceScore (decimal, 0.0-1.0), and DetectedCaptureType (nullable CaptureType indicating the AI's content classification).
 
 #### Scenario: AiExtraction with all fields populated
 
@@ -166,21 +166,9 @@ The system SHALL, after successful extraction, automatically spawn Commitment en
 - **AND** no Commitment entity is spawned for that item
 - **AND** the user can resolve the person later via the unresolved people review flow
 
-#### Scenario: Discard extraction
-
-- **WHEN** an authenticated user sends a POST to `/api/captures/{id}/discard-extraction`
-- **THEN** the system does NOT spawn any entities
-- **AND** the AiExtraction is retained on the capture for reference
-- **AND** the capture raises a `CaptureExtractionDiscarded` domain event
-
-#### Scenario: Confirm on non-processed capture rejected
-
-- **WHEN** an authenticated user sends a POST to `/api/captures/{id}/confirm-extraction` for a capture that is not in Processed status
-- **THEN** the system returns HTTP 409 Conflict
-
 ### Requirement: Resolve person mention post-extraction
 
-The system SHALL allow an authenticated user to resolve an unresolved person mention by sending a POST to `/api/captures/{captureId}/resolve-person-mention` with `rawName` and `personId`. The system SHALL update the extraction's PersonMention with the resolved PersonId, add the raw name as an alias on the person (if not already present), link the capture to the person, and spawn any skipped commitments for that person (High/Medium confidence with no existing SpawnedCommitmentId). The raw name used as alias SHALL be validated for uniqueness among the user's people.
+The system SHALL allow an authenticated user to resolve an unresolved person mention by sending a POST to `/api/captures/{id}/resolve-person-mention` with `rawName` and `personId`. The system SHALL update the extraction's PersonMention with the resolved PersonId, add the raw name as an alias on the person (if not already present), link the capture to the person, and spawn any skipped commitments for that person (High/Medium confidence with no existing SpawnedCommitmentId). When multiple extracted commitments share the same `PersonRawName`, all matching commitments SHALL be spawned in a single resolution operation. The raw name used as alias SHALL be validated for uniqueness among the user's people.
 
 #### Scenario: Resolve and spawn skipped commitments
 
