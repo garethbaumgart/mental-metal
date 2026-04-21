@@ -1,6 +1,13 @@
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError, switchMap, throwError } from 'rxjs';
+import {
+  catchError,
+  filter,
+  finalize,
+  first,
+  switchMap,
+  throwError,
+} from 'rxjs';
 import { from } from 'rxjs';
 import { AuthService } from './auth.service';
 
@@ -30,6 +37,27 @@ function isUnauthenticatedAuthRequest(url: string): boolean {
   }
 }
 
+/**
+ * Retry the original request with the current access token.
+ * Extracted to avoid duplication between the "first 401" and
+ * "queued while refresh in-flight" code paths.
+ */
+function retryWithToken(
+  req: Parameters<HttpInterceptorFn>[0],
+  next: Parameters<HttpInterceptorFn>[1],
+  authService: AuthService,
+  originalError: HttpErrorResponse,
+) {
+  const freshToken = authService.accessToken();
+  if (freshToken) {
+    const retryReq = req.clone({
+      setHeaders: { Authorization: `Bearer ${freshToken}` },
+    });
+    return next(retryReq);
+  }
+  return throwError(() => originalError);
+}
+
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
 
@@ -44,30 +72,38 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(authReq).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error.status === 401 && !isRefreshing) {
-        isRefreshing = true;
+      if (error.status !== 401) {
+        return throwError(() => error);
+      }
 
-        return from(authService.refreshToken()).pipe(
-          switchMap((success) => {
-            isRefreshing = false;
-            if (success) {
-              const retryReq = req.clone({
-                setHeaders: {
-                  Authorization: `Bearer ${authService.accessToken()}`,
-                },
-              });
-              return next(retryReq);
-            }
-            return throwError(() => error);
-          }),
-          catchError((refreshError) => {
-            isRefreshing = false;
-            return throwError(() => refreshError);
-          }),
+      // A refresh is already in flight — wait for it to complete, then retry.
+      if (isRefreshing) {
+        return authService.refreshResult$.pipe(
+          // refreshResult$ is a BehaviorSubject seeded with null.
+          // Skip the current (null | stale) value and wait for the
+          // next emission, which signals the in-flight refresh completed.
+          filter((result) => result !== null),
+          first(),
+          switchMap(() => retryWithToken(req, next, authService, error)),
         );
       }
 
-      return throwError(() => error);
+      // First 401 — initiate the refresh.
+      isRefreshing = true;
+      authService.beginRefresh();
+
+      return from(authService.refreshToken()).pipe(
+        switchMap((success) => {
+          if (success) {
+            return retryWithToken(req, next, authService, error);
+          }
+          return throwError(() => error);
+        }),
+        catchError((refreshError) => throwError(() => refreshError)),
+        finalize(() => {
+          isRefreshing = false;
+        }),
+      );
     }),
   );
 };

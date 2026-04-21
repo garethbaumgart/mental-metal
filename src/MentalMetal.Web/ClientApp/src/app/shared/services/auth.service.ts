@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { BehaviorSubject, firstValueFrom, Observable } from 'rxjs';
 import {
   AuthTokenResponse,
   LoginWithPasswordRequest,
@@ -19,6 +19,22 @@ export class AuthService {
   readonly accessToken = signal<string | null>(this.readStoredToken());
   readonly currentUser = signal<UserProfile | null>(null);
   readonly isAuthenticated = computed(() => this.accessToken() !== null);
+
+  /** Private subject that drives refresh coordination. Only AuthService
+   *  should emit on this — the interceptor subscribes via the readonly
+   *  `refreshResult$` observable. */
+  private readonly _refreshResult = new BehaviorSubject<string | null>(null);
+
+  /** Read-only projection the interceptor subscribes to. Emits the new token
+   *  (or empty string on failure) after a token refresh completes so that
+   *  concurrent 401 retries wait for a single refresh. */
+  readonly refreshResult$: Observable<string | null> =
+    this._refreshResult.asObservable();
+
+  /** Reset the refresh result before starting a new refresh cycle. */
+  beginRefresh(): void {
+    this._refreshResult.next(null);
+  }
 
   constructor() {
     this.extractTokenFromHash();
@@ -94,6 +110,7 @@ export class AuthService {
       if (result?.accessToken) {
         this.accessToken.set(result.accessToken);
         this.storeToken(result.accessToken);
+        this._refreshResult.next(result.accessToken);
         return true;
       }
     } catch {
@@ -103,6 +120,7 @@ export class AuthService {
     this.accessToken.set(null);
     this.currentUser.set(null);
     this.removeStoredToken();
+    this._refreshResult.next('');
     return false;
   }
 
