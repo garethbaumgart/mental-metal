@@ -14,6 +14,8 @@ public sealed class GenerateWeeklyBriefHandler(
     ICurrentUserService currentUserService,
     IBriefCacheService briefCacheService)
 {
+    public const string NoDataNarrative =
+        "No captures or commitment activity were recorded this week.";
     public async Task<WeeklyBriefResponse> HandleAsync(
         DateOnly? weekOf,
         bool forceRefresh,
@@ -68,22 +70,51 @@ public sealed class GenerateWeeklyBriefHandler(
         var totalOpen = allCommitments
             .Count(c => c.Status == CommitmentStatus.Open);
 
-        // Get initiatives with linked captures from this period
+        // When there are no captures and no commitment activity, skip AI and return a clean
+        // "no data" response to avoid generating misleading narrative from empty context.
+        // Check early to avoid unnecessary initiative DB call and iteration.
+        if (weekCaptures.Count == 0 && newThisWeek == 0 && completedThisWeek == 0 && overdueCount == 0)
+        {
+            return new WeeklyBriefResponse(
+                NoDataNarrative,
+                [],
+                [],
+                new CommitmentStatusSummary(newThisWeek, completedThisWeek, overdueCount, totalOpen),
+                [],
+                [],
+                new DateRange(weekStartOffset, weekEndOffset),
+                DateTimeOffset.UtcNow);
+        }
+
+        // Get initiatives with linked captures or commitments from this period
         var initiatives = await initiativeRepository.GetAllAsync(
             userId, InitiativeStatus.Active, cancellationToken);
+
+        // Pre-compute commitment counts per initiative for O(1) lookup
+        var weekCommitmentsByInitiative = allCommitments
+            .Where(c => c.InitiativeId.HasValue
+                     && c.CreatedAt >= weekStartOffset
+                     && c.CreatedAt < weekEndOffset)
+            .GroupBy(c => c.InitiativeId!.Value)
+            .ToDictionary(g => g.Key, g => g.Count());
 
         var initiativeActivity = new List<InitiativeActivityDto>();
         foreach (var initiative in initiatives)
         {
-            var linkedCount = weekCaptures
+            var linkedCaptureCount = weekCaptures
                 .Count(c => c.LinkedInitiativeIds.Contains(initiative.Id));
 
-            if (linkedCount > 0)
+            weekCommitmentsByInitiative.TryGetValue(initiative.Id, out var linkedCommitmentCount);
+
+            if (linkedCaptureCount > 0 || linkedCommitmentCount > 0)
             {
+                // DTO intentionally reports capture count only — commitment count is used
+                // solely as an inclusion criterion so initiatives with commitment-only activity
+                // appear in the brief rather than being silently excluded.
                 initiativeActivity.Add(new InitiativeActivityDto(
                     initiative.Id,
                     initiative.Title,
-                    linkedCount,
+                    linkedCaptureCount,
                     initiative.AutoSummary));
             }
         }
@@ -172,10 +203,12 @@ public sealed class GenerateWeeklyBriefHandler(
 
         foreach (var kv in multiCapturePeople)
         {
-            // Find the person's name from extraction data
+            // Find the first non-whitespace name for this person across all captures
             var name = captures
                 .SelectMany(c => c.AiExtraction?.PeopleMentioned ?? [])
-                .FirstOrDefault(p => p.PersonId == kv.Key)?.RawName;
+                .Where(p => p.PersonId == kv.Key)
+                .Select(p => p.RawName)
+                .FirstOrDefault(rawName => !string.IsNullOrWhiteSpace(rawName));
 
             if (name is not null)
                 insights.Add($"{name} appeared in {kv.Value} conversations this week");
