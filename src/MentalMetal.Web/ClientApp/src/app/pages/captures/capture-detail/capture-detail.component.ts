@@ -8,12 +8,13 @@ import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { PanelModule } from 'primeng/panel';
 import { SelectModule } from 'primeng/select';
+import { DialogModule } from 'primeng/dialog';
 import { MessageService } from 'primeng/api';
 import { CapturesService } from '../../../shared/services/captures.service';
 import { PeopleService } from '../../../shared/services/people.service';
 import { InitiativesService } from '../../../shared/services/initiatives.service';
 import { Capture, CaptureTranscript, CaptureType, ProcessingStatus } from '../../../shared/models/capture.model';
-import { Person } from '../../../shared/models/person.model';
+import { Person, PersonType } from '../../../shared/models/person.model';
 import { Initiative } from '../../../shared/models/initiative.model';
 import { TranscriptViewerComponent } from '../transcript-viewer/transcript-viewer.component';
 import { SpeakerPickerComponent } from '../speaker-picker/speaker-picker.component';
@@ -31,6 +32,7 @@ import { SpeakerPickerComponent } from '../speaker-picker/speaker-picker.compone
     ToastModule,
     PanelModule,
     SelectModule,
+    DialogModule,
     TranscriptViewerComponent,
     SpeakerPickerComponent,
   ],
@@ -54,6 +56,12 @@ import { SpeakerPickerComponent } from '../speaker-picker/speaker-picker.compone
     .error-title { color: var(--p-red-700); }
     .error-detail { color: var(--p-red-600); }
     .risk-icon { color: var(--p-yellow-500); }
+    .unresolved-banner {
+      border-color: var(--p-yellow-200);
+      background-color: var(--p-yellow-50);
+    }
+    .unresolved-icon { color: var(--p-yellow-500); }
+    .unresolved-title { color: var(--p-yellow-700); }
   `],
   providers: [MessageService],
   template: `
@@ -115,6 +123,82 @@ import { SpeakerPickerComponent } from '../speaker-picker/speaker-picker.compone
             />
           </div>
         }
+
+        <!-- Unresolved People Banner -->
+        @if (unresolvedPeople().length > 0) {
+          <div class="p-4 rounded-md border unresolved-banner flex flex-col gap-3">
+            <div class="flex items-center gap-2">
+              <i class="pi pi-users unresolved-icon"></i>
+              <span class="font-medium unresolved-title">{{ unresolvedPeople().length }} unresolved {{ unresolvedPeople().length === 1 ? 'person' : 'people' }}</span>
+            </div>
+            @for (p of unresolvedPeople(); track p.rawName) {
+              <div class="flex items-center gap-2 text-sm">
+                <span class="font-medium">{{ p.rawName }}</span>
+                @if (p.context) {
+                  <span class="text-muted-color">— {{ p.context }}</span>
+                }
+                @if (resolvingPersonName() === p.rawName) {
+                  <p-select
+                    [options]="people()"
+                    optionLabel="name"
+                    optionValue="id"
+                    placeholder="Select person..."
+                    [filter]="true"
+                    filterBy="name"
+                    (onChange)="onPersonSelected(p.rawName, $event.value)"
+                    appendTo="body"
+                    class="ml-2"
+                    [style]="{ 'min-width': '200px' }"
+                  />
+                  <p-button icon="pi pi-times" [text]="true" size="small" (onClick)="resolvingPersonName.set(null)" />
+                } @else {
+                  <p-button label="Link to Existing" icon="pi pi-link" size="small" [text]="true" (onClick)="startResolvePerson(p.rawName)" />
+                  <p-button label="Quick Create" icon="pi pi-plus" size="small" [text]="true" (onClick)="openQuickCreate(p.rawName)" />
+                }
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Quick Create Person Dialog -->
+        <p-dialog
+          header="Quick Create Person"
+          [visible]="quickCreateVisible()"
+          (visibleChange)="quickCreateVisible.set($event)"
+          [modal]="true"
+          [style]="{ width: '400px' }"
+        >
+          <div class="flex flex-col gap-4 pt-2">
+            <div class="flex flex-col gap-2">
+              <label for="qc-name" class="text-sm font-medium">Name</label>
+              <input pInputText id="qc-name" [ngModel]="quickCreateName()" (ngModelChange)="quickCreateName.set($event)" class="w-full" />
+            </div>
+            <div class="flex flex-col gap-2">
+              <label for="qc-type" class="text-sm font-medium">Type</label>
+              <p-select
+                id="qc-type"
+                [options]="personTypeOptions"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="quickCreateType()"
+                (ngModelChange)="quickCreateType.set($event)"
+                class="w-full"
+              />
+            </div>
+          </div>
+          <ng-template #footer>
+            <div class="flex justify-end gap-2">
+              <p-button label="Cancel" [text]="true" (onClick)="quickCreateVisible.set(false)" />
+              <p-button
+                label="Create & Resolve"
+                icon="pi pi-check"
+                (onClick)="submitQuickCreate()"
+                [loading]="quickCreateSubmitting()"
+                [disabled]="!quickCreateName().trim()"
+              />
+            </div>
+          </ng-template>
+        </p-dialog>
 
         <!-- Raw Content -->
         <section class="flex flex-col gap-4">
@@ -211,23 +295,6 @@ import { SpeakerPickerComponent } from '../speaker-picker/speaker-picker.compone
                       <p-tag value="Resolved" severity="success" />
                     } @else {
                       <p-tag value="Unresolved" severity="warn" />
-                      @if (resolvingPersonName() === p.rawName) {
-                        <p-select
-                          [options]="people()"
-                          optionLabel="name"
-                          optionValue="id"
-                          placeholder="Select person..."
-                          [filter]="true"
-                          filterBy="name"
-                          (onChange)="onPersonSelected(p.rawName, $event.value)"
-                          appendTo="body"
-                          class="ml-2"
-                          [style]="{ 'min-width': '200px' }"
-                        />
-                        <p-button icon="pi pi-times" [text]="true" size="small" (onClick)="resolvingPersonName.set(null)" />
-                      } @else {
-                        <p-button label="Resolve" icon="pi pi-link" size="small" [text]="true" (onClick)="startResolvePerson(p.rawName)" />
-                      }
                     }
                   </div>
                 }
@@ -353,6 +420,21 @@ export class CaptureDetailComponent implements OnInit {
   readonly resolvingPersonName = signal<string | null>(null);
   readonly resolvingInitiativeName = signal<string | null>(null);
 
+  // Quick Create dialog state
+  readonly quickCreateVisible = signal(false);
+  readonly quickCreateRawName = signal('');
+  readonly quickCreateName = signal('');
+  readonly quickCreateType = signal<PersonType>('Stakeholder');
+  readonly quickCreateSubmitting = signal(false);
+
+  readonly personTypeOptions = [
+    { label: 'Direct Report', value: 'DirectReport' as PersonType },
+    { label: 'Stakeholder', value: 'Stakeholder' as PersonType },
+    { label: 'Peer', value: 'Peer' as PersonType },
+    { label: 'External', value: 'External' as PersonType },
+    { label: 'Candidate', value: 'Candidate' as PersonType },
+  ];
+
   constructor() {
     effect(() => {
       const el = this.highlightMark()?.nativeElement;
@@ -367,9 +449,14 @@ export class CaptureDetailComponent implements OnInit {
     return c?.aiExtraction?.detectedCaptureType ?? null;
   });
 
-  readonly hasUnresolvedMentions = computed(() => {
+  readonly unresolvedPeople = computed(() => {
     const c = this.capture();
-    return c?.aiExtraction?.peopleMentioned.some(p => !p.personId) ?? false;
+    if (!c?.aiExtraction) return [];
+    return c.aiExtraction.peopleMentioned.filter(p => !p.personId);
+  });
+
+  readonly hasUnresolvedMentions = computed(() => {
+    return this.unresolvedPeople().length > 0;
   });
 
   readonly hasUnlinkedTags = computed(() => {
@@ -495,6 +582,43 @@ export class CaptureDetailComponent implements OnInit {
       },
       error: () => {
         this.messageService.add({ severity: 'error', summary: 'Failed to resolve person' });
+      },
+    });
+  }
+
+  protected openQuickCreate(rawName: string): void {
+    this.quickCreateRawName.set(rawName);
+    this.quickCreateName.set(rawName);
+    this.quickCreateType.set('Stakeholder');
+    this.quickCreateVisible.set(true);
+  }
+
+  protected submitQuickCreate(): void {
+    const c = this.capture();
+    const rawName = this.quickCreateRawName();
+    const name = this.quickCreateName().trim();
+    if (!c || !rawName || !name) return;
+
+    this.quickCreateSubmitting.set(true);
+    this.capturesService.quickCreateAndResolve(c.id, rawName, name, this.quickCreateType()).subscribe({
+      next: (updated) => {
+        this.capture.set(updated);
+        this.quickCreateSubmitting.set(false);
+        this.quickCreateVisible.set(false);
+        this.messageService.add({ severity: 'success', summary: 'Person created and resolved' });
+      },
+      error: (err) => {
+        this.quickCreateSubmitting.set(false);
+        const detail = err?.error?.error ?? 'Unknown error';
+        if (err.status === 409) {
+          this.messageService.add({
+            severity: 'warn',
+            summary: 'Duplicate name',
+            detail: 'A person with this name already exists. Try linking to the existing person instead.',
+          });
+        } else {
+          this.messageService.add({ severity: 'error', summary: 'Failed to create person', detail });
+        }
       },
     });
   }

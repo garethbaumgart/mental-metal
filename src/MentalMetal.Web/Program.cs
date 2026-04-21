@@ -954,6 +954,47 @@ app.MapPost("/api/captures/{id:guid}/resolve-person-mention", async (
     {
         return Results.NotFound();
     }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("Alias") && ex.Message.Contains("already used"))
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/captures/{id:guid}/resolve-person-mention/quick-create", async (
+    Guid id,
+    QuickCreateAndResolveRequest request,
+    QuickCreateAndResolveHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var response = await handler.HandleAsync(id, request, cancellationToken);
+        return Results.Ok(response);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+    {
+        return Results.NotFound();
+    }
+    catch (DuplicatePersonNameException ex)
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("Alias") && ex.Message.Contains("already used"))
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("no AI extraction"))
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
     catch (InvalidOperationException ex)
     {
         return Results.BadRequest(new { error = ex.Message });

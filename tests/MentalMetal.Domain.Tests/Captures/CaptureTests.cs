@@ -1,4 +1,5 @@
 using MentalMetal.Domain.Captures;
+using MentalMetal.Domain.Commitments;
 
 namespace MentalMetal.Domain.Tests.Captures;
 
@@ -337,5 +338,35 @@ public class CaptureTests
 
         Assert.Throws<InvalidOperationException>(() =>
             capture.Reclassify(CaptureType.Transcript));
+    }
+
+    [Fact]
+    public void ExtractedCommitment_StoresPersonRawName()
+    {
+        var commitment = new ExtractedCommitment
+        {
+            Description = "Send report",
+            Direction = CommitmentDirection.MineToThem,
+            PersonRawName = "Sarah",
+            PersonId = null,
+            Confidence = CommitmentConfidence.High
+        };
+
+        Assert.Equal("Sarah", commitment.PersonRawName);
+    }
+
+    [Fact]
+    public void ExtractedCommitment_PersonRawName_NullWhenNoPerson()
+    {
+        var commitment = new ExtractedCommitment
+        {
+            Description = "General task",
+            Direction = CommitmentDirection.MineToThem,
+            PersonRawName = null,
+            PersonId = null,
+            Confidence = CommitmentConfidence.Medium
+        };
+
+        Assert.Null(commitment.PersonRawName);
     }
 }

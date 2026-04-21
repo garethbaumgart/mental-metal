@@ -176,6 +176,7 @@ public static class DependencyInjection
         services.AddScoped<NameResolutionService>();
         services.AddScoped<InitiativeTaggingService>();
         services.AddScoped<ResolvePersonMentionHandler>();
+        services.AddScoped<QuickCreateAndResolveHandler>();
         services.AddScoped<ResolveInitiativeTagHandler>();
 
         // Capture import handlers and parsers

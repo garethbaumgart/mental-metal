@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { provideRouter } from '@angular/router';
 import { ActivatedRoute } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { CaptureDetailComponent } from './capture-detail.component';
 import { CapturesService } from '../../../shared/services/captures.service';
 import { PeopleService } from '../../../shared/services/people.service';
@@ -54,6 +54,7 @@ describe('CaptureDetailComponent', () => {
     updateMetadata: vi.fn(),
     resolvePersonMention: vi.fn(),
     resolveInitiativeTag: vi.fn(),
+    quickCreateAndResolve: vi.fn(),
     getTranscript: vi.fn().mockReturnValue(of(null)),
     updateSpeakers: vi.fn(),
   };
@@ -126,5 +127,137 @@ describe('CaptureDetailComponent', () => {
     );
 
     expect((component as any).detectedCaptureType()).toBe('MeetingNotes');
+  });
+
+  it('unresolvedPeople returns empty array when no extraction', () => {
+    (component as any).capture.set(
+      buildCapture({ processingStatus: 'Raw', aiExtraction: null }),
+    );
+
+    expect((component as any).unresolvedPeople()).toEqual([]);
+  });
+
+  it('unresolvedPeople returns unresolved mentions only', () => {
+    (component as any).capture.set(
+      buildCapture({
+        processingStatus: 'Processed',
+        aiExtraction: buildExtraction({
+          peopleMentioned: [
+            { rawName: 'Sarah', personId: null, context: 'discussed project' },
+            { rawName: 'Alice', personId: 'person-1', context: null },
+            { rawName: 'Mike', personId: null, context: null },
+          ],
+        }),
+      }),
+    );
+
+    const unresolved = (component as any).unresolvedPeople();
+    expect(unresolved).toHaveLength(2);
+    expect(unresolved[0].rawName).toBe('Sarah');
+    expect(unresolved[1].rawName).toBe('Mike');
+  });
+
+  it('unresolvedPeople returns empty when all resolved', () => {
+    (component as any).capture.set(
+      buildCapture({
+        processingStatus: 'Processed',
+        aiExtraction: buildExtraction({
+          peopleMentioned: [
+            { rawName: 'Alice', personId: 'person-1', context: null },
+          ],
+        }),
+      }),
+    );
+
+    expect((component as any).unresolvedPeople()).toHaveLength(0);
+  });
+
+  it('hasUnresolvedMentions is true when there are unresolved people', () => {
+    (component as any).capture.set(
+      buildCapture({
+        processingStatus: 'Processed',
+        aiExtraction: buildExtraction({
+          peopleMentioned: [
+            { rawName: 'Sarah', personId: null, context: null },
+          ],
+        }),
+      }),
+    );
+
+    expect((component as any).hasUnresolvedMentions()).toBe(true);
+  });
+
+  it('hasUnresolvedMentions is false when all resolved', () => {
+    (component as any).capture.set(
+      buildCapture({
+        processingStatus: 'Processed',
+        aiExtraction: buildExtraction({
+          peopleMentioned: [
+            { rawName: 'Alice', personId: 'person-1', context: null },
+          ],
+        }),
+      }),
+    );
+
+    expect((component as any).hasUnresolvedMentions()).toBe(false);
+  });
+
+  it('openQuickCreate pre-fills name and sets default type', () => {
+    (component as any).capture.set(buildCapture());
+    (component as any).openQuickCreate('Sarah');
+
+    expect((component as any).quickCreateRawName()).toBe('Sarah');
+    expect((component as any).quickCreateName()).toBe('Sarah');
+    expect((component as any).quickCreateType()).toBe('Stakeholder');
+    expect((component as any).quickCreateVisible()).toBe(true);
+  });
+
+  it('submitQuickCreate calls service and updates capture on success', () => {
+    const updatedCapture = buildCapture({
+      aiExtraction: buildExtraction({
+        peopleMentioned: [{ rawName: 'Sarah', personId: 'new-person-id', context: null }],
+      }),
+    });
+    mockCapturesService.quickCreateAndResolve.mockReturnValue(of(updatedCapture));
+
+    (component as any).capture.set(
+      buildCapture({
+        aiExtraction: buildExtraction({
+          peopleMentioned: [{ rawName: 'Sarah', personId: null, context: null }],
+        }),
+      }),
+    );
+    (component as any).quickCreateRawName.set('Sarah');
+    (component as any).quickCreateName.set('Sarah Chen');
+    (component as any).quickCreateType.set('Stakeholder');
+
+    (component as any).submitQuickCreate();
+
+    expect(mockCapturesService.quickCreateAndResolve).toHaveBeenCalledWith(
+      'cap-1', 'Sarah', 'Sarah Chen', 'Stakeholder',
+    );
+  });
+
+  it('submitQuickCreate handles 409 conflict with warning message', () => {
+    mockCapturesService.quickCreateAndResolve.mockReturnValue(
+      throwError(() => ({ status: 409, error: { error: 'Duplicate name' } })),
+    );
+
+    (component as any).capture.set(
+      buildCapture({
+        aiExtraction: buildExtraction({
+          peopleMentioned: [{ rawName: 'Sarah', personId: null, context: null }],
+        }),
+      }),
+    );
+    // Open the dialog first so quickCreateVisible is true
+    (component as any).openQuickCreate('Sarah');
+    (component as any).quickCreateName.set('Sarah Chen');
+
+    (component as any).submitQuickCreate();
+
+    expect((component as any).quickCreateSubmitting()).toBe(false);
+    // Dialog should remain open on conflict
+    expect((component as any).quickCreateVisible()).toBe(true);
   });
 });

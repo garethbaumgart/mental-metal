@@ -10,6 +10,7 @@ import {
   UpdateCaptureMetadataRequest,
   UpdateCaptureSpeakersRequest,
 } from '../models/capture.model';
+import { PersonType } from '../models/person.model';
 
 @Injectable({ providedIn: 'root' })
 export class CapturesService {
@@ -85,5 +86,13 @@ export class CapturesService {
 
   resolveInitiativeTag(id: string, rawName: string, initiativeId: string): Observable<Capture> {
     return this.http.post<Capture>(`${this.baseUrl}/${id}/resolve-initiative-tag`, { rawName, initiativeId });
+  }
+
+  quickCreateAndResolve(id: string, rawName: string, personName: string, personType: PersonType): Observable<Capture> {
+    return this.http.post<Capture>(`${this.baseUrl}/${id}/resolve-person-mention/quick-create`, {
+      rawName,
+      personName,
+      personType,
+    });
   }
 }
