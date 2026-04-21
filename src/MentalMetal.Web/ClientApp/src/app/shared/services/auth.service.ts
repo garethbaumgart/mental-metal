@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { BehaviorSubject, firstValueFrom } from 'rxjs';
 import {
   AuthTokenResponse,
   LoginWithPasswordRequest,
@@ -19,6 +19,11 @@ export class AuthService {
   readonly accessToken = signal<string | null>(this.readStoredToken());
   readonly currentUser = signal<UserProfile | null>(null);
   readonly isAuthenticated = computed(() => this.accessToken() !== null);
+
+  /** Emits the new token (or empty string on failure) after a token refresh
+   *  completes. The interceptor uses this to queue concurrent 401 retries so
+   *  they all wait for a single refresh instead of failing independently. */
+  readonly refreshResult$ = new BehaviorSubject<string | null>(null);
 
   constructor() {
     this.extractTokenFromHash();
@@ -94,6 +99,7 @@ export class AuthService {
       if (result?.accessToken) {
         this.accessToken.set(result.accessToken);
         this.storeToken(result.accessToken);
+        this.refreshResult$.next(result.accessToken);
         return true;
       }
     } catch {
@@ -103,6 +109,7 @@ export class AuthService {
     this.accessToken.set(null);
     this.currentUser.set(null);
     this.removeStoredToken();
+    this.refreshResult$.next('');
     return false;
   }
 
