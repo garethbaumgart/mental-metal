@@ -1,3 +1,4 @@
+using MentalMetal.Application.Briefings;
 using MentalMetal.Application.Captures.AutoExtract;
 using MentalMetal.Application.Common;
 using MentalMetal.Application.Common.Ai;
@@ -21,6 +22,7 @@ public class AutoExtractCaptureHandlerTests
     private readonly IAiCompletionService _aiService = Substitute.For<IAiCompletionService>();
     private readonly ITasteBudgetService _tasteBudget = Substitute.For<ITasteBudgetService>();
     private readonly ICurrentUserService _currentUser = Substitute.For<ICurrentUserService>();
+    private readonly IBriefCacheService _briefCacheService = Substitute.For<IBriefCacheService>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ILogger<AutoExtractCaptureHandler> _logger = NullLogger<AutoExtractCaptureHandler>.Instance;
 
@@ -38,7 +40,7 @@ public class AutoExtractCaptureHandlerTests
 
         _sut = new AutoExtractCaptureHandler(
             _captureRepo, _personRepo, _initiativeRepo, _commitmentRepo,
-            _aiService, _tasteBudget, _currentUser,
+            _aiService, _tasteBudget, _currentUser, _briefCacheService,
             new NameResolutionService(), new InitiativeTaggingService(),
             _unitOfWork, _logger);
     }
@@ -76,6 +78,9 @@ public class AutoExtractCaptureHandlerTests
         Assert.Equal("A brief meeting about project updates.", result.AiExtraction!.Summary);
         Assert.Single(result.AiExtraction.Decisions);
         Assert.Single(result.AiExtraction.Risks);
+
+        // Brief cache should be invalidated after successful extraction
+        _briefCacheService.Received(1).InvalidateForUser(_userId);
     }
 
     [Fact]
@@ -104,6 +109,9 @@ public class AutoExtractCaptureHandlerTests
 
         Assert.Equal(ProcessingStatus.Failed, result.ProcessingStatus);
         Assert.Contains("API rate limited", result.FailureReason);
+
+        // Brief cache should NOT be invalidated on failure
+        _briefCacheService.DidNotReceive().InvalidateForUser(Arg.Any<Guid>());
     }
 
     [Fact]

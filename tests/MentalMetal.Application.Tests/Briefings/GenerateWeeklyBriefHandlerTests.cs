@@ -15,6 +15,7 @@ public class GenerateWeeklyBriefHandlerTests
     private readonly IInitiativeRepository _initiativeRepo = Substitute.For<IInitiativeRepository>();
     private readonly IAiCompletionService _aiService = Substitute.For<IAiCompletionService>();
     private readonly ICurrentUserService _currentUser = Substitute.For<ICurrentUserService>();
+    private readonly IBriefCacheService _cacheService = Substitute.For<IBriefCacheService>();
 
     private readonly Guid _userId = Guid.NewGuid();
     private readonly GenerateWeeklyBriefHandler _sut;
@@ -23,21 +24,30 @@ public class GenerateWeeklyBriefHandlerTests
     {
         _currentUser.UserId.Returns(_userId);
         _sut = new GenerateWeeklyBriefHandler(
-            _captureRepo, _commitmentRepo, _initiativeRepo, _aiService, _currentUser);
+            _captureRepo, _commitmentRepo, _initiativeRepo, _aiService, _currentUser, _cacheService);
+    }
+
+    private void SetupEmptyDataSources()
+    {
+        _captureRepo.GetByDateRangeAsync(
+            _userId, Arg.Any<DateTimeOffset>(), Arg.Any<DateTimeOffset>(),
+            ProcessingStatus.Processed, Arg.Any<CancellationToken>())
+            .Returns(new List<Capture>());
+        _commitmentRepo.GetAllAsync(_userId, null, null, null, null, null, Arg.Any<CancellationToken>())
+            .Returns(new List<Commitment>());
+        _initiativeRepo.GetAllAsync(_userId, InitiativeStatus.Active, Arg.Any<CancellationToken>())
+            .Returns(new List<Initiative>());
+        _aiService.CompleteAsync(Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AiCompletionResult("Quiet week.", 20, 50, "test-model", AiProvider.Anthropic));
     }
 
     [Fact]
     public async Task HandleAsync_NoDataThisWeek_SkipsAiAndReturnsCannedNarrative()
     {
         // Regression: bug #4 — AI was invoked with empty context, producing misleading narrative.
-        _captureRepo.GetAllAsync(_userId, null, ProcessingStatus.Processed, Arg.Any<CancellationToken>())
-            .Returns(new List<Capture>());
-        _commitmentRepo.GetAllAsync(_userId, null, null, null, null, null, Arg.Any<CancellationToken>())
-            .Returns(new List<Commitment>());
-        _initiativeRepo.GetAllAsync(_userId, InitiativeStatus.Active, Arg.Any<CancellationToken>())
-            .Returns(new List<Initiative>());
+        SetupEmptyDataSources();
 
-        var result = await _sut.HandleAsync(null, CancellationToken.None);
+        var result = await _sut.HandleAsync(null, forceRefresh: true, CancellationToken.None);
 
         Assert.Equal(GenerateWeeklyBriefHandler.NoDataNarrative, result.Narrative);
         Assert.Empty(result.InitiativeActivity);
@@ -66,7 +76,9 @@ public class GenerateWeeklyBriefHandlerTests
             ExtractedAt = DateTimeOffset.UtcNow
         });
 
-        _captureRepo.GetAllAsync(_userId, null, ProcessingStatus.Processed, Arg.Any<CancellationToken>())
+        _captureRepo.GetByDateRangeAsync(
+            _userId, Arg.Any<DateTimeOffset>(), Arg.Any<DateTimeOffset>(),
+            ProcessingStatus.Processed, Arg.Any<CancellationToken>())
             .Returns(new List<Capture> { capture });
         _commitmentRepo.GetAllAsync(_userId, null, null, null, null, null, Arg.Any<CancellationToken>())
             .Returns(new List<Commitment>());
@@ -76,7 +88,7 @@ public class GenerateWeeklyBriefHandlerTests
         _aiService.CompleteAsync(Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>())
             .Returns(new AiCompletionResult("Weekly review.", 20, 50, "test-model", AiProvider.Anthropic));
 
-        await _sut.HandleAsync(null, CancellationToken.None);
+        await _sut.HandleAsync(null, forceRefresh: true, CancellationToken.None);
 
         await _aiService.Received(1).CompleteAsync(
             Arg.Is<AiCompletionRequest>(r => r.SystemPrompt.Contains("weekly briefing")),
@@ -87,14 +99,9 @@ public class GenerateWeeklyBriefHandlerTests
     public async Task HandleAsync_WithSpecificWeek_UsesCorrectDateRange()
     {
         var weekOf = new DateOnly(2026, 4, 15); // Wednesday
-        _captureRepo.GetAllAsync(_userId, null, ProcessingStatus.Processed, Arg.Any<CancellationToken>())
-            .Returns(new List<Capture>());
-        _commitmentRepo.GetAllAsync(_userId, null, null, null, null, null, Arg.Any<CancellationToken>())
-            .Returns(new List<Commitment>());
-        _initiativeRepo.GetAllAsync(_userId, InitiativeStatus.Active, Arg.Any<CancellationToken>())
-            .Returns(new List<Initiative>());
+        SetupEmptyDataSources();
 
-        var result = await _sut.HandleAsync(weekOf, CancellationToken.None);
+        var result = await _sut.HandleAsync(weekOf, forceRefresh: true, CancellationToken.None);
 
         // April 15, 2026 is a Wednesday, so week starts on Monday April 13
         Assert.Equal(new DateTimeOffset(2026, 4, 13, 0, 0, 0, TimeSpan.Zero), result.DateRange.Start);
@@ -114,7 +121,9 @@ public class GenerateWeeklyBriefHandlerTests
             ExtractedAt = DateTimeOffset.UtcNow
         });
 
-        _captureRepo.GetAllAsync(_userId, null, ProcessingStatus.Processed, Arg.Any<CancellationToken>())
+        _captureRepo.GetByDateRangeAsync(
+            _userId, Arg.Any<DateTimeOffset>(), Arg.Any<DateTimeOffset>(),
+            ProcessingStatus.Processed, Arg.Any<CancellationToken>())
             .Returns(new List<Capture> { capture });
         _commitmentRepo.GetAllAsync(_userId, null, null, null, null, null, Arg.Any<CancellationToken>())
             .Returns(new List<Commitment>());
@@ -124,7 +133,7 @@ public class GenerateWeeklyBriefHandlerTests
         _aiService.CompleteAsync(Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>())
             .Returns(new AiCompletionResult("Brief.", 20, 50, "test-model", AiProvider.Anthropic));
 
-        var result = await _sut.HandleAsync(null, CancellationToken.None);
+        var result = await _sut.HandleAsync(null, forceRefresh: true, CancellationToken.None);
 
         // The capture may or may not be in the current week depending on when the test runs
         // but the handler should handle it gracefully either way
@@ -146,7 +155,9 @@ public class GenerateWeeklyBriefHandlerTests
             ExtractedAt = DateTimeOffset.UtcNow
         });
 
-        _captureRepo.GetAllAsync(_userId, null, ProcessingStatus.Processed, Arg.Any<CancellationToken>())
+        _captureRepo.GetByDateRangeAsync(
+            _userId, Arg.Any<DateTimeOffset>(), Arg.Any<DateTimeOffset>(),
+            ProcessingStatus.Processed, Arg.Any<CancellationToken>())
             .Returns(new List<Capture> { capture });
         _commitmentRepo.GetAllAsync(_userId, null, null, null, null, null, Arg.Any<CancellationToken>())
             .Returns(new List<Commitment>());
@@ -156,7 +167,7 @@ public class GenerateWeeklyBriefHandlerTests
         _aiService.CompleteAsync(Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>())
             .Returns(new AiCompletionResult("Brief.", 20, 50, "test-model", AiProvider.Anthropic));
 
-        var result = await _sut.HandleAsync(null, CancellationToken.None);
+        var result = await _sut.HandleAsync(null, forceRefresh: true, CancellationToken.None);
 
         Assert.NotNull(result.Narrative);
     }
@@ -175,7 +186,9 @@ public class GenerateWeeklyBriefHandlerTests
             _userId, "Deliver spec", CommitmentDirection.MineToThem, personId,
             initiativeId: initiative.Id);
 
-        _captureRepo.GetAllAsync(_userId, null, ProcessingStatus.Processed, Arg.Any<CancellationToken>())
+        _captureRepo.GetByDateRangeAsync(
+            _userId, Arg.Any<DateTimeOffset>(), Arg.Any<DateTimeOffset>(),
+            ProcessingStatus.Processed, Arg.Any<CancellationToken>())
             .Returns(new List<Capture>());
         _commitmentRepo.GetAllAsync(_userId, null, null, null, null, null, Arg.Any<CancellationToken>())
             .Returns(new List<Commitment> { commitment });
@@ -185,7 +198,7 @@ public class GenerateWeeklyBriefHandlerTests
         _aiService.CompleteAsync(Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>())
             .Returns(new AiCompletionResult("Active week.", 20, 50, "test-model", AiProvider.Anthropic));
 
-        var result = await _sut.HandleAsync(null, CancellationToken.None);
+        var result = await _sut.HandleAsync(null, forceRefresh: true, CancellationToken.None);
 
         Assert.Single(result.InitiativeActivity);
         Assert.Equal("Project Alpha", result.InitiativeActivity[0].Title);
@@ -196,18 +209,14 @@ public class GenerateWeeklyBriefHandlerTests
     {
         // Regression: bug #1 — weekly brief must only use processed captures (matching daily brief).
         // The repo is called with ProcessingStatus.Processed filter.
-        _captureRepo.GetAllAsync(_userId, null, ProcessingStatus.Processed, Arg.Any<CancellationToken>())
-            .Returns(new List<Capture>());
-        _commitmentRepo.GetAllAsync(_userId, null, null, null, null, null, Arg.Any<CancellationToken>())
-            .Returns(new List<Commitment>());
-        _initiativeRepo.GetAllAsync(_userId, InitiativeStatus.Active, Arg.Any<CancellationToken>())
-            .Returns(new List<Initiative>());
+        SetupEmptyDataSources();
 
-        await _sut.HandleAsync(null, CancellationToken.None);
+        await _sut.HandleAsync(null, forceRefresh: true, CancellationToken.None);
 
-        // Verify the capture repo was called with the Processed filter
-        await _captureRepo.Received(1).GetAllAsync(
-            _userId, null, ProcessingStatus.Processed, Arg.Any<CancellationToken>());
+        // Verify the capture repo was called with the date-range query and Processed filter
+        await _captureRepo.Received(1).GetByDateRangeAsync(
+            _userId, Arg.Any<DateTimeOffset>(), Arg.Any<DateTimeOffset>(),
+            ProcessingStatus.Processed, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -243,7 +252,9 @@ public class GenerateWeeklyBriefHandlerTests
             ExtractedAt = DateTimeOffset.UtcNow
         });
 
-        _captureRepo.GetAllAsync(_userId, null, ProcessingStatus.Processed, Arg.Any<CancellationToken>())
+        _captureRepo.GetByDateRangeAsync(
+            _userId, Arg.Any<DateTimeOffset>(), Arg.Any<DateTimeOffset>(),
+            ProcessingStatus.Processed, Arg.Any<CancellationToken>())
             .Returns(new List<Capture> { capture1, capture2 });
         _commitmentRepo.GetAllAsync(_userId, null, null, null, null, null, Arg.Any<CancellationToken>())
             .Returns(new List<Commitment>());
@@ -253,9 +264,65 @@ public class GenerateWeeklyBriefHandlerTests
         _aiService.CompleteAsync(Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>())
             .Returns(new AiCompletionResult("Brief.", 20, 50, "test-model", AiProvider.Anthropic));
 
-        var result = await _sut.HandleAsync(null, CancellationToken.None);
+        var result = await _sut.HandleAsync(null, forceRefresh: true, CancellationToken.None);
 
         // Person with whitespace-only name should not appear in cross-conversation insights
         Assert.Empty(result.CrossConversationInsights);
+    }
+
+    [Fact]
+    public async Task HandleAsync_ReturnsCachedBrief_WhenNotForceRefresh()
+    {
+        var cached = new WeeklyBriefResponse(
+            "Cached weekly", [], [], new CommitmentStatusSummary(0, 0, 0, 0),
+            [], [], new DateRange(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow),
+            DateTimeOffset.UtcNow.AddMinutes(-30));
+        _cacheService.GetWeeklyBrief(_userId, Arg.Any<DateOnly>()).Returns(cached);
+
+        var result = await _sut.HandleAsync(null, forceRefresh: false, CancellationToken.None);
+
+        Assert.Same(cached, result);
+        await _aiService.DidNotReceive().CompleteAsync(
+            Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_BypassesCache_WhenForceRefresh()
+    {
+        var cached = new WeeklyBriefResponse(
+            "Cached weekly", [], [], new CommitmentStatusSummary(0, 0, 0, 0),
+            [], [], new DateRange(DateTimeOffset.UtcNow, DateTimeOffset.UtcNow),
+            DateTimeOffset.UtcNow.AddMinutes(-30));
+        _cacheService.GetWeeklyBrief(_userId, Arg.Any<DateOnly>()).Returns(cached);
+        SetupEmptyDataSources();
+
+        var result = await _sut.HandleAsync(null, forceRefresh: true, CancellationToken.None);
+
+        Assert.NotSame(cached, result);
+    }
+
+    [Fact]
+    public async Task HandleAsync_CachesGeneratedBrief()
+    {
+        SetupEmptyDataSources();
+
+        var result = await _sut.HandleAsync(null, forceRefresh: true, CancellationToken.None);
+
+        _cacheService.Received(1).SetWeeklyBrief(_userId, Arg.Any<DateOnly>(), result);
+    }
+
+    [Fact]
+    public async Task HandleAsync_UsesDateRangeQuery_NotGetAllAsync()
+    {
+        SetupEmptyDataSources();
+
+        await _sut.HandleAsync(null, forceRefresh: true, CancellationToken.None);
+
+        await _captureRepo.Received(1).GetByDateRangeAsync(
+            _userId, Arg.Any<DateTimeOffset>(), Arg.Any<DateTimeOffset>(),
+            ProcessingStatus.Processed, Arg.Any<CancellationToken>());
+        await _captureRepo.DidNotReceive().GetAllAsync(
+            Arg.Any<Guid>(), Arg.Any<CaptureType?>(), Arg.Any<ProcessingStatus?>(),
+            Arg.Any<CancellationToken>());
     }
 }

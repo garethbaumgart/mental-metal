@@ -11,38 +11,47 @@ public sealed class GenerateWeeklyBriefHandler(
     ICommitmentRepository commitmentRepository,
     IInitiativeRepository initiativeRepository,
     IAiCompletionService aiCompletionService,
-    ICurrentUserService currentUserService)
+    ICurrentUserService currentUserService,
+    IBriefCacheService briefCacheService)
 {
     public const string NoDataNarrative =
         "No captures or commitment activity were recorded this week.";
     public async Task<WeeklyBriefResponse> HandleAsync(
         DateOnly? weekOf,
+        bool forceRefresh,
         CancellationToken cancellationToken)
     {
         var userId = currentUserService.UserId;
 
-        // Default to the current week's Monday
+        // Compute the week start so we can use it for the cache key
         var referenceDate = weekOf ?? DateOnly.FromDateTime(DateTime.UtcNow);
-        var dayOfWeek = referenceDate.DayOfWeek == DayOfWeek.Sunday ? 6 : (int)referenceDate.DayOfWeek - 1;
-        var weekStart = referenceDate.AddDays(-dayOfWeek);
+        var weekStart = WeekHelper.GetWeekStart(referenceDate);
+
+        if (!forceRefresh)
+        {
+            var cached = briefCacheService.GetWeeklyBrief(userId, weekStart);
+            if (cached is not null)
+                return cached;
+        }
+
+        var response = await GenerateAsync(userId, weekStart, cancellationToken);
+        briefCacheService.SetWeeklyBrief(userId, weekStart, response);
+        return response;
+    }
+
+    private async Task<WeeklyBriefResponse> GenerateAsync(
+        Guid userId, DateOnly weekStart, CancellationToken cancellationToken)
+    {
         var weekEnd = weekStart.AddDays(7);
 
         var weekStartOffset = new DateTimeOffset(weekStart.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
         var weekEndOffset = new DateTimeOffset(weekEnd.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
 
-        // TODO: ICaptureRepository.GetAllAsync does not accept a date range — all captures are
-        // loaded then filtered in memory. Add a date-range overload to push filtering to the
-        // database once capture volume warrants it.
-        var allCaptures = await captureRepository.GetAllAsync(
-            userId, null, ProcessingStatus.Processed, cancellationToken);
-
-        var weekCaptures = allCaptures
-            .Where(c => c.CapturedAt >= weekStartOffset && c.CapturedAt < weekEndOffset)
-            .OrderByDescending(c => c.CapturedAt)
+        // Use date-range query instead of loading all captures
+        var weekCaptures = (await captureRepository.GetByDateRangeAsync(
+            userId, weekStartOffset, weekEndOffset, ProcessingStatus.Processed, cancellationToken))
             .ToList();
 
-        // TODO: Same optimisation opportunity — ICommitmentRepository.GetAllAsync does not
-        // accept a date range, so we load all commitments and filter in memory.
         var allCommitments = await commitmentRepository.GetAllAsync(
             userId, null, null, null, null, null, cancellationToken);
 

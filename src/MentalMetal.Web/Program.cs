@@ -725,7 +725,7 @@ app.MapGet("/api/briefing/daily", async (
     GenerateDailyBriefHandler handler,
     CancellationToken cancellationToken) =>
 {
-    var response = await handler.HandleAsync(cancellationToken);
+    var response = await handler.HandleAsync(forceRefresh: false, cancellationToken);
     return Results.Ok(response);
 }).RequireAuthorization();
 
@@ -733,7 +733,7 @@ app.MapPost("/api/briefing/daily/refresh", async (
     GenerateDailyBriefHandler handler,
     CancellationToken cancellationToken) =>
 {
-    var response = await handler.HandleAsync(cancellationToken);
+    var response = await handler.HandleAsync(forceRefresh: true, cancellationToken);
     return Results.Ok(response);
 }).RequireAuthorization();
 
@@ -742,7 +742,7 @@ app.MapGet("/api/briefing/weekly", async (
     GenerateWeeklyBriefHandler handler,
     CancellationToken cancellationToken) =>
 {
-    var response = await handler.HandleAsync(weekOf, cancellationToken);
+    var response = await handler.HandleAsync(weekOf, forceRefresh: false, cancellationToken);
     return Results.Ok(response);
 }).RequireAuthorization();
 
@@ -751,7 +751,7 @@ app.MapPost("/api/briefing/weekly/refresh", async (
     GenerateWeeklyBriefHandler handler,
     CancellationToken cancellationToken) =>
 {
-    var response = await handler.HandleAsync(weekOf, cancellationToken);
+    var response = await handler.HandleAsync(weekOf, forceRefresh: true, cancellationToken);
     return Results.Ok(response);
 }).RequireAuthorization();
 

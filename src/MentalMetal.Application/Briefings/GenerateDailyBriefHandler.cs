@@ -11,23 +11,38 @@ public sealed class GenerateDailyBriefHandler(
     ICommitmentRepository commitmentRepository,
     IPersonRepository personRepository,
     IAiCompletionService aiCompletionService,
-    ICurrentUserService currentUserService)
+    ICurrentUserService currentUserService,
+    IBriefCacheService briefCacheService)
 {
-    public async Task<DailyBriefResponse> HandleAsync(CancellationToken cancellationToken)
+    public async Task<DailyBriefResponse> HandleAsync(
+        bool forceRefresh, CancellationToken cancellationToken)
     {
         var userId = currentUserService.UserId;
+
+        if (!forceRefresh)
+        {
+            var cached = briefCacheService.GetDailyBrief(userId);
+            if (cached is not null)
+                return cached;
+        }
+
+        var response = await GenerateAsync(userId, cancellationToken);
+        briefCacheService.SetDailyBrief(userId, response);
+        return response;
+    }
+
+    private async Task<DailyBriefResponse> GenerateAsync(
+        Guid userId, CancellationToken cancellationToken)
+    {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var yesterdayStart = today.AddDays(-1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var yesterdayEnd = today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        var yesterdayStart = new DateTimeOffset(
+            today.AddDays(-1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+        var yesterdayEnd = new DateTimeOffset(
+            today.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
 
-        // Get all processed captures and filter to yesterday
-        var allCaptures = await captureRepository.GetAllAsync(
-            userId, null, ProcessingStatus.Processed, cancellationToken);
-
-        var yesterdayCaptures = allCaptures
-            .Where(c => c.CapturedAt >= new DateTimeOffset(yesterdayStart)
-                     && c.CapturedAt < new DateTimeOffset(yesterdayEnd))
-            .OrderByDescending(c => c.CapturedAt)
+        // Use date-range query instead of loading all captures
+        var yesterdayCaptures = (await captureRepository.GetByDateRangeAsync(
+            userId, yesterdayStart, yesterdayEnd, ProcessingStatus.Processed, cancellationToken))
             .ToList();
 
         // Get commitments
