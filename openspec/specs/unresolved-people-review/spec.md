@@ -37,6 +37,12 @@ The system SHALL allow an authenticated user to create a new Person and resolve 
 - **WHEN** an authenticated user sends a POST with a rawName that does not match any PersonMention in the extraction
 - **THEN** the system returns HTTP 400 with message indicating the raw name was not found in extraction
 
+#### Scenario: Quick-create with alias conflict rejected
+
+- **WHEN** an authenticated user sends a POST with rawName "Sarah" and personName "Sarah Chen"
+- **AND** another Person already has "Sarah" as an alias
+- **THEN** the system returns HTTP 409 Conflict
+
 ### Requirement: Spawn skipped commitments on person resolution
 
 The system SHALL, when resolving an unresolved person mention (via either link-to-existing or quick-create), spawn Commitment entities for extracted commitments that reference the resolved raw name, have High or Medium confidence, and have no `SpawnedCommitmentId`. The spawned commitments SHALL follow the same creation rules as initial extraction (direction, due date, source offsets, source capture link). The system SHALL update the extraction's `ExtractedCommitment` entries with the newly spawned `SpawnedCommitmentId` and resolved `PersonId`.
