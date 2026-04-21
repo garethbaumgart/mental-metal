@@ -114,13 +114,13 @@ The system prompt SHALL instruct the AI to include `source_start_offset` (0-base
 
 ### Requirement: AiExtraction value object
 
-The system SHALL define an `AiExtraction` value object embedded on the Capture aggregate with the following properties: Summary (string, required), Commitments (list of extracted commitments with description, direction, person hint, optional due date, and optional source character offsets: SourceStartOffset and SourceEndOffset), Delegations (list of extracted delegations with description, person hint, and optional due date), Observations (list of extracted observations with description, person hint, and tag), Decisions (list of strings), RisksIdentified (list of strings), SuggestedPersonLinks (list of person name hints), SuggestedInitiativeLinks (list of initiative name hints), ConfidenceScore (decimal, 0.0-1.0), and DetectedCaptureType (nullable CaptureType indicating the AI's content classification).
+The system SHALL define an `AiExtraction` value object embedded on the Capture aggregate with the following properties: Summary (string, required), Commitments (list of extracted commitments with description, direction, confidence level, person hint, PersonRawName, optional PersonId — null when unresolved, optional due date, optional source character offsets: SourceStartOffset and SourceEndOffset, and optional SpawnedCommitmentId), Delegations (list of extracted delegations with description, person hint, and optional due date), Observations (list of extracted observations with description, person hint, and tag), Decisions (list of strings), RisksIdentified (list of strings), PeopleMentioned (list of person mentions with RawName string and optional PersonId — null when unresolved), SuggestedPersonLinks (list of person name hints), SuggestedInitiativeLinks (list of initiative name hints), ConfidenceScore (decimal, 0.0-1.0), and DetectedCaptureType (nullable CaptureType indicating the AI's content classification).
 
 #### Scenario: AiExtraction with all fields populated
 
 - **WHEN** a transcript yields commitments, delegations, observations, decisions, and risks
 - **THEN** the AiExtraction value object contains all extracted items with their respective properties
-- **AND** each commitment includes SourceStartOffset and SourceEndOffset
+- **AND** each commitment includes SourceStartOffset, SourceEndOffset, and PersonRawName
 - **AND** DetectedCaptureType is set to the type the AI classified the content as
 
 #### Scenario: AiExtraction with minimal content
@@ -140,36 +140,54 @@ The system SHALL define an `AiExtraction` value object embedded on the Capture a
 
 ### Requirement: Spawn entities from extraction
 
-The system SHALL, after successful extraction, offer the user a confirmation step before spawning entities. Spawnable entities include: Commitments (created via the commitment-tracking API), Delegations (created via the delegation-tracking API), and Observations (stored for people-lens). Each spawned entity SHALL have its SourceCaptureId set to the originating capture's ID. Each spawned Commitment SHALL have its SourceStartOffset and SourceEndOffset set from the extracted commitment's source offsets (if available).
+The system SHALL, after successful extraction, automatically spawn Commitment entities for High/Medium confidence commitments that have a resolved PersonId. Commitments referencing unresolved people (null PersonId) SHALL be recorded in the extraction metadata with their `PersonRawName` but SHALL NOT be spawned as Commitment entities. Each spawned entity SHALL have its SourceCaptureId set to the originating capture's ID. Each spawned Commitment SHALL have its SourceStartOffset and SourceEndOffset set from the extracted commitment's source offsets (if available). The extraction metadata SHALL preserve all extracted commitments (both spawned and skipped) so that skipped commitments can be spawned later when the person is resolved.
 
-#### Scenario: Confirm and spawn all extracted entities
+#### Scenario: Auto-spawn commitments for resolved people only
 
-- **WHEN** an authenticated user sends a POST to `/api/captures/{id}/confirm-extraction`
-- **THEN** the system creates Commitment entities for each extracted commitment, Delegation entities for each extracted delegation, and Observation records for each extracted observation
-- **AND** each spawned entity has SourceCaptureId set to the capture's ID
-- **AND** each spawned Commitment has SourceStartOffset and SourceEndOffset set from the extraction data
-- **AND** the capture raises a `CaptureExtractionConfirmed` domain event
+- **WHEN** the extraction pipeline finds two commitments: one for "Sarah" (resolved to PersonId X) and one for "Mike" (unresolved)
+- **THEN** the system creates a Commitment entity for Sarah's commitment with PersonId X and SourceCaptureId set to the capture
+- **AND** records Mike's commitment in the extraction with PersonRawName "Mike", PersonId null, and SpawnedCommitmentId null
+- **AND** does NOT create a Commitment entity for Mike's commitment
 
-#### Scenario: Confirm extraction with person matching
+#### Scenario: Auto-spawn with source offsets
+
+- **WHEN** the extraction pipeline spawns a commitment with source offsets
+- **THEN** the spawned Commitment has SourceStartOffset and SourceEndOffset set from the extraction data
+
+#### Scenario: Name resolution matches existing person
 
 - **WHEN** the extraction contains person hints (e.g., "Sarah") and the user has a Person named "Sarah Chen"
-- **THEN** the system matches the hint to the existing Person by name similarity and sets the PersonId on spawned entities
+- **THEN** the system matches the hint to the existing Person by name similarity and sets the PersonId on the spawned commitment
 
-#### Scenario: Confirm extraction with no person match
+#### Scenario: Name resolution finds no match
 
 - **WHEN** the extraction contains a person hint that does not match any existing Person
-- **THEN** the spawned entity is created without a PersonId and the user can link it manually
+- **THEN** the extracted commitment is recorded with PersonRawName set and PersonId null
+- **AND** no Commitment entity is spawned for that item
+- **AND** the user can resolve the person later via the unresolved people review flow
 
-#### Scenario: Discard extraction
+### Requirement: Resolve person mention post-extraction
 
-- **WHEN** an authenticated user sends a POST to `/api/captures/{id}/discard-extraction`
-- **THEN** the system does NOT spawn any entities
-- **AND** the AiExtraction is retained on the capture for reference
-- **AND** the capture raises a `CaptureExtractionDiscarded` domain event
+The system SHALL allow an authenticated user to resolve an unresolved person mention by sending a POST to `/api/captures/{id}/resolve-person-mention` with `rawName` and `personId`. The system SHALL update the extraction's PersonMention with the resolved PersonId, add the raw name as an alias on the person (if not already present), link the capture to the person, and spawn any skipped commitments for that person (High/Medium confidence with no existing SpawnedCommitmentId). When multiple extracted commitments share the same `PersonRawName`, all matching commitments SHALL be spawned in a single resolution operation. The operation SHALL be atomic -- if any step fails, no changes are persisted. The raw name used as alias SHALL be validated for uniqueness among the user's people.
 
-#### Scenario: Confirm on non-processed capture rejected
+#### Scenario: Resolve and spawn skipped commitments
 
-- **WHEN** an authenticated user sends a POST to `/api/captures/{id}/confirm-extraction` for a capture that is not in Processed status
+- **WHEN** an authenticated user resolves "Sarah" to PersonId X
+- **AND** the extraction has one High confidence commitment with PersonRawName "Sarah" and SpawnedCommitmentId null
+- **THEN** the system creates a Commitment entity with PersonId X
+- **AND** updates the extraction's commitment with the SpawnedCommitmentId
+- **AND** records the spawned commitment on the capture
+
+#### Scenario: Resolve with no skipped commitments
+
+- **WHEN** an authenticated user resolves "Mike" to PersonId Y
+- **AND** no extracted commitments reference "Mike"
+- **THEN** the mention is resolved and linked, but no commitments are spawned
+
+#### Scenario: Alias conflict rejected
+
+- **WHEN** an authenticated user resolves "Sarah" to PersonId X
+- **AND** another Person already has "Sarah" as an alias
 - **THEN** the system returns HTTP 409 Conflict
 
 ### Requirement: Retry failed processing
