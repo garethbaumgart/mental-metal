@@ -316,7 +316,7 @@ export class CommitmentsListComponent implements OnInit {
 
   protected onComplete(commitment: Commitment): void {
     this.commitmentsService.complete(commitment.id).subscribe({
-      next: () => this.loadCommitments(),
+      next: (updated) => this.applyOptimisticUpdate(updated),
       error: () =>
         this.messageService.add({ severity: 'error', summary: 'Failed to complete commitment' }),
     });
@@ -324,7 +324,7 @@ export class CommitmentsListComponent implements OnInit {
 
   protected onDismiss(commitment: Commitment): void {
     this.commitmentsService.dismiss(commitment.id).subscribe({
-      next: () => this.loadCommitments(),
+      next: (updated) => this.applyOptimisticUpdate(updated),
       error: () =>
         this.messageService.add({ severity: 'error', summary: 'Failed to dismiss commitment' }),
     });
@@ -332,9 +332,22 @@ export class CommitmentsListComponent implements OnInit {
 
   protected onReopen(commitment: Commitment): void {
     this.commitmentsService.reopen(commitment.id).subscribe({
-      next: () => this.loadCommitments(),
+      next: (updated) => this.applyOptimisticUpdate(updated),
       error: () =>
         this.messageService.add({ severity: 'error', summary: 'Failed to reopen commitment' }),
+    });
+  }
+
+  private applyOptimisticUpdate(updated: Commitment): void {
+    const statusFilter = this.selectedStatus();
+    const matchesFilter = statusFilter === null || updated.status === statusFilter;
+
+    this.commitments.update((list) => {
+      if (matchesFilter) {
+        return list.map((c) => (c.id === updated.id ? updated : c));
+      } else {
+        return list.filter((c) => c.id !== updated.id);
+      }
     });
   }
 
