@@ -14,7 +14,8 @@ public sealed record AiExtractionResponse(
     List<string> Decisions,
     List<string> Risks,
     List<InitiativeTagResponse> InitiativeTags,
-    DateTimeOffset ExtractedAt)
+    DateTimeOffset ExtractedAt,
+    CaptureType? DetectedCaptureType)
 {
     public static AiExtractionResponse? From(AiExtraction? extraction) =>
         extraction is null ? null : new(
@@ -25,7 +26,8 @@ public sealed record AiExtractionResponse(
             (extraction.Decisions ?? []).ToList(),
             (extraction.Risks ?? []).ToList(),
             (extraction.InitiativeTags ?? []).Select(t => new InitiativeTagResponse(t.RawName, t.InitiativeId, t.Context)).ToList(),
-            extraction.ExtractedAt);
+            extraction.ExtractedAt,
+            extraction.DetectedCaptureType);
 }
 
 public sealed record PersonMentionResponse(string RawName, Guid? PersonId, string? Context);

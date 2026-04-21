@@ -235,4 +235,107 @@ public class CaptureTests
 
         Assert.Throws<ArgumentException>(() => capture.RecordSpawnedCommitment(Guid.Empty));
     }
+
+    // --- Reclassify tests ---
+
+    [Fact]
+    public void Reclassify_QuickNoteToTranscript_ChangesTypeAndRaisesEvent()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+        capture.BeginProcessing();
+        capture.ClearDomainEvents();
+
+        capture.Reclassify(CaptureType.Transcript);
+
+        Assert.Equal(CaptureType.Transcript, capture.CaptureType);
+        var domainEvent = Assert.Single(capture.DomainEvents);
+        var reclassified = Assert.IsType<CaptureReclassified>(domainEvent);
+        Assert.Equal(CaptureType.QuickNote, reclassified.OldType);
+        Assert.Equal(CaptureType.Transcript, reclassified.NewType);
+    }
+
+    [Fact]
+    public void Reclassify_QuickNoteToMeetingNotes_ChangesTypeAndRaisesEvent()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+        capture.BeginProcessing();
+        capture.ClearDomainEvents();
+
+        capture.Reclassify(CaptureType.MeetingNotes);
+
+        Assert.Equal(CaptureType.MeetingNotes, capture.CaptureType);
+        var domainEvent = Assert.Single(capture.DomainEvents);
+        var reclassified = Assert.IsType<CaptureReclassified>(domainEvent);
+        Assert.Equal(CaptureType.QuickNote, reclassified.OldType);
+        Assert.Equal(CaptureType.MeetingNotes, reclassified.NewType);
+    }
+
+    [Fact]
+    public void Reclassify_SameType_IsNoOp()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+        capture.BeginProcessing();
+        capture.ClearDomainEvents();
+
+        capture.Reclassify(CaptureType.QuickNote);
+
+        Assert.Equal(CaptureType.QuickNote, capture.CaptureType);
+        Assert.Empty(capture.DomainEvents);
+    }
+
+    [Fact]
+    public void Reclassify_ToAudioRecording_Throws()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+        capture.BeginProcessing();
+
+        Assert.Throws<InvalidOperationException>(() =>
+            capture.Reclassify(CaptureType.AudioRecording));
+    }
+
+    [Fact]
+    public void Reclassify_FromAudioRecording_Throws()
+    {
+        var capture = Capture.CreateAudio(
+            UserId, "blob-ref", "audio/webm", 10.0, DateTimeOffset.UtcNow);
+        // Transition from Pending -> InProgress -> Transcribed to populate RawContent,
+        // then Raw -> Processing to reach the status required by Reclassify
+        capture.BeginTranscription(DateTimeOffset.UtcNow);
+        capture.AttachTranscript("transcript text", [], DateTimeOffset.UtcNow);
+        capture.BeginProcessing();
+
+        Assert.Throws<InvalidOperationException>(() =>
+            capture.Reclassify(CaptureType.Transcript));
+    }
+
+    [Fact]
+    public void Reclassify_FromRawStatus_Throws()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            capture.Reclassify(CaptureType.Transcript));
+    }
+
+    [Fact]
+    public void Reclassify_FromProcessedStatus_Throws()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+        capture.BeginProcessing();
+        capture.CompleteProcessing(CreateTestExtraction());
+
+        Assert.Throws<InvalidOperationException>(() =>
+            capture.Reclassify(CaptureType.Transcript));
+    }
+
+    [Fact]
+    public void Reclassify_FromFailedStatus_Throws()
+    {
+        var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);
+        capture.BeginProcessing();
+        capture.FailProcessing("error");
+
+        Assert.Throws<InvalidOperationException>(() =>
+            capture.Reclassify(CaptureType.Transcript));
+    }
 }

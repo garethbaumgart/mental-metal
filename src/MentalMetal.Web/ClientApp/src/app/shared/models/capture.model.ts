@@ -67,6 +67,7 @@ export interface AiExtraction {
   risks: string[];
   initiativeTags: InitiativeTag[];
   extractedAt: string;
+  detectedCaptureType: CaptureType | null;
 }
 
 export interface Capture {

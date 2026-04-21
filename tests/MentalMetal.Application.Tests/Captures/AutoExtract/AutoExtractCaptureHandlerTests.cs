@@ -355,6 +355,144 @@ public class AutoExtractCaptureHandlerTests
     }
 
     [Fact]
+    public async Task HandleAsync_DetectedTypeTranscript_ReclassifiesFromQuickNote()
+    {
+        var capture = Capture.Create(_userId, "Alice: Hi\nBob: Hello", CaptureType.QuickNote);
+        _captureRepo.GetByIdAsync(capture.Id, Arg.Any<CancellationToken>())
+            .Returns(capture);
+
+        var aiJson = """
+        {
+          "summary": "A brief conversation.",
+          "people_mentioned": [],
+          "commitments": [],
+          "decisions": [],
+          "risks": [],
+          "initiative_tags": [],
+          "detected_type": "Transcript"
+        }
+        """;
+
+        _aiService.CompleteAsync(Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AiCompletionResult(aiJson, 100, 200, "test-model", AiProvider.Anthropic));
+
+        var result = await _sut.HandleAsync(capture.Id, CancellationToken.None);
+
+        Assert.Equal(CaptureType.Transcript, result.CaptureType);
+        Assert.Equal(CaptureType.Transcript, result.AiExtraction!.DetectedCaptureType);
+    }
+
+    [Fact]
+    public async Task HandleAsync_DetectedTypeSameAsCurrent_DoesNotReclassify()
+    {
+        var capture = Capture.Create(_userId, "Test meeting notes", CaptureType.MeetingNotes);
+        _captureRepo.GetByIdAsync(capture.Id, Arg.Any<CancellationToken>())
+            .Returns(capture);
+
+        var aiJson = """
+        {
+          "summary": "Meeting notes.",
+          "people_mentioned": [],
+          "commitments": [],
+          "decisions": [],
+          "risks": [],
+          "initiative_tags": [],
+          "detected_type": "MeetingNotes"
+        }
+        """;
+
+        _aiService.CompleteAsync(Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AiCompletionResult(aiJson, 100, 200, "test-model", AiProvider.Anthropic));
+
+        var result = await _sut.HandleAsync(capture.Id, CancellationToken.None);
+
+        Assert.Equal(CaptureType.MeetingNotes, result.CaptureType);
+        Assert.Equal(CaptureType.MeetingNotes, result.AiExtraction!.DetectedCaptureType);
+    }
+
+    [Fact]
+    public async Task HandleAsync_DetectedTypeNull_DoesNotReclassify()
+    {
+        var capture = Capture.Create(_userId, "Test content", CaptureType.QuickNote);
+        _captureRepo.GetByIdAsync(capture.Id, Arg.Any<CancellationToken>())
+            .Returns(capture);
+
+        var aiJson = """
+        {
+          "summary": "A note.",
+          "people_mentioned": [],
+          "commitments": [],
+          "decisions": [],
+          "risks": [],
+          "initiative_tags": []
+        }
+        """;
+
+        _aiService.CompleteAsync(Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AiCompletionResult(aiJson, 100, 200, "test-model", AiProvider.Anthropic));
+
+        var result = await _sut.HandleAsync(capture.Id, CancellationToken.None);
+
+        Assert.Equal(CaptureType.QuickNote, result.CaptureType);
+        Assert.Null(result.AiExtraction!.DetectedCaptureType);
+    }
+
+    [Fact]
+    public async Task HandleAsync_DetectedTypeUnrecognized_DoesNotReclassify()
+    {
+        var capture = Capture.Create(_userId, "Test content", CaptureType.QuickNote);
+        _captureRepo.GetByIdAsync(capture.Id, Arg.Any<CancellationToken>())
+            .Returns(capture);
+
+        var aiJson = """
+        {
+          "summary": "A note.",
+          "people_mentioned": [],
+          "commitments": [],
+          "decisions": [],
+          "risks": [],
+          "initiative_tags": [],
+          "detected_type": "UnknownType"
+        }
+        """;
+
+        _aiService.CompleteAsync(Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AiCompletionResult(aiJson, 100, 200, "test-model", AiProvider.Anthropic));
+
+        var result = await _sut.HandleAsync(capture.Id, CancellationToken.None);
+
+        Assert.Equal(CaptureType.QuickNote, result.CaptureType);
+        Assert.Null(result.AiExtraction!.DetectedCaptureType);
+    }
+
+    [Fact]
+    public async Task HandleAsync_DetectedTypeStored_OnAiExtraction()
+    {
+        var capture = Capture.Create(_userId, "Some quick note", CaptureType.QuickNote);
+        _captureRepo.GetByIdAsync(capture.Id, Arg.Any<CancellationToken>())
+            .Returns(capture);
+
+        var aiJson = """
+        {
+          "summary": "A quick note.",
+          "people_mentioned": [],
+          "commitments": [],
+          "decisions": [],
+          "risks": [],
+          "initiative_tags": [],
+          "detected_type": "QuickNote"
+        }
+        """;
+
+        _aiService.CompleteAsync(Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AiCompletionResult(aiJson, 100, 200, "test-model", AiProvider.Anthropic));
+
+        var result = await _sut.HandleAsync(capture.Id, CancellationToken.None);
+
+        Assert.Equal(CaptureType.QuickNote, result.AiExtraction!.DetectedCaptureType);
+    }
+
+    [Fact]
     public async Task HandleAsync_SourceOffsetsFromAi_PropagatedToSpawnedCommitment()
     {
         var capture = CreateRawCapture();
