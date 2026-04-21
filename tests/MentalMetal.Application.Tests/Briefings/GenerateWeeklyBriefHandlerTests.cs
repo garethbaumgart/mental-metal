@@ -39,10 +39,18 @@ public class GenerateWeeklyBriefHandlerTests
 
         var result = await _sut.HandleAsync(null, CancellationToken.None);
 
-        Assert.Contains("No captures or commitment activity", result.Narrative);
+        Assert.Equal(GenerateWeeklyBriefHandler.NoDataNarrative, result.Narrative);
         Assert.Empty(result.InitiativeActivity);
         Assert.Empty(result.CrossConversationInsights);
         Assert.Equal(0, result.CommitmentStatus.NewCount);
+        Assert.Equal(0, result.CommitmentStatus.CompletedCount);
+        Assert.Equal(0, result.CommitmentStatus.OverdueCount);
+
+        Assert.NotNull(result.DateRange);
+        Assert.Equal(DayOfWeek.Monday, result.DateRange.Start.DayOfWeek);
+        Assert.Equal(DayOfWeek.Monday, result.DateRange.End.DayOfWeek);
+        Assert.Equal(result.DateRange.Start.AddDays(7), result.DateRange.End);
+
         await _aiService.DidNotReceive().CompleteAsync(
             Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>());
     }

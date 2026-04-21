@@ -13,6 +13,8 @@ public sealed class GenerateWeeklyBriefHandler(
     IAiCompletionService aiCompletionService,
     ICurrentUserService currentUserService)
 {
+    public const string NoDataNarrative =
+        "No captures or commitment activity were recorded this week.";
     public async Task<WeeklyBriefResponse> HandleAsync(
         DateOnly? weekOf,
         CancellationToken cancellationToken)
@@ -76,6 +78,9 @@ public sealed class GenerateWeeklyBriefHandler(
 
             if (linkedCaptureCount > 0 || linkedCommitmentCount > 0)
             {
+                // DTO intentionally reports capture count only — commitment count is used
+                // solely as an inclusion criterion so initiatives with commitment-only activity
+                // appear in the brief rather than being silently excluded.
                 initiativeActivity.Add(new InitiativeActivityDto(
                     initiative.Id,
                     initiative.Title,
@@ -102,7 +107,7 @@ public sealed class GenerateWeeklyBriefHandler(
         if (weekCaptures.Count == 0 && newThisWeek == 0 && completedThisWeek == 0 && overdueCount == 0)
         {
             return new WeeklyBriefResponse(
-                "No captures or commitment activity were recorded this week.",
+                NoDataNarrative,
                 [],
                 [],
                 new CommitmentStatusSummary(newThisWeek, completedThisWeek, overdueCount, totalOpen),
