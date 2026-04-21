@@ -294,6 +294,21 @@ public class CaptureTests
     }
 
     [Fact]
+    public void Reclassify_FromAudioRecording_Throws()
+    {
+        var capture = Capture.CreateAudio(
+            UserId, "blob-ref", "audio/webm", 10.0, DateTimeOffset.UtcNow);
+        // Transition from Pending -> InProgress -> Transcribed to populate RawContent,
+        // then Raw -> Processing to reach the status required by Reclassify
+        capture.BeginTranscription(DateTimeOffset.UtcNow);
+        capture.AttachTranscript("transcript text", [], DateTimeOffset.UtcNow);
+        capture.BeginProcessing();
+
+        Assert.Throws<InvalidOperationException>(() =>
+            capture.Reclassify(CaptureType.Transcript));
+    }
+
+    [Fact]
     public void Reclassify_FromRawStatus_Throws()
     {
         var capture = Capture.Create(UserId, "content", CaptureType.QuickNote);

@@ -171,6 +171,10 @@ public sealed class Capture : AggregateRoot, IUserScoped
             throw new InvalidOperationException(
                 "Cannot reclassify to AudioRecording. AudioRecording is set by the audio capture pipeline.");
 
+        if (CaptureType == CaptureType.AudioRecording)
+            throw new InvalidOperationException(
+                "Cannot reclassify from AudioRecording. AudioRecording captures are managed by the audio pipeline.");
+
         if (CaptureType == newType)
             return;
 

@@ -276,11 +276,17 @@ public sealed class AutoExtractCaptureHandler(
             : null;
     }
 
-    private static CaptureType? TryParseCaptureType(string? value) => value switch
+    private static CaptureType? TryParseCaptureType(string? value)
     {
-        "QuickNote" => CaptureType.QuickNote,
-        "Transcript" => CaptureType.Transcript,
-        "MeetingNotes" => CaptureType.MeetingNotes,
-        _ => null
-    };
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        return value.Trim() switch
+        {
+            var v when v.Equals("QuickNote", StringComparison.OrdinalIgnoreCase) => CaptureType.QuickNote,
+            var v when v.Equals("Transcript", StringComparison.OrdinalIgnoreCase) => CaptureType.Transcript,
+            var v when v.Equals("MeetingNotes", StringComparison.OrdinalIgnoreCase) => CaptureType.MeetingNotes,
+            _ => null
+        };
+    }
 }
