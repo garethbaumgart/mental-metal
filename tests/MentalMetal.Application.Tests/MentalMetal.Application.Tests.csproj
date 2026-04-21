@@ -22,7 +22,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\MentalMetal.Application\MentalMetal.Application.csproj" />
     <ProjectReference Include="..\..\src\MentalMetal.Domain\MentalMetal.Domain.csproj" />
-    <ProjectReference Include="..\..\src\MentalMetal.Infrastructure\MentalMetal.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

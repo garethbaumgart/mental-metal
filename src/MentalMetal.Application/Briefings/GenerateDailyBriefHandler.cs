@@ -36,9 +36,9 @@ public sealed class GenerateDailyBriefHandler(
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var yesterdayStart = new DateTimeOffset(
-            today.AddDays(-1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+            today.AddDays(-1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
         var yesterdayEnd = new DateTimeOffset(
-            today.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+            today.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
 
         // Use date-range query instead of loading all captures
         var yesterdayCaptures = (await captureRepository.GetByDateRangeAsync(
