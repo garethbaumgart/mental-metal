@@ -611,7 +611,7 @@ export class CaptureDetailComponent implements OnInit {
         this.quickCreateSubmitting.set(false);
         const detail = err?.error?.error ?? 'Unknown error';
         if (err.status === 409) {
-          const isAlias = detail.toLowerCase().includes('alias');
+          const isAlias = detail.startsWith("Alias '");
           this.messageService.add({
             severity: 'warn',
             summary: isAlias ? 'Alias Conflict' : 'Duplicate Person Name',

@@ -1162,8 +1162,11 @@ static IResult? ValidateWeekOf(DateOnly? weekOf, TimeProvider timeProvider)
     if (weekOf is not { } w)
         return null;
 
+    // Validate the normalized week start (Monday) rather than the raw date,
+    // since the handler normalizes via WeekHelper.GetWeekStart before generation/caching.
+    var weekStart = WeekHelper.GetWeekStart(w);
     var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
-    if (w < today.AddDays(-52 * 7) || w > today.AddDays(7))
+    if (weekStart < today.AddDays(-52 * 7) || weekStart > today.AddDays(7))
         return Results.BadRequest(new { error = "weekOf must be within the last 52 weeks or at most one week in the future." });
 
     return null;
