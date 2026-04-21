@@ -8,7 +8,7 @@ When AI extraction identifies people mentioned in a capture, unresolved names ar
 - Add a "quick-create person" inline flow from the capture detail view so users can create people without navigating away
 - Add a "link to existing person" option for unresolved names where the AI match was ambiguous
 - After resolving previously-unresolved people, automatically spawn the commitments that were skipped during initial extraction
-- Include unresolved person count in the capture response DTO so the UI can show a notification badge
+- Frontend derives unresolved person count by filtering `PeopleMentioned` where `PersonId` is null (no separate DTO field needed)
 
 ## Non-goals
 

@@ -4,44 +4,29 @@
 
 The system SHALL, after successful extraction, automatically spawn Commitment entities for High/Medium confidence commitments that have a resolved PersonId. Commitments referencing unresolved people (null PersonId) SHALL be recorded in the extraction metadata with their `PersonRawName` but SHALL NOT be spawned as Commitment entities. Each spawned entity SHALL have its SourceCaptureId set to the originating capture's ID. Each spawned Commitment SHALL have its SourceStartOffset and SourceEndOffset set from the extracted commitment's source offsets (if available). The extraction metadata SHALL preserve all extracted commitments (both spawned and skipped) so that skipped commitments can be spawned later when the person is resolved.
 
-#### Scenario: Spawn commitments for resolved people only
+#### Scenario: Auto-spawn commitments for resolved people only
 
 - **WHEN** the extraction pipeline finds two commitments: one for "Sarah" (resolved to PersonId X) and one for "Mike" (unresolved)
-- **THEN** the system creates a Commitment entity for Sarah's commitment with PersonId X
+- **THEN** the system creates a Commitment entity for Sarah's commitment with PersonId X and SourceCaptureId set to the capture
 - **AND** records Mike's commitment in the extraction with PersonRawName "Mike", PersonId null, and SpawnedCommitmentId null
 - **AND** does NOT create a Commitment entity for Mike's commitment
 
-#### Scenario: Confirm and spawn all extracted entities
+#### Scenario: Auto-spawn with source offsets
 
-- **WHEN** an authenticated user sends a POST to `/api/captures/{id}/confirm-extraction`
-- **THEN** the system creates Commitment entities for each extracted commitment with a resolved PersonId
-- **AND** each spawned entity has SourceCaptureId set to the capture's ID
-- **AND** each spawned Commitment has SourceStartOffset and SourceEndOffset set from the extraction data
-- **AND** the capture raises a `CaptureExtractionConfirmed` domain event
+- **WHEN** the extraction pipeline spawns a commitment with source offsets
+- **THEN** the spawned Commitment has SourceStartOffset and SourceEndOffset set from the extraction data
 
-#### Scenario: Confirm extraction with person matching
+#### Scenario: Name resolution matches existing person
 
 - **WHEN** the extraction contains person hints (e.g., "Sarah") and the user has a Person named "Sarah Chen"
-- **THEN** the system matches the hint to the existing Person by name similarity and sets the PersonId on spawned entities
+- **THEN** the system matches the hint to the existing Person by name similarity and sets the PersonId on the spawned commitment
 
-#### Scenario: Confirm extraction with no person match
+#### Scenario: Name resolution finds no match
 
 - **WHEN** the extraction contains a person hint that does not match any existing Person
 - **THEN** the extracted commitment is recorded with PersonRawName set and PersonId null
 - **AND** no Commitment entity is spawned for that item
 - **AND** the user can resolve the person later via the unresolved people review flow
-
-#### Scenario: Discard extraction
-
-- **WHEN** an authenticated user sends a POST to `/api/captures/{id}/discard-extraction`
-- **THEN** the system does NOT spawn any entities
-- **AND** the AiExtraction is retained on the capture for reference
-- **AND** the capture raises a `CaptureExtractionDiscarded` domain event
-
-#### Scenario: Confirm on non-processed capture rejected
-
-- **WHEN** an authenticated user sends a POST to `/api/captures/{id}/confirm-extraction` for a capture that is not in Processed status
-- **THEN** the system returns HTTP 409 Conflict
 
 ### Requirement: AiExtraction value object
 
