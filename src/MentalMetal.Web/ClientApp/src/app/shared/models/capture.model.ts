@@ -47,6 +47,7 @@ export interface PersonMention {
 export interface ExtractedCommitment {
   description: string;
   direction: CommitmentDirection;
+  personRawName: string | null;
   personId: string | null;
   dueDate: string | null;
   confidence: CommitmentConfidence;

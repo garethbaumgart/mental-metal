@@ -6,9 +6,9 @@ using MentalMetal.Domain.Users;
 
 namespace MentalMetal.Application.Captures.AutoExtract;
 
-public sealed record ResolvePersonMentionRequest(string RawName, Guid PersonId);
+public sealed record QuickCreateAndResolveRequest(string RawName, string PersonName, PersonType PersonType);
 
-public sealed class ResolvePersonMentionHandler(
+public sealed class QuickCreateAndResolveHandler(
     ICaptureRepository captureRepository,
     IPersonRepository personRepository,
     ICommitmentRepository commitmentRepository,
@@ -16,7 +16,7 @@ public sealed class ResolvePersonMentionHandler(
     IUnitOfWork unitOfWork)
 {
     public async Task<CaptureResponse> HandleAsync(
-        Guid captureId, ResolvePersonMentionRequest request, CancellationToken cancellationToken)
+        Guid captureId, QuickCreateAndResolveRequest request, CancellationToken cancellationToken)
     {
         var userId = currentUserService.UserId;
 
@@ -24,48 +24,52 @@ public sealed class ResolvePersonMentionHandler(
             .EnsureOwned(userId, captureId);
 
         if (capture.AiExtraction is null)
-            throw new InvalidOperationException("Capture has no AI extraction to resolve.");
+            throw new InvalidOperationException("Capture has no AI extraction to resolve");
+
+        var trimmedRawName = request.RawName.Trim();
+        var trimmedPersonName = request.PersonName.Trim();
 
         // Validate that rawName matches an existing unresolved PeopleMentioned entry
-        var trimmedName = request.RawName.Trim();
         var mention = capture.AiExtraction.PeopleMentioned
-            .FirstOrDefault(p => string.Equals(p.RawName, trimmedName, StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(p => string.Equals(p.RawName, trimmedRawName, StringComparison.OrdinalIgnoreCase));
         if (mention is null)
             throw new InvalidOperationException(
-                $"No person mention with raw name '{trimmedName}' found in extraction.");
+                $"No person mention with raw name '{trimmedRawName}' found in extraction.");
 
         if (mention.PersonId.HasValue)
             throw new InvalidOperationException(
-                $"Person mention '{trimmedName}' is already resolved.");
+                $"Person mention '{trimmedRawName}' is already resolved.");
 
-        var person = await personRepository.GetByIdAsync(request.PersonId, cancellationToken)
-            ?? throw new InvalidOperationException($"Person not found: {request.PersonId}");
+        // Check for duplicate person name
+        if (await personRepository.ExistsByNameAsync(userId, trimmedPersonName, excludeId: null, cancellationToken))
+            throw new DuplicatePersonNameException(trimmedPersonName);
 
-        if (person.UserId != userId)
-            throw new InvalidOperationException($"Person not found: {request.PersonId}");
+        // Create the person
+        var person = Person.Create(userId, trimmedPersonName, request.PersonType);
 
-        // Add the raw name as an alias (idempotent — skip if already this person's name/alias)
-        if (!string.Equals(person.Name, trimmedName, StringComparison.OrdinalIgnoreCase)
-            && !person.Aliases.Any(a => string.Equals(a, trimmedName, StringComparison.OrdinalIgnoreCase)))
+        // Add raw name as alias if different from person name
+        if (!string.Equals(trimmedRawName, trimmedPersonName, StringComparison.OrdinalIgnoreCase))
         {
-            // Ensure alias isn't already used by another person
-            if (await personRepository.AliasExistsForOtherPersonAsync(userId, trimmedName, person.Id, cancellationToken))
-                throw new AliasConflictException(trimmedName);
+            // Check alias uniqueness across user's people
+            if (await personRepository.AliasExistsForOtherPersonAsync(userId, trimmedRawName, person.Id, cancellationToken))
+                throw new AliasConflictException(trimmedRawName);
 
-            person.AddAlias(trimmedName);
+            person.AddAlias(trimmedRawName);
         }
+
+        await personRepository.AddAsync(person, cancellationToken);
 
         // Update the extraction with resolved PersonId on people mentions
         var updatedPeople = capture.AiExtraction.PeopleMentioned.Select(p =>
-            string.Equals(p.RawName, trimmedName, StringComparison.OrdinalIgnoreCase)
-                ? p with { PersonId = request.PersonId }
+            string.Equals(p.RawName, trimmedRawName, StringComparison.OrdinalIgnoreCase)
+                ? p with { PersonId = person.Id }
                 : p).ToList();
 
         // Spawn skipped commitments for this person and update extraction commitments
         var updatedCommitments = new List<ExtractedCommitment>();
         foreach (var c in capture.AiExtraction.Commitments)
         {
-            if (string.Equals(c.PersonRawName, trimmedName, StringComparison.OrdinalIgnoreCase)
+            if (string.Equals(c.PersonRawName, trimmedRawName, StringComparison.OrdinalIgnoreCase)
                 && c.SpawnedCommitmentId is null
                 && c.Confidence is CommitmentConfidence.High or CommitmentConfidence.Medium)
             {
@@ -77,7 +81,7 @@ public sealed class ResolvePersonMentionHandler(
                     userId,
                     c.Description,
                     c.Direction,
-                    request.PersonId,
+                    person.Id,
                     dueDateOnly,
                     initiativeId: null,
                     capture.Id,
@@ -90,14 +94,13 @@ public sealed class ResolvePersonMentionHandler(
 
                 updatedCommitments.Add(c with
                 {
-                    PersonId = request.PersonId,
+                    PersonId = person.Id,
                     SpawnedCommitmentId = commitment.Id
                 });
             }
-            else if (string.Equals(c.PersonRawName, trimmedName, StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(c.PersonRawName, trimmedRawName, StringComparison.OrdinalIgnoreCase))
             {
-                // Update PersonId on already-spawned or low-confidence commitments
-                updatedCommitments.Add(c with { PersonId = request.PersonId });
+                updatedCommitments.Add(c with { PersonId = person.Id });
             }
             else
             {
@@ -111,14 +114,29 @@ public sealed class ResolvePersonMentionHandler(
             Commitments = updatedCommitments
         };
 
-        // Replace extraction via domain method
         capture.UpdateExtraction(updatedExtraction);
-
-        // Link capture to the person
-        capture.LinkToPerson(request.PersonId);
+        capture.LinkToPerson(person.Id);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return CaptureResponse.From(capture);
     }
+}
+
+/// <summary>
+/// Thrown when a person with the same name already exists for the user.
+/// </summary>
+public sealed class DuplicatePersonNameException(string name)
+    : Exception($"A person named '{name}' already exists. Consider linking to the existing person instead.")
+{
+    public string PersonName { get; } = name;
+}
+
+/// <summary>
+/// Thrown when the raw name is already used as an alias by another person.
+/// </summary>
+public sealed class AliasConflictException(string alias)
+    : Exception($"Alias '{alias}' is already used by another person.")
+{
+    public string Alias { get; } = alias;
 }

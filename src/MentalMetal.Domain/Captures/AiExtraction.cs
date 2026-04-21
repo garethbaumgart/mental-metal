@@ -28,6 +28,7 @@ public sealed record ExtractedCommitment
 {
     public required string Description { get; init; }
     public required CommitmentDirection Direction { get; init; }
+    public string? PersonRawName { get; init; }
     public Guid? PersonId { get; init; }
     public DateTimeOffset? DueDate { get; init; }
     public required CommitmentConfidence Confidence { get; init; }

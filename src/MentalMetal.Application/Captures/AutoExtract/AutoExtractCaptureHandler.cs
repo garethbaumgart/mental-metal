@@ -160,6 +160,7 @@ public sealed class AutoExtractCaptureHandler(
                 {
                     Description = c.Description,
                     Direction = direction,
+                    PersonRawName = c.PersonRawName?.Trim(),
                     PersonId = personId,
                     DueDate = dueDate,
                     Confidence = confidence,

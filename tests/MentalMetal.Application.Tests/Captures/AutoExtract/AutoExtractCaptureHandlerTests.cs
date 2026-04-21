@@ -292,6 +292,11 @@ public class AutoExtractCaptureHandlerTests
 
         // Person is unresolved — cannot spawn commitment (PersonId is required)
         await _commitmentRepo.DidNotReceive().AddAsync(Arg.Any<Commitment>(), Arg.Any<CancellationToken>());
+
+        // PersonRawName should be stored for later resolution
+        Assert.Equal("Unknown Person", result.AiExtraction!.Commitments[0].PersonRawName);
+        Assert.Null(result.AiExtraction.Commitments[0].PersonId);
+        Assert.Null(result.AiExtraction.Commitments[0].SpawnedCommitmentId);
     }
 
     [Fact]

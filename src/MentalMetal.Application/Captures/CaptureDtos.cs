@@ -22,7 +22,7 @@ public sealed record AiExtractionResponse(
             extraction.Summary,
             (extraction.PeopleMentioned ?? []).Select(p => new PersonMentionResponse(p.RawName, p.PersonId, p.Context)).ToList(),
             (extraction.Commitments ?? []).Select(c => new ExtractedCommitmentResponse(
-                c.Description, c.Direction, c.PersonId, c.DueDate, c.Confidence, c.SpawnedCommitmentId)).ToList(),
+                c.Description, c.Direction, c.PersonRawName, c.PersonId, c.DueDate, c.Confidence, c.SpawnedCommitmentId)).ToList(),
             (extraction.Decisions ?? []).ToList(),
             (extraction.Risks ?? []).ToList(),
             (extraction.InitiativeTags ?? []).Select(t => new InitiativeTagResponse(t.RawName, t.InitiativeId, t.Context)).ToList(),
@@ -32,7 +32,7 @@ public sealed record AiExtractionResponse(
 
 public sealed record PersonMentionResponse(string RawName, Guid? PersonId, string? Context);
 public sealed record ExtractedCommitmentResponse(
-    string Description, CommitmentDirection Direction, Guid? PersonId,
+    string Description, CommitmentDirection Direction, string? PersonRawName, Guid? PersonId,
     DateTimeOffset? DueDate, CommitmentConfidence Confidence, Guid? SpawnedCommitmentId);
 public sealed record InitiativeTagResponse(string RawName, Guid? InitiativeId, string? Context);
 
