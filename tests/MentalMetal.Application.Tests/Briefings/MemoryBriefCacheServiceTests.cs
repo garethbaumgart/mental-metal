@@ -95,19 +95,34 @@ public class MemoryBriefCacheServiceTests : IDisposable
     }
 
     [Fact]
-    public void InvalidateForUser_RemovesRecentWeeklyBriefs()
+    public void InvalidateForUser_RemovesCurrentWeekBrief()
     {
-        // Set a weekly brief for the current week
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var dayOfWeek = today.DayOfWeek == DayOfWeek.Sunday ? 6 : (int)today.DayOfWeek - 1;
-        var currentWeekStart = today.AddDays(-dayOfWeek);
-
+        var currentWeekStart = WeekHelper.GetWeekStart(DateOnly.FromDateTime(DateTime.UtcNow));
         var brief = MakeWeeklyBrief("This week");
         _sut.SetWeeklyBrief(_userId, currentWeekStart, brief);
 
         _sut.InvalidateForUser(_userId);
 
         Assert.Null(_sut.GetWeeklyBrief(_userId, currentWeekStart));
+    }
+
+    [Fact]
+    public void InvalidateForUser_RemovesPriorWeekBriefs()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var currentWeek = WeekHelper.GetWeekStart(today);
+        var priorWeek = WeekHelper.GetWeekStart(today.AddDays(-7));
+        var twoWeeksAgo = WeekHelper.GetWeekStart(today.AddDays(-14));
+
+        _sut.SetWeeklyBrief(_userId, currentWeek, MakeWeeklyBrief("Current"));
+        _sut.SetWeeklyBrief(_userId, priorWeek, MakeWeeklyBrief("Prior"));
+        _sut.SetWeeklyBrief(_userId, twoWeeksAgo, MakeWeeklyBrief("Two weeks ago"));
+
+        _sut.InvalidateForUser(_userId);
+
+        Assert.Null(_sut.GetWeeklyBrief(_userId, currentWeek));
+        Assert.Null(_sut.GetWeeklyBrief(_userId, priorWeek));
+        Assert.Null(_sut.GetWeeklyBrief(_userId, twoWeeksAgo));
     }
 
     [Fact]
@@ -124,6 +139,23 @@ public class MemoryBriefCacheServiceTests : IDisposable
 
         Assert.Null(_sut.GetDailyBrief(_userId));
         Assert.Same(brief2, _sut.GetDailyBrief(userId2));
+    }
+
+    [Fact]
+    public void InvalidateForUser_DoesNotAffectOtherUsersWeeklyBriefs()
+    {
+        var userId2 = Guid.NewGuid();
+        var weekStart = WeekHelper.GetWeekStart(DateOnly.FromDateTime(DateTime.UtcNow));
+        var brief1 = MakeWeeklyBrief("User 1 weekly");
+        var brief2 = MakeWeeklyBrief("User 2 weekly");
+
+        _sut.SetWeeklyBrief(_userId, weekStart, brief1);
+        _sut.SetWeeklyBrief(userId2, weekStart, brief2);
+
+        _sut.InvalidateForUser(_userId);
+
+        Assert.Null(_sut.GetWeeklyBrief(_userId, weekStart));
+        Assert.Same(brief2, _sut.GetWeeklyBrief(userId2, weekStart));
     }
 
     private static DailyBriefResponse MakeDailyBrief(string narrative) =>

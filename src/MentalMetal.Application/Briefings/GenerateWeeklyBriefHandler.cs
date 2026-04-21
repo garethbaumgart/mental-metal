@@ -23,8 +23,7 @@ public sealed class GenerateWeeklyBriefHandler(
 
         // Compute the week start so we can use it for the cache key
         var referenceDate = weekOf ?? DateOnly.FromDateTime(DateTime.UtcNow);
-        var dayOfWeek = referenceDate.DayOfWeek == DayOfWeek.Sunday ? 6 : (int)referenceDate.DayOfWeek - 1;
-        var weekStart = referenceDate.AddDays(-dayOfWeek);
+        var weekStart = WeekHelper.GetWeekStart(referenceDate);
 
         if (!forceRefresh)
         {

@@ -28,20 +28,23 @@ public sealed class MemoryBriefCacheService(IMemoryCache cache) : IBriefCacheSer
 
     public void InvalidateForUser(Guid userId)
     {
-        // Remove daily brief
+        // Remove daily brief (keyed by UTC date so it naturally rolls over at midnight)
         cache.Remove(DailyKey(userId));
 
-        // Remove weekly briefs for recent weeks (current + previous)
+        // Remove weekly briefs for the current week and the 3 prior weeks.
+        // Older weeks are left to expire via TTL (4 hours). This covers the
+        // realistic window where a newly-processed capture would affect a brief.
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         for (var i = 0; i < 4; i++)
         {
-            var date = today.AddDays(-7 * i);
-            var dayOfWeek = date.DayOfWeek == DayOfWeek.Sunday ? 6 : (int)date.DayOfWeek - 1;
-            var weekStart = date.AddDays(-dayOfWeek);
+            var weekStart = WeekHelper.GetWeekStart(today.AddDays(-7 * i));
             cache.Remove(WeeklyKey(userId, weekStart));
         }
     }
 
-    private static string DailyKey(Guid userId) => $"brief:daily:{userId}";
-    private static string WeeklyKey(Guid userId, DateOnly weekStart) => $"brief:weekly:{userId}:{weekStart:yyyy-MM-dd}";
+    private static string DailyKey(Guid userId) =>
+        $"brief:daily:{userId}:{DateOnly.FromDateTime(DateTime.UtcNow):yyyy-MM-dd}";
+
+    private static string WeeklyKey(Guid userId, DateOnly weekStart) =>
+        $"brief:weekly:{userId}:{weekStart:yyyy-MM-dd}";
 }
