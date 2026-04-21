@@ -161,6 +161,26 @@ public sealed class Capture : AggregateRoot, IUserScoped
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 
+    public void Reclassify(CaptureType newType)
+    {
+        if (ProcessingStatus != ProcessingStatus.Processing)
+            throw new InvalidOperationException(
+                $"Cannot reclassify from '{ProcessingStatus}' status. Reclassification is only allowed during processing.");
+
+        if (newType == CaptureType.AudioRecording)
+            throw new InvalidOperationException(
+                "Cannot reclassify to AudioRecording. AudioRecording is set by the audio capture pipeline.");
+
+        if (CaptureType == newType)
+            return;
+
+        var oldType = CaptureType;
+        CaptureType = newType;
+        UpdatedAt = DateTimeOffset.UtcNow;
+
+        RaiseDomainEvent(new CaptureReclassified(Id, oldType, newType));
+    }
+
     public void UpdateMetadata(string? title)
     {
         Title = title?.Trim();

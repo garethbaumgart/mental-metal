@@ -24,6 +24,9 @@ internal sealed record ExtractionResponseDto
 
     [JsonPropertyName("initiative_tags")]
     public List<InitiativeTagDto> InitiativeTags { get; init; } = [];
+
+    [JsonPropertyName("detected_type")]
+    public string? DetectedType { get; init; }
 }
 
 internal sealed record PersonMentionDto

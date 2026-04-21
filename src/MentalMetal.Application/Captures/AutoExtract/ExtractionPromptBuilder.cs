@@ -37,6 +37,11 @@ public static class ExtractionPromptBuilder
 
         6. **summary**: A 2-3 sentence summary of the key discussion points and outcomes.
 
+        7. **detected_type**: Classify the content type. One of:
+           - "QuickNote": Short unstructured text, a single thought, reminder, or brief note
+           - "Transcript": Multi-speaker dialogue with speaker labels or turn-taking patterns
+           - "MeetingNotes": Structured notes with headings, bullet points, agenda items, or action items
+
         Rules:
         - Only extract what is EXPLICITLY stated in the text. Do NOT infer or hallucinate.
         - If the text is a quick note with no clear commitments, return empty arrays.
@@ -49,7 +54,8 @@ public static class ExtractionPromptBuilder
           "commitments": [{"description": "string", "direction": "MineToThem|TheirsToMe", "person_raw_name": "string|null", "due_date": "string|null", "confidence": "High|Medium|Low", "source_start_offset": 0, "source_end_offset": 0}],
           "decisions": ["string"],
           "risks": ["string"],
-          "initiative_tags": [{"raw_name": "string", "context": "string|null"}]
+          "initiative_tags": [{"raw_name": "string", "context": "string|null"}],
+          "detected_type": "QuickNote|Transcript|MeetingNotes"
         }
         """;
 

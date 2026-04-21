@@ -70,6 +70,12 @@ import { SpeakerPickerComponent } from '../speaker-picker/speaker-picker.compone
           <p-button icon="pi pi-arrow-left" [text]="true" (onClick)="goBack()" />
           <h1 class="text-2xl font-bold flex-1">{{ capture()!.title || 'Untitled Capture' }}</h1>
           <p-tag [value]="formatType(capture()!.captureType)" [severity]="typeSeverity(capture()!.captureType)" />
+          @if (detectedCaptureType(); as detected) {
+            <p-tag
+              [value]="'Detected as: ' + formatType(detected)"
+              [severity]="detected === capture()!.captureType ? 'success' : 'warn'"
+            />
+          }
           @if (capture()!.processingStatus === 'Processing') {
             <p-tag severity="warn">
               <i class="pi pi-spinner pi-spin mr-1"></i> Processing
@@ -355,6 +361,11 @@ export class CaptureDetailComponent implements OnInit {
       }
     });
   }
+
+  readonly detectedCaptureType = computed(() => {
+    const c = this.capture();
+    return c?.aiExtraction?.detectedCaptureType ?? null;
+  });
 
   readonly hasUnresolvedMentions = computed(() => {
     const c = this.capture();

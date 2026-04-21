@@ -14,6 +14,7 @@ public sealed record AiExtraction
     public IReadOnlyList<string> Risks { get; init; } = new List<string>();
     public IReadOnlyList<InitiativeTag> InitiativeTags { get; init; } = new List<InitiativeTag>();
     public required DateTimeOffset ExtractedAt { get; init; }
+    public CaptureType? DetectedCaptureType { get; init; }
 }
 
 public sealed record PersonMention

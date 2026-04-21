@@ -70,3 +70,8 @@ public sealed record CaptureSpeakerIdentified(Guid CaptureId, string SpeakerLabe
 {
     public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
 }
+
+public sealed record CaptureReclassified(Guid CaptureId, CaptureType OldType, CaptureType NewType) : IDomainEvent
+{
+    public DateTimeOffset OccurredAt { get; } = DateTimeOffset.UtcNow;
+}

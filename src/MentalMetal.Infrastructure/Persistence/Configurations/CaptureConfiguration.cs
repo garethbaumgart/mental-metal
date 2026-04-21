@@ -35,6 +35,8 @@ public sealed class CaptureConfiguration : IEntityTypeConfiguration<Capture>
             extraction.OwnsMany(e => e.PeopleMentioned);
             extraction.OwnsMany(e => e.Commitments);
             extraction.OwnsMany(e => e.InitiativeTags);
+            extraction.Property(e => e.DetectedCaptureType)
+                .HasConversion<string?>();
         });
 
         builder.Property(c => c.FailureReason)

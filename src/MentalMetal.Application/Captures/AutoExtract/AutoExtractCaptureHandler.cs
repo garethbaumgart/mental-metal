@@ -183,7 +183,18 @@ public sealed class AutoExtractCaptureHandler(
                     capture.LinkToInitiative(initiativeId.Value);
             }
 
-            // 10. Complete processing
+            // 10. Reclassify capture type if the AI detected a different type
+            CaptureType? detectedCaptureType = TryParseCaptureType(dto.DetectedType);
+
+            if (detectedCaptureType.HasValue
+                && detectedCaptureType.Value != CaptureType.AudioRecording
+                && capture.CaptureType != CaptureType.AudioRecording
+                && detectedCaptureType.Value != capture.CaptureType)
+            {
+                capture.Reclassify(detectedCaptureType.Value);
+            }
+
+            // 11. Complete processing
             var extraction = new AiExtraction
             {
                 Summary = dto.Summary,
@@ -192,7 +203,8 @@ public sealed class AutoExtractCaptureHandler(
                 Decisions = dto.Decisions,
                 Risks = dto.Risks,
                 InitiativeTags = initiativeTags,
-                ExtractedAt = DateTimeOffset.UtcNow
+                ExtractedAt = DateTimeOffset.UtcNow,
+                DetectedCaptureType = detectedCaptureType
             };
 
             capture.CompleteProcessing(extraction);
@@ -263,4 +275,12 @@ public sealed class AutoExtractCaptureHandler(
             ? result
             : null;
     }
+
+    private static CaptureType? TryParseCaptureType(string? value) => value switch
+    {
+        "QuickNote" => CaptureType.QuickNote,
+        "Transcript" => CaptureType.Transcript,
+        "MeetingNotes" => CaptureType.MeetingNotes,
+        _ => null
+    };
 }
