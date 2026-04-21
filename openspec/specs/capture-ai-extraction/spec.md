@@ -168,7 +168,7 @@ The system SHALL, after successful extraction, automatically spawn Commitment en
 
 ### Requirement: Resolve person mention post-extraction
 
-The system SHALL allow an authenticated user to resolve an unresolved person mention by sending a POST to `/api/captures/{id}/resolve-person-mention` with `rawName` and `personId`. The system SHALL update the extraction's PersonMention with the resolved PersonId, add the raw name as an alias on the person (if not already present), link the capture to the person, and spawn any skipped commitments for that person (High/Medium confidence with no existing SpawnedCommitmentId). When multiple extracted commitments share the same `PersonRawName`, all matching commitments SHALL be spawned in a single resolution operation. The raw name used as alias SHALL be validated for uniqueness among the user's people.
+The system SHALL allow an authenticated user to resolve an unresolved person mention by sending a POST to `/api/captures/{id}/resolve-person-mention` with `rawName` and `personId`. The system SHALL update the extraction's PersonMention with the resolved PersonId, add the raw name as an alias on the person (if not already present), link the capture to the person, and spawn any skipped commitments for that person (High/Medium confidence with no existing SpawnedCommitmentId). When multiple extracted commitments share the same `PersonRawName`, all matching commitments SHALL be spawned in a single resolution operation. The operation SHALL be atomic -- if any step fails, no changes are persisted. The raw name used as alias SHALL be validated for uniqueness among the user's people.
 
 #### Scenario: Resolve and spawn skipped commitments
 
