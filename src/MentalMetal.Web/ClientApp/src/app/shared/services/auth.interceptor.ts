@@ -95,6 +95,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         }),
         catchError((refreshError) => {
           isRefreshing = false;
+          // Notify queued requests so they don't hang forever.
+          authService.refreshResult$.next('');
           return throwError(() => refreshError);
         }),
       );
