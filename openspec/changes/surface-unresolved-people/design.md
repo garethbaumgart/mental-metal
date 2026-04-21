@@ -59,11 +59,11 @@ The frontend capture detail view shows extraction results but does not highlight
 - Separate "unresolved people" page -- rejected: adds navigation, breaks capture-centric workflow
 - Inline expansion in the extraction panel -- acceptable but banner is more visible
 
-### 4. Track unresolved commitment details in extraction metadata
+### 4. Leverage existing extraction state for tracking unresolved commitments
 
-**Decision:** The `ExtractedCommitment` already stores `PersonId` (null for unresolved) and `SpawnedCommitmentId` (null when not spawned). A commitment with a non-null `PersonId` referencing a raw name in the extraction and a null `SpawnedCommitmentId` is the indicator for "needs spawning after resolution." No schema changes needed for tracking.
+**Decision:** The `ExtractedCommitment` already stores `PersonId` (null for unresolved) and `SpawnedCommitmentId` (null when not spawned). These two fields together identify commitments that were skipped during extraction and need spawning after person resolution. The only addition needed is `PersonRawName` (see decision 5) to correlate which commitments belong to which unresolved person.
 
-**Rationale:** The existing data model already captures the necessary state. Adding new fields would be redundant.
+**Rationale:** The existing state fields (`PersonId`, `SpawnedCommitmentId`) already capture whether a commitment was spawned or skipped. The gap is correlation -- knowing which raw name each commitment references -- which is addressed by `PersonRawName` in decision 5.
 
 ### 5. Match extracted commitments to unresolved names via raw name correlation
 

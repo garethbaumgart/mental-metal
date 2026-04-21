@@ -26,7 +26,7 @@
 ## 5. Web: Register API endpoint
 
 - [ ] 5.1 Add minimal API endpoint `POST /api/captures/{captureId}/resolve-person-mention/quick-create` mapped to `QuickCreateAndResolveHandler`
-- [ ] 5.2 Add unit/integration test for the new endpoint (201 on success, 409 on duplicate, 400 on missing extraction)
+- [ ] 5.2 Add unit/integration test for the new endpoint (200 on success, 409 on duplicate, 400 on missing extraction)
 
 ## 6. Frontend: Unresolved people banner component
 
