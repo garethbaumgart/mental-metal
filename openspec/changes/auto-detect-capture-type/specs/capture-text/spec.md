@@ -41,7 +41,7 @@ The Capture aggregate SHALL expose a `Reclassify(CaptureType newType)` method th
 
 ### Requirement: Capture detail view
 
-The frontend SHALL provide a detail view for a single capture showing the full raw content, metadata (type, status, title, source, timestamps), and linked people and initiatives. The detail view SHALL allow editing the title and source, and linking/unlinking people and initiatives. When the capture has been processed and the `AiExtraction` contains a `DetectedCaptureType` that differs from the capture's original creation type, the detail view SHALL display a "Detected as: {type}" indicator near the type badge.
+The frontend SHALL provide a detail view for a single capture showing the full raw content, metadata (type, status, title, source, timestamps), and linked people and initiatives. The detail view SHALL allow editing the title and source, and linking/unlinking people and initiatives. When the capture has been processed and the `AiExtraction` contains a non-null `DetectedCaptureType`, the detail view SHALL display a "Detected as: {type}" indicator near the type badge. The indicator compares `DetectedCaptureType` against the capture's current persisted `CaptureType` -- if they match (i.e., the capture was reclassified or was already correct), the indicator serves as confirmation; if they differ (which would only happen if reclassification was skipped, e.g., for AudioRecording captures), the indicator highlights the discrepancy.
 
 #### Scenario: View capture detail
 
@@ -58,7 +58,17 @@ The frontend SHALL provide a detail view for a single capture showing the full r
 - **WHEN** a user adds a person link from the detail view
 - **THEN** the person appears in the linked people section
 
-#### Scenario: Display detected type when reclassified
+#### Scenario: Display detected type after reclassification
 
-- **WHEN** a user views a processed capture that was reclassified from QuickNote to Transcript
-- **THEN** the detail view shows the current type as "Transcript" and displays a "Detected as: Transcript" indicator
+- **WHEN** a user views a processed capture whose `CaptureType` is `Transcript` and whose `AiExtraction.DetectedCaptureType` is `Transcript`
+- **THEN** the detail view shows the type badge as "Transcript" and displays a "Detected as: Transcript" indicator
+
+#### Scenario: Display detected type for AudioRecording capture
+
+- **WHEN** a user views a processed `AudioRecording` capture whose `AiExtraction.DetectedCaptureType` is `Transcript`
+- **THEN** the detail view shows the type badge as "AudioRecording" and displays a "Detected as: Transcript" indicator highlighting the discrepancy
+
+#### Scenario: No detected type indicator when DetectedCaptureType is null
+
+- **WHEN** a user views a processed capture whose `AiExtraction.DetectedCaptureType` is null
+- **THEN** the detail view shows the type badge only, with no "Detected as" indicator

@@ -73,6 +73,8 @@ The existing `ExtractionPromptBuilder.SystemPrompt` will be extended to include 
 
 The field is added to the JSON schema at the end of the response object. Fallback: if the AI omits the field or returns an unrecognized value, the handler keeps the original capture type (no reclassification).
 
+**Naming convention:** The JSON field is `detected_type` (snake_case, matching the existing extraction schema). The `ExtractionResponseDto` property is `DetectedType` with `[JsonPropertyName("detected_type")]`. The `AiExtraction` value object property is `DetectedCaptureType` (fully qualified to avoid ambiguity with the aggregate's `CaptureType` property).
+
 ## Risks / Trade-offs
 
 - **[Risk] AI misclassifies content** -- Mitigation: keep original type as fallback if `detected_type` is null or unrecognized; the AI prompt includes clear classification criteria; users can still manually set type via Advanced section before capture
