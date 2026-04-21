@@ -66,15 +66,20 @@ public sealed class GenerateWeeklyBriefHandler(
         var initiativeActivity = new List<InitiativeActivityDto>();
         foreach (var initiative in initiatives)
         {
-            var linkedCount = weekCaptures
+            var linkedCaptureCount = weekCaptures
                 .Count(c => c.LinkedInitiativeIds.Contains(initiative.Id));
 
-            if (linkedCount > 0)
+            var linkedCommitmentCount = allCommitments
+                .Count(c => c.InitiativeId == initiative.Id
+                         && c.CreatedAt >= weekStartOffset
+                         && c.CreatedAt < weekEndOffset);
+
+            if (linkedCaptureCount > 0 || linkedCommitmentCount > 0)
             {
                 initiativeActivity.Add(new InitiativeActivityDto(
                     initiative.Id,
                     initiative.Title,
-                    linkedCount,
+                    linkedCaptureCount,
                     initiative.AutoSummary));
             }
         }
@@ -91,6 +96,21 @@ public sealed class GenerateWeeklyBriefHandler(
             i.Title,
             i.CaptureCount,
             i.AutoSummary)).ToList();
+
+        // When there are no captures and no commitment activity, skip AI and return a clean
+        // "no data" response to avoid generating misleading narrative from empty context.
+        if (weekCaptures.Count == 0 && newThisWeek == 0 && completedThisWeek == 0 && overdueCount == 0)
+        {
+            return new WeeklyBriefResponse(
+                "No captures or commitment activity were recorded this week.",
+                [],
+                [],
+                new CommitmentStatusSummary(newThisWeek, completedThisWeek, overdueCount, totalOpen),
+                [],
+                initiativeActivity,
+                new DateRange(weekStartOffset, weekEndOffset),
+                DateTimeOffset.UtcNow);
+        }
 
         var userPrompt = WeeklyBriefPromptBuilder.BuildUserPrompt(
             captureContexts,
@@ -163,12 +183,12 @@ public sealed class GenerateWeeklyBriefHandler(
 
         foreach (var kv in multiCapturePeople)
         {
-            // Find the person's name from extraction data
+            // Find the person's name from extraction data — skip if unresolvable
             var name = captures
                 .SelectMany(c => c.AiExtraction?.PeopleMentioned ?? [])
                 .FirstOrDefault(p => p.PersonId == kv.Key)?.RawName;
 
-            if (name is not null)
+            if (!string.IsNullOrWhiteSpace(name))
                 insights.Add($"{name} appeared in {kv.Value} conversations this week");
         }
 
