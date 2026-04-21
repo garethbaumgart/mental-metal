@@ -38,7 +38,20 @@ The system SHALL automatically trigger AI processing on a Capture after it is cr
 
 ### Requirement: AI extraction pipeline
 
-The `AutoExtractCaptureHandler` SHALL orchestrate the extraction pipeline: (1) load the Capture, (2) call `IAiCompletionService.CompleteAsync` with a system prompt instructing the AI to extract structured data from the raw content, (3) parse the AI response into an `AiExtraction` value object, (4) call `Reclassify(detectedType)` on the Capture while it is still in `Processing` status if all reclassification conditions are met (see below), (5) call `CompleteProcessing(extraction)` on the Capture aggregate, and (6) persist the result. If the AI call fails, the handler SHALL call `FailProcessing(reason)` on the Capture. The system prompt SHALL instruct the AI to include `source_start_offset` (0-based character index where the commitment starts in the input text) and `source_end_offset` (exclusive character index where the commitment ends) for each extracted commitment. The system prompt SHALL also instruct the AI to classify the content type as one of `QuickNote`, `Transcript`, or `MeetingNotes` via a `detected_type` field. **Reclassification conditions:** the handler SHALL call `Reclassify(detectedType)` only when (a) the detected type is a recognized `CaptureType` other than `AudioRecording`, (b) the capture's current type is not `AudioRecording`, and (c) the detected type differs from the current type. If any condition is not met, reclassification is skipped.
+The `AutoExtractCaptureHandler` SHALL orchestrate the extraction pipeline:
+
+1. Load the Capture
+2. Call `IAiCompletionService.CompleteAsync` with a system prompt instructing the AI to extract structured data from the raw content
+3. Parse the AI response into an `AiExtraction` value object
+4. If reclassification conditions are met, call `Reclassify(detectedType)` on the Capture while it is still in `Processing` status
+5. Call `CompleteProcessing(extraction)` on the Capture aggregate
+6. Persist the result
+
+If the AI call fails, the handler SHALL call `FailProcessing(reason)` on the Capture.
+
+The system prompt SHALL instruct the AI to include `source_start_offset` (0-based character index where the commitment starts in the input text) and `source_end_offset` (exclusive character index where the commitment ends) for each extracted commitment. The system prompt SHALL also instruct the AI to classify the content type as one of `QuickNote`, `Transcript`, or `MeetingNotes` via a `detected_type` field.
+
+**Reclassification conditions:** the handler SHALL call `Reclassify(detectedType)` only when all of the following are true: (a) the detected type is a recognized `CaptureType` other than `AudioRecording`, (b) the capture's current type is not `AudioRecording`, and (c) the detected type differs from the current type. If any condition is not met, reclassification is skipped.
 
 #### Scenario: Successful extraction from a quick note
 
