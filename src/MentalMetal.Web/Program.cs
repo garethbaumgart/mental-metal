@@ -740,14 +740,11 @@ app.MapPost("/api/briefing/daily/refresh", async (
 app.MapGet("/api/briefing/weekly", async (
     DateOnly? weekOf,
     GenerateWeeklyBriefHandler handler,
+    TimeProvider timeProvider,
     CancellationToken cancellationToken) =>
 {
-    if (weekOf is { } w)
-    {
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        if (w < today.AddDays(-52 * 7) || w > today.AddDays(7))
-            return Results.BadRequest(new { error = "weekOf must be within the last 52 weeks or at most one week in the future." });
-    }
+    if (ValidateWeekOf(weekOf, timeProvider) is { } error)
+        return error;
     var response = await handler.HandleAsync(weekOf, forceRefresh: false, cancellationToken);
     return Results.Ok(response);
 }).RequireAuthorization();
@@ -755,14 +752,11 @@ app.MapGet("/api/briefing/weekly", async (
 app.MapPost("/api/briefing/weekly/refresh", async (
     DateOnly? weekOf,
     GenerateWeeklyBriefHandler handler,
+    TimeProvider timeProvider,
     CancellationToken cancellationToken) =>
 {
-    if (weekOf is { } w)
-    {
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        if (w < today.AddDays(-52 * 7) || w > today.AddDays(7))
-            return Results.BadRequest(new { error = "weekOf must be within the last 52 weeks or at most one week in the future." });
-    }
+    if (ValidateWeekOf(weekOf, timeProvider) is { } error)
+        return error;
     var response = await handler.HandleAsync(weekOf, forceRefresh: true, cancellationToken);
     return Results.Ok(response);
 }).RequireAuthorization();
@@ -1158,6 +1152,22 @@ app.MapFallback("/api/{**catch-all}", () => Results.NotFound());
 app.MapFallbackToFile("index.html");
 
 app.Run();
+
+/// <summary>
+/// Returns a 400 BadRequest result if weekOf is outside the allowed range
+/// (52 weeks past to 1 week future), or null if valid.
+/// </summary>
+static IResult? ValidateWeekOf(DateOnly? weekOf, TimeProvider timeProvider)
+{
+    if (weekOf is not { } w)
+        return null;
+
+    var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+    if (w < today.AddDays(-52 * 7) || w > today.AddDays(7))
+        return Results.BadRequest(new { error = "weekOf must be within the last 52 weeks or at most one week in the future." });
+
+    return null;
+}
 
 internal sealed record TestLoginRequest(string Email, string Name);
 
