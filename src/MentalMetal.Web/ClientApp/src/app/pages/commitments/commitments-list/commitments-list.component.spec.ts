@@ -152,16 +152,18 @@ describe('CommitmentsListComponent', () => {
     const c1 = makeCommitment({ id: 'c1', description: 'Done task', status: 'Completed' });
     fixture.detectChanges();
 
-    // Set the status filter to Completed before init loads
-    fixture.componentInstance['selectedStatus'].set('Completed');
+    // Switch the status filter to Completed after ngOnInit has already fired
+    // (detectChanges above triggered it with the default "Open" filter).
+    fixture.componentInstance.selectedStatus.set('Completed');
 
     http.expectOne((r) => r.url === '/api/people').flush([makePerson()]);
-    // The init request with "Open" filter
+    // The init request with default "Open" filter
     http.expectOne((r) => r.url.startsWith('/api/commitments')).flush([]);
     fixture.detectChanges();
 
-    // Trigger filter change to load Completed
-    fixture.componentInstance['onFilterChange']();
+    // Trigger filter change to load Completed — onFilterChange is protected,
+    // so we use a type-cast to call it from the test.
+    (fixture.componentInstance as unknown as { onFilterChange(): void }).onFilterChange();
     http.expectOne((r) => r.url.startsWith('/api/commitments')).flush([c1]);
     fixture.detectChanges();
 

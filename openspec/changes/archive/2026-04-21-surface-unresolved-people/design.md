@@ -59,11 +59,11 @@ The frontend capture detail view shows extraction results but does not highlight
 - Separate "unresolved people" page -- rejected: adds navigation, breaks capture-centric workflow
 - Inline expansion in the extraction panel -- acceptable but banner is more visible
 
-### 4. Leverage existing extraction state for tracking unresolved commitments
+### 4. No EF migration needed for new extraction fields
 
-**Decision:** The `ExtractedCommitment` already stores `PersonId` (null for unresolved) and `SpawnedCommitmentId` (null when not spawned). These two fields together identify commitments that were skipped during extraction and need spawning after person resolution. The only addition needed is `PersonRawName` (see decision 5) to correlate which commitments belong to which unresolved person.
+**Decision:** The `ExtractedCommitment` already stores `PersonId` (null for unresolved) and `SpawnedCommitmentId` (null when not spawned). These two fields together identify commitments that were skipped during extraction and need spawning after person resolution. The only addition needed is `PersonRawName` (see decision 5) to correlate which commitments belong to which unresolved person. Because `AiExtraction` is stored as JSONB (via EF Core's `ToJson()` mapping), adding `PersonRawName` to the `ExtractedCommitment` record requires no EF migration -- existing rows simply lack the field and deserialize as null.
 
-**Rationale:** The existing state fields (`PersonId`, `SpawnedCommitmentId`) already capture whether a commitment was spawned or skipped. The gap is correlation -- knowing which raw name each commitment references -- which is addressed by `PersonRawName` in decision 5.
+**Rationale:** The existing state fields (`PersonId`, `SpawnedCommitmentId`) already capture whether a commitment was spawned or skipped. The gap is correlation -- knowing which raw name each commitment references -- which is addressed by `PersonRawName` in decision 5. The JSONB storage means schema-level changes are not required for additive fields on the value object.
 
 ### 5. Match extracted commitments to unresolved names via raw name correlation
 
@@ -73,7 +73,7 @@ The frontend capture detail view shows extraction results but does not highlight
 
 ## Risks / Trade-offs
 
-- **[Risk] Adding `PersonRawName` to `ExtractedCommitment` requires a migration** -- Mitigation: `AiExtraction` is stored as a JSON column, so this is a non-breaking additive change. No SQL migration needed, just a code change.
+- **[Risk] Adding `PersonRawName` to `ExtractedCommitment`** -- Not a risk: `AiExtraction` is stored as a JSONB column via `ToJson()`, so this is a non-breaking additive change. No EF migration is needed; existing rows simply lack the field and deserialize as null.
 - **[Risk] Quick-create might produce duplicate people** -- Mitigation: Person creation already enforces name uniqueness per user. The quick-create dialog will show a warning if the name matches an existing person and suggest linking instead.
 - **[Risk] Spawning commitments post-resolution could create unexpected items** -- Mitigation: Only High/Medium confidence commitments are spawned (same rules as initial extraction). The UI will show a preview of what will be created.
 

@@ -345,13 +345,13 @@ The Capture aggregate SHALL expose a `Reclassify(CaptureType newType)` method th
 - **THEN** the capture's `CaptureType` changes to `MeetingNotes`
 - **AND** a `CaptureReclassified` domain event is raised with oldType `QuickNote` and newType `MeetingNotes`
 
-#### Scenario: No-op when new type matches current type
+#### Scenario: No-op when new type matches current type during processing
 
 - **WHEN** `Reclassify(CaptureType.QuickNote)` is called on a capture with type `QuickNote` and status `Processing`
 - **THEN** the capture's `CaptureType` remains `QuickNote`
 - **AND** no domain event is raised
 
-#### Scenario: Reject reclassification to AudioRecording
+#### Scenario: Reject reclassification to AudioRecording during processing
 
 - **WHEN** `Reclassify(CaptureType.AudioRecording)` is called on a capture with type `QuickNote` and status `Processing`
 - **THEN** the system throws a domain exception indicating that reclassification to AudioRecording is not allowed

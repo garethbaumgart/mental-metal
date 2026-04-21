@@ -56,8 +56,12 @@ public static class DependencyInjection
                 "AiProvider:EncryptionKey is required. Generate with: openssl rand -base64 32")
             .ValidateOnStart();
 
-        // Caching
-        services.AddMemoryCache();
+        // Caching — SizeLimit caps entries (not bytes). When SizeLimit is set,
+        // every cache.Set() call MUST specify Size in MemoryCacheEntryOptions
+        // (otherwise the entry is silently rejected). MemoryBriefCacheService
+        // sets Size = 1 on each entry. 256 entries covers ~30 users *
+        // (1 daily + 4 weekly) with headroom.
+        services.AddMemoryCache(options => options.SizeLimit = 256);
         services.AddSingleton<IBriefCacheService, MemoryBriefCacheService>();
 
         // Infrastructure services

@@ -14,7 +14,7 @@
 
 ## 3. Infrastructure Layer
 
-- [ ] 3.1 Verify no EF Core migration is required -- `AiExtraction` is persisted as JSONB via `ToJson()`, so `DetectedCaptureType` is stored as a new JSON field rather than a separate column
+- [ ] 3.1 Verify no EF Core migration is needed for the data change -- `AiExtraction` is persisted as JSONB via `ToJson()`, so `DetectedCaptureType` appears as a new JSON field rather than a separate column. An empty migration is generated only to update the EF Core model snapshot (no `Up()`/`Down()` SQL).
 - [ ] 3.2 Verify EF Core JSON mapping correctly serializes/deserializes `AiExtraction.DetectedCaptureType` (nullable enum in JSONB)
 
 ## 4. Frontend

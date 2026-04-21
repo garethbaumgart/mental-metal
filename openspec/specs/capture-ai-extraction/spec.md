@@ -109,12 +109,12 @@ The system prompt SHALL instruct the AI to include `source_start_offset` (0-base
 #### Scenario: Taste limit exceeded
 
 - **WHEN** the AI completion call throws a TasteLimitExceededException
-- **THEN** the handler calls FailProcessing with reason "Daily AI limit reached"
+- **THEN** the handler calls FailProcessing with reason "Daily free AI operation limit reached. Add your own AI provider key for unlimited access."
 - **AND** the capture status transitions to Failed
 
 ### Requirement: AiExtraction value object
 
-The system SHALL define an `AiExtraction` value object embedded on the Capture aggregate with the following properties: Summary (string, required), Commitments (list of extracted commitments with description, direction, confidence level, person hint, PersonRawName, optional PersonId — null when unresolved, optional due date, optional source character offsets: SourceStartOffset and SourceEndOffset, and optional SpawnedCommitmentId), Delegations (list of extracted delegations with description, person hint, and optional due date), Observations (list of extracted observations with description, person hint, and tag), Decisions (list of strings), RisksIdentified (list of strings), PeopleMentioned (list of person mentions with RawName string and optional PersonId — null when unresolved), SuggestedPersonLinks (list of person name hints), SuggestedInitiativeLinks (list of initiative name hints), ConfidenceScore (decimal, 0.0-1.0), and DetectedCaptureType (nullable CaptureType indicating the AI's content classification).
+The system SHALL define an `AiExtraction` value object embedded on the Capture aggregate with the following properties: Summary (string, required), PeopleMentioned (list of person mentions with RawName string, optional PersonId -- null when unresolved, and optional Context), Commitments (list of extracted commitments with description, direction, confidence level, PersonRawName, optional PersonId -- null when unresolved, optional due date, optional source character offsets: SourceStartOffset and SourceEndOffset, and optional SpawnedCommitmentId), Decisions (list of strings), Risks (list of strings), InitiativeTags (list of initiative tags with RawName, optional InitiativeId, and optional Context), ExtractedAt (DateTimeOffset, required), and DetectedCaptureType (nullable CaptureType indicating the AI's content classification).
 
 #### Scenario: AiExtraction with all fields populated
 
@@ -258,22 +258,12 @@ The frontend capture list and detail views SHALL display a processing status ind
 
 ### Requirement: Extraction review UI
 
-The frontend SHALL provide an extraction review panel on the capture detail view for processed captures. The panel SHALL display the AI-generated summary, extracted commitments, delegations, observations, decisions, and risks in organized sections. Each extracted item SHALL show its matched person (if any) and relevant details. The panel SHALL provide "Confirm & Create" and "Discard" action buttons.
+The frontend SHALL provide an extraction review panel on the capture detail view for processed captures. The panel SHALL display the AI-generated summary, extracted commitments, decisions, risks, people mentioned, and initiative tags in organized sections. Each extracted item SHALL show its matched person or initiative (if any) and relevant details. Commitments are auto-spawned during extraction for resolved people; no manual "Confirm & Create" or "Discard" actions are needed.
 
 #### Scenario: Review extraction results
 
 - **WHEN** a user views a processed capture's detail page
-- **THEN** the extraction panel displays the summary, extracted items grouped by type, suggested person/initiative links, and the confidence score
-
-#### Scenario: Confirm extraction from review panel
-
-- **WHEN** a user clicks "Confirm & Create" in the extraction review panel
-- **THEN** the system spawns the extracted entities and the panel updates to show "Entities created" with links to the created items
-
-#### Scenario: Discard extraction from review panel
-
-- **WHEN** a user clicks "Discard" in the extraction review panel
-- **THEN** the system discards the extraction, no entities are spawned, and the panel shows "Extraction discarded"
+- **THEN** the extraction panel displays the summary, commitments (with direction, confidence, and person tags), decisions, risks, people mentioned (with resolved/unresolved status), and initiative tags
 
 ### Requirement: Process capture action in UI
 
