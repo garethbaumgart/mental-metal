@@ -78,6 +78,9 @@ public class AutoExtractCaptureHandlerTests
         Assert.Equal("A brief meeting about project updates.", result.AiExtraction!.Summary);
         Assert.Single(result.AiExtraction.Decisions);
         Assert.Single(result.AiExtraction.Risks);
+
+        // Brief cache should be invalidated after successful extraction
+        _briefCacheService.Received(1).InvalidateForUser(_userId);
     }
 
     [Fact]
@@ -106,6 +109,9 @@ public class AutoExtractCaptureHandlerTests
 
         Assert.Equal(ProcessingStatus.Failed, result.ProcessingStatus);
         Assert.Contains("API rate limited", result.FailureReason);
+
+        // Brief cache should NOT be invalidated on failure
+        _briefCacheService.DidNotReceive().InvalidateForUser(Arg.Any<Guid>());
     }
 
     [Fact]
