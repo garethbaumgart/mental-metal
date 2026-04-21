@@ -139,4 +139,20 @@ public class QuickCreateAndResolveHandlerTests
             () => _sut.HandleAsync(capture.Id, request, CancellationToken.None));
         Assert.Contains("found in extraction", ex.Message);
     }
+
+    [Fact]
+    public async Task HandleAsync_AlreadyResolvedMention_Throws()
+    {
+        var capture = CreateProcessedCaptureWithExtraction(
+            [new PersonMention { RawName = "Alice", PersonId = Guid.NewGuid(), Context = null }],
+            []);
+
+        _captureRepo.GetByIdAsync(capture.Id, Arg.Any<CancellationToken>()).Returns(capture);
+
+        var request = new QuickCreateAndResolveRequest("Alice", "Alice Smith", PersonType.Peer);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _sut.HandleAsync(capture.Id, request, CancellationToken.None));
+        Assert.Contains("already resolved", ex.Message);
+    }
 }

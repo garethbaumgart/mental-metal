@@ -26,13 +26,17 @@ public sealed class ResolvePersonMentionHandler(
         if (capture.AiExtraction is null)
             throw new InvalidOperationException("Capture has no AI extraction to resolve.");
 
-        // Validate that rawName matches an existing PeopleMentioned entry
+        // Validate that rawName matches an existing unresolved PeopleMentioned entry
         var trimmedName = request.RawName.Trim();
-        var mentionExists = capture.AiExtraction.PeopleMentioned
-            .Any(p => string.Equals(p.RawName, trimmedName, StringComparison.OrdinalIgnoreCase));
-        if (!mentionExists)
+        var mention = capture.AiExtraction.PeopleMentioned
+            .FirstOrDefault(p => string.Equals(p.RawName, trimmedName, StringComparison.OrdinalIgnoreCase));
+        if (mention is null)
             throw new InvalidOperationException(
                 $"No person mention with raw name '{trimmedName}' found in extraction.");
+
+        if (mention.PersonId.HasValue)
+            throw new InvalidOperationException(
+                $"Person mention '{trimmedName}' is already resolved.");
 
         var person = await personRepository.GetByIdAsync(request.PersonId, cancellationToken)
             ?? throw new InvalidOperationException($"Person not found: {request.PersonId}");
@@ -46,7 +50,7 @@ public sealed class ResolvePersonMentionHandler(
         {
             // Ensure alias isn't already used by another person
             if (await personRepository.AliasExistsForOtherPersonAsync(userId, trimmedName, person.Id, cancellationToken))
-                throw new InvalidOperationException($"Alias '{trimmedName}' is already used by another person.");
+                throw new AliasConflictException(trimmedName);
 
             person.AddAlias(trimmedName);
         }

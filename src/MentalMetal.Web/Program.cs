@@ -954,7 +954,7 @@ app.MapPost("/api/captures/{id:guid}/resolve-person-mention", async (
     {
         return Results.NotFound();
     }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("Alias") && ex.Message.Contains("already used"))
+    catch (AliasConflictException ex)
     {
         return Results.Conflict(new { error = ex.Message });
     }
@@ -987,13 +987,9 @@ app.MapPost("/api/captures/{id:guid}/resolve-person-mention/quick-create", async
     {
         return Results.Conflict(new { error = ex.Message });
     }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("Alias") && ex.Message.Contains("already used"))
+    catch (AliasConflictException ex)
     {
         return Results.Conflict(new { error = ex.Message });
-    }
-    catch (InvalidOperationException ex) when (ex.Message.Contains("no AI extraction"))
-    {
-        return Results.BadRequest(new { error = ex.Message });
     }
     catch (InvalidOperationException ex)
     {

@@ -29,12 +29,16 @@ public sealed class QuickCreateAndResolveHandler(
         var trimmedRawName = request.RawName.Trim();
         var trimmedPersonName = request.PersonName.Trim();
 
-        // Validate that rawName matches an existing PeopleMentioned entry
-        var mentionExists = capture.AiExtraction.PeopleMentioned
-            .Any(p => string.Equals(p.RawName, trimmedRawName, StringComparison.OrdinalIgnoreCase));
-        if (!mentionExists)
+        // Validate that rawName matches an existing unresolved PeopleMentioned entry
+        var mention = capture.AiExtraction.PeopleMentioned
+            .FirstOrDefault(p => string.Equals(p.RawName, trimmedRawName, StringComparison.OrdinalIgnoreCase));
+        if (mention is null)
             throw new InvalidOperationException(
                 $"No person mention with raw name '{trimmedRawName}' found in extraction.");
+
+        if (mention.PersonId.HasValue)
+            throw new InvalidOperationException(
+                $"Person mention '{trimmedRawName}' is already resolved.");
 
         // Check for duplicate person name
         if (await personRepository.ExistsByNameAsync(userId, trimmedPersonName, excludeId: null, cancellationToken))
@@ -48,7 +52,7 @@ public sealed class QuickCreateAndResolveHandler(
         {
             // Check alias uniqueness across user's people
             if (await personRepository.AliasExistsForOtherPersonAsync(userId, trimmedRawName, person.Id, cancellationToken))
-                throw new InvalidOperationException($"Alias '{trimmedRawName}' is already used by another person.");
+                throw new AliasConflictException(trimmedRawName);
 
             person.AddAlias(trimmedRawName);
         }
@@ -126,4 +130,13 @@ public sealed class DuplicatePersonNameException(string name)
     : Exception($"A person named '{name}' already exists. Consider linking to the existing person instead.")
 {
     public string PersonName { get; } = name;
+}
+
+/// <summary>
+/// Thrown when the raw name is already used as an alias by another person.
+/// </summary>
+public sealed class AliasConflictException(string alias)
+    : Exception($"Alias '{alias}' is already used by another person.")
+{
+    public string Alias { get; } = alias;
 }

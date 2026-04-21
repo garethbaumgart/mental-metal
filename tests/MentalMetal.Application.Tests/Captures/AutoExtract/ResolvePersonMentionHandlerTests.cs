@@ -173,4 +173,22 @@ public class ResolvePersonMentionHandlerTests
         await _commitmentRepo.Received(1).AddAsync(Arg.Any<Commitment>(), Arg.Any<CancellationToken>());
         Assert.NotEmpty(result.SpawnedCommitmentIds);
     }
+
+    [Fact]
+    public async Task HandleAsync_AlreadyResolvedMention_Throws()
+    {
+        var person = Person.Create(_userId, "Alice", PersonType.DirectReport);
+        var capture = CreateProcessedCaptureWithExtraction(
+            [new PersonMention { RawName = "Alice", PersonId = Guid.NewGuid(), Context = null }],
+            []);
+
+        _captureRepo.GetByIdAsync(capture.Id, Arg.Any<CancellationToken>()).Returns(capture);
+        _personRepo.GetByIdAsync(person.Id, Arg.Any<CancellationToken>()).Returns(person);
+
+        var request = new ResolvePersonMentionRequest("Alice", person.Id);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _sut.HandleAsync(capture.Id, request, CancellationToken.None));
+        Assert.Contains("already resolved", ex.Message);
+    }
 }

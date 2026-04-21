@@ -613,8 +613,8 @@ export class CaptureDetailComponent implements OnInit {
         if (err.status === 409) {
           this.messageService.add({
             severity: 'warn',
-            summary: 'Duplicate name',
-            detail: 'A person with this name already exists. Try linking to the existing person instead.',
+            summary: 'Conflict',
+            detail,
           });
         } else {
           this.messageService.add({ severity: 'error', summary: 'Failed to create person', detail });
