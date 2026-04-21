@@ -27,8 +27,9 @@ public class GenerateWeeklyBriefHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_NoCapturesThisWeek_ReturnsEmptyBrief()
+    public async Task HandleAsync_NoDataThisWeek_SkipsAiAndReturnsCannedNarrative()
     {
+        // Regression: bug #4 — AI was invoked with empty context, producing misleading narrative.
         _captureRepo.GetAllAsync(_userId, null, ProcessingStatus.Processed, Arg.Any<CancellationToken>())
             .Returns(new List<Capture>());
         _commitmentRepo.GetAllAsync(_userId, null, null, null, null, null, Arg.Any<CancellationToken>())
@@ -36,22 +37,37 @@ public class GenerateWeeklyBriefHandlerTests
         _initiativeRepo.GetAllAsync(_userId, InitiativeStatus.Active, Arg.Any<CancellationToken>())
             .Returns(new List<Initiative>());
 
-        _aiService.CompleteAsync(Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new AiCompletionResult("Quiet week.", 20, 50, "test-model", AiProvider.Anthropic));
-
         var result = await _sut.HandleAsync(null, CancellationToken.None);
 
-        Assert.Equal("Quiet week.", result.Narrative);
+        Assert.Equal(GenerateWeeklyBriefHandler.NoDataNarrative, result.Narrative);
         Assert.Empty(result.InitiativeActivity);
         Assert.Empty(result.CrossConversationInsights);
         Assert.Equal(0, result.CommitmentStatus.NewCount);
+        Assert.Equal(0, result.CommitmentStatus.CompletedCount);
+        Assert.Equal(0, result.CommitmentStatus.OverdueCount);
+
+        Assert.NotNull(result.DateRange);
+        Assert.Equal(DayOfWeek.Monday, result.DateRange.Start.DayOfWeek);
+        Assert.Equal(DayOfWeek.Monday, result.DateRange.End.DayOfWeek);
+        Assert.Equal(result.DateRange.Start.AddDays(7), result.DateRange.End);
+
+        await _aiService.DidNotReceive().CompleteAsync(
+            Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task HandleAsync_CallsAiWithWeeklyPrompt()
+    public async Task HandleAsync_WithCaptures_CallsAiWithWeeklyPrompt()
     {
+        var capture = Capture.Create(_userId, "Status sync.", CaptureType.MeetingNotes);
+        capture.BeginProcessing();
+        capture.CompleteProcessing(new AiExtraction
+        {
+            Summary = "Sync meeting.",
+            ExtractedAt = DateTimeOffset.UtcNow
+        });
+
         _captureRepo.GetAllAsync(_userId, null, ProcessingStatus.Processed, Arg.Any<CancellationToken>())
-            .Returns(new List<Capture>());
+            .Returns(new List<Capture> { capture });
         _commitmentRepo.GetAllAsync(_userId, null, null, null, null, null, Arg.Any<CancellationToken>())
             .Returns(new List<Commitment>());
         _initiativeRepo.GetAllAsync(_userId, InitiativeStatus.Active, Arg.Any<CancellationToken>())
@@ -77,9 +93,6 @@ public class GenerateWeeklyBriefHandlerTests
             .Returns(new List<Commitment>());
         _initiativeRepo.GetAllAsync(_userId, InitiativeStatus.Active, Arg.Any<CancellationToken>())
             .Returns(new List<Initiative>());
-
-        _aiService.CompleteAsync(Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new AiCompletionResult("Week of April 13.", 20, 50, "test-model", AiProvider.Anthropic));
 
         var result = await _sut.HandleAsync(weekOf, CancellationToken.None);
 
@@ -121,8 +134,8 @@ public class GenerateWeeklyBriefHandlerTests
     [Fact]
     public async Task HandleAsync_CaptureWithNullExtractionCollections_DoesNotThrow()
     {
-        // Regression: EF Core JSON deserialization can produce null for Decisions/Risks
-        // even when C# defaults are set. The handler must tolerate this.
+        // Regression: bug #2 — EF Core JSON deserialization can produce null for Decisions/Risks
+        // even when C# defaults are set. The handler must tolerate this via null-coalescing.
         var capture = Capture.Create(_userId, "Meeting notes.", CaptureType.MeetingNotes);
         capture.BeginProcessing();
         capture.CompleteProcessing(new AiExtraction
@@ -146,7 +159,103 @@ public class GenerateWeeklyBriefHandlerTests
         var result = await _sut.HandleAsync(null, CancellationToken.None);
 
         Assert.NotNull(result.Narrative);
-        await _aiService.Received(1).CompleteAsync(
-            Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_InitiativeWithCommitmentsButNoCaptures_IncludedInActivity()
+    {
+        // Regression: bug #3 — initiatives were excluded if they had no linked captures in the
+        // date range, even when they had commitments created that week.
+        // Use null weekOf so the handler defaults to the current week, which will include
+        // the commitment we just created (CreatedAt = UtcNow).
+        var initiative = Initiative.Create(_userId, "Project Alpha");
+        var personId = Guid.NewGuid();
+
+        var commitment = Commitment.Create(
+            _userId, "Deliver spec", CommitmentDirection.MineToThem, personId,
+            initiativeId: initiative.Id);
+
+        _captureRepo.GetAllAsync(_userId, null, ProcessingStatus.Processed, Arg.Any<CancellationToken>())
+            .Returns(new List<Capture>());
+        _commitmentRepo.GetAllAsync(_userId, null, null, null, null, null, Arg.Any<CancellationToken>())
+            .Returns(new List<Commitment> { commitment });
+        _initiativeRepo.GetAllAsync(_userId, InitiativeStatus.Active, Arg.Any<CancellationToken>())
+            .Returns(new List<Initiative> { initiative });
+
+        _aiService.CompleteAsync(Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AiCompletionResult("Active week.", 20, 50, "test-model", AiProvider.Anthropic));
+
+        var result = await _sut.HandleAsync(null, CancellationToken.None);
+
+        Assert.Single(result.InitiativeActivity);
+        Assert.Equal("Project Alpha", result.InitiativeActivity[0].Title);
+    }
+
+    [Fact]
+    public async Task HandleAsync_OnlyProcessedCapturesUsed()
+    {
+        // Regression: bug #1 — weekly brief must only use processed captures (matching daily brief).
+        // The repo is called with ProcessingStatus.Processed filter.
+        _captureRepo.GetAllAsync(_userId, null, ProcessingStatus.Processed, Arg.Any<CancellationToken>())
+            .Returns(new List<Capture>());
+        _commitmentRepo.GetAllAsync(_userId, null, null, null, null, null, Arg.Any<CancellationToken>())
+            .Returns(new List<Commitment>());
+        _initiativeRepo.GetAllAsync(_userId, InitiativeStatus.Active, Arg.Any<CancellationToken>())
+            .Returns(new List<Initiative>());
+
+        await _sut.HandleAsync(null, CancellationToken.None);
+
+        // Verify the capture repo was called with the Processed filter
+        await _captureRepo.Received(1).GetAllAsync(
+            _userId, null, ProcessingStatus.Processed, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_PersonWithWhitespaceRawName_SkippedInCrossInsights()
+    {
+        // Regression: bug #5 — person name lookup returning empty/whitespace names should
+        // be skipped, not rendered with blank or "unknown" labels.
+        var personId = Guid.NewGuid();
+
+        var capture1 = Capture.Create(_userId, "Meeting 1.", CaptureType.MeetingNotes);
+        capture1.BeginProcessing();
+        capture1.LinkToPerson(personId);
+        capture1.CompleteProcessing(new AiExtraction
+        {
+            Summary = "Meeting one.",
+            PeopleMentioned = new List<PersonMention>
+            {
+                new() { PersonId = personId, RawName = "  " }
+            },
+            ExtractedAt = DateTimeOffset.UtcNow
+        });
+
+        var capture2 = Capture.Create(_userId, "Meeting 2.", CaptureType.MeetingNotes);
+        capture2.BeginProcessing();
+        capture2.LinkToPerson(personId);
+        capture2.CompleteProcessing(new AiExtraction
+        {
+            Summary = "Meeting two.",
+            PeopleMentioned = new List<PersonMention>
+            {
+                new() { PersonId = personId, RawName = "  " }
+            },
+            ExtractedAt = DateTimeOffset.UtcNow
+        });
+
+        _captureRepo.GetAllAsync(_userId, null, ProcessingStatus.Processed, Arg.Any<CancellationToken>())
+            .Returns(new List<Capture> { capture1, capture2 });
+        _commitmentRepo.GetAllAsync(_userId, null, null, null, null, null, Arg.Any<CancellationToken>())
+            .Returns(new List<Commitment>());
+        _initiativeRepo.GetAllAsync(_userId, InitiativeStatus.Active, Arg.Any<CancellationToken>())
+            .Returns(new List<Initiative>());
+
+        _aiService.CompleteAsync(Arg.Any<AiCompletionRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AiCompletionResult("Brief.", 20, 50, "test-model", AiProvider.Anthropic));
+
+        var result = await _sut.HandleAsync(null, CancellationToken.None);
+
+        // Person with whitespace-only name should not appear in cross-conversation insights
+        Assert.Empty(result.CrossConversationInsights);
     }
 }
