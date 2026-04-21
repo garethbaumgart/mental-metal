@@ -1,6 +1,13 @@
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError, filter, first, switchMap, throwError } from 'rxjs';
+import {
+  catchError,
+  filter,
+  finalize,
+  first,
+  switchMap,
+  throwError,
+} from 'rxjs';
 import { from } from 'rxjs';
 import { AuthService } from './auth.service';
 
@@ -83,21 +90,18 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
       // First 401 — initiate the refresh.
       isRefreshing = true;
-      authService.refreshResult$.next(null);
+      authService.beginRefresh();
 
       return from(authService.refreshToken()).pipe(
         switchMap((success) => {
-          isRefreshing = false;
           if (success) {
             return retryWithToken(req, next, authService, error);
           }
           return throwError(() => error);
         }),
-        catchError((refreshError) => {
+        catchError((refreshError) => throwError(() => refreshError)),
+        finalize(() => {
           isRefreshing = false;
-          // Notify queued requests so they don't hang forever.
-          authService.refreshResult$.next('');
-          return throwError(() => refreshError);
         }),
       );
     }),

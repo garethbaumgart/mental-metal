@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import {
   HttpClient,
@@ -26,7 +26,8 @@ describe('authInterceptor', () => {
   let authService: AuthService;
 
   beforeEach(() => {
-    // Clear any module-level state from previous tests
+    // Stub localStorage so AuthService doesn't read stale tokens from
+    // the test runner's environment.
     vi.stubGlobal('localStorage', {
       getItem: vi.fn().mockReturnValue(null),
       setItem: vi.fn(),
@@ -44,6 +45,12 @@ describe('authInterceptor', () => {
     http = TestBed.inject(HttpClient);
     httpTesting = TestBed.inject(HttpTestingController);
     authService = TestBed.inject(AuthService);
+  });
+
+  afterEach(() => {
+    httpTesting.verify();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('attaches bearer token to authenticated requests', () => {
@@ -79,17 +86,14 @@ describe('authInterceptor', () => {
       'Bearer expired-token',
     );
 
-    // Simulate refreshToken succeeding (async to mirror real behavior)
-    vi.spyOn(authService, 'refreshToken').mockImplementation(async () => {
-      authService.accessToken.set('fresh-token');
-      authService.refreshResult$.next('fresh-token');
-      return true;
-    });
-
-    // Respond with 401
+    // Respond with 401 — triggers refreshToken() which calls /api/auth/refresh
     firstReq.flush(null, { status: 401, statusText: 'Unauthorized' });
 
-    // Wait for the async refreshToken mock to resolve
+    // The real refreshToken() POSTs to /api/auth/refresh — respond with a fresh token
+    const refreshReq = httpTesting.expectOne('/api/auth/refresh');
+    refreshReq.flush({ accessToken: 'fresh-token' });
+
+    // Wait for async processing
     await new Promise((r) => setTimeout(r, 0));
 
     // The interceptor should retry with the fresh token
@@ -113,34 +117,18 @@ describe('authInterceptor', () => {
     const req1 = httpTesting.expectOne('/api/one');
     const req2 = httpTesting.expectOne('/api/two');
 
-    // Mock refreshToken to simulate a real async refresh
-    let resolveRefresh!: (value: boolean) => void;
-    const refreshPromise = new Promise<boolean>((r) => (resolveRefresh = r));
-    vi.spyOn(authService, 'refreshToken').mockImplementation(() => {
-      authService.refreshResult$.next(null); // reset before refresh
-      return refreshPromise.then((success) => {
-        if (success) {
-          authService.accessToken.set('fresh-token');
-          authService.refreshResult$.next('fresh-token');
-        } else {
-          authService.refreshResult$.next('');
-        }
-        return success;
-      });
-    });
-
-    // Both get 401
+    // Both get 401 — only the first should trigger a refresh
     req1.flush(null, { status: 401, statusText: 'Unauthorized' });
     req2.flush(null, { status: 401, statusText: 'Unauthorized' });
 
-    // refreshToken should only be called once
-    expect(authService.refreshToken).toHaveBeenCalledTimes(1);
+    // Only one /api/auth/refresh call should be made
+    const refreshReqs = httpTesting.match('/api/auth/refresh');
+    expect(refreshReqs.length).toBe(1);
 
-    // Complete the refresh
-    resolveRefresh(true);
-    await refreshPromise;
+    // Respond with a fresh token
+    refreshReqs[0].flush({ accessToken: 'fresh-token' });
 
-    // Wait a tick for RxJS to process
+    // Wait for async processing
     await new Promise((r) => setTimeout(r, 0));
 
     // Both requests should be retried with the fresh token
