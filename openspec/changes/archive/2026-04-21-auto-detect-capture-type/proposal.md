@@ -15,7 +15,7 @@ When a user pastes a meeting transcript into Quick Capture, the system always cr
 
 - No client-side heuristic detection (all classification happens server-side during AI extraction)
 - No new AI call or separate classification endpoint -- detection piggybacks on the existing extraction call
-- No user override UI for the detected type in this change (manual type selection in Quick Capture is a separate UI gap and out of scope for this proposal)
+- No user override UI for the detected type in this change
 - `AudioRecording` is excluded from auto-detection -- it is set by the audio capture pipeline and should not be reclassified
 
 ## Capabilities

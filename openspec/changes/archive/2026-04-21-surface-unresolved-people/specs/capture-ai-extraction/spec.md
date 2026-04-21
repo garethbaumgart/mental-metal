@@ -30,11 +30,11 @@ The system SHALL, after successful extraction, automatically spawn Commitment en
 
 ### Requirement: AiExtraction value object
 
-The system SHALL define an `AiExtraction` value object embedded on the Capture aggregate with the following properties: Summary (string, required), Commitments (list of extracted commitments with description, direction, person hint, PersonRawName, optional due date, and optional source character offsets: SourceStartOffset and SourceEndOffset, optional SpawnedCommitmentId), Delegations (list of extracted delegations with description, person hint, and optional due date), Observations (list of extracted observations with description, person hint, and tag), Decisions (list of strings), RisksIdentified (list of strings), SuggestedPersonLinks (list of person name hints), SuggestedInitiativeLinks (list of initiative name hints), and ConfidenceScore (decimal, 0.0-1.0).
+The system SHALL define an `AiExtraction` value object embedded on the Capture aggregate with the following properties: Summary (string, required), PeopleMentioned (list of person mentions with RawName, optional PersonId, and optional Context), Commitments (list of extracted commitments with description, direction, confidence level, PersonRawName, optional PersonId, optional due date, optional source character offsets: SourceStartOffset and SourceEndOffset, and optional SpawnedCommitmentId), Decisions (list of strings), Risks (list of strings), InitiativeTags (list of initiative tags with RawName, optional InitiativeId, and optional Context), and ExtractedAt (DateTimeOffset, required).
 
 #### Scenario: AiExtraction with all fields populated
 
-- **WHEN** a transcript yields commitments, delegations, observations, decisions, and risks
+- **WHEN** a transcript yields commitments, decisions, and risks
 - **THEN** the AiExtraction value object contains all extracted items with their respective properties
 - **AND** each commitment includes SourceStartOffset, SourceEndOffset, and PersonRawName
 
@@ -50,7 +50,7 @@ The system SHALL define an `AiExtraction` value object embedded on the Capture a
 
 ### Requirement: Resolve person mention post-extraction
 
-The system SHALL allow an authenticated user to resolve an unresolved person mention by sending a POST to `/api/captures/{captureId}/resolve-person-mention` with `rawName` and `personId`. The system SHALL update the extraction's PersonMention with the resolved PersonId, add the raw name as an alias on the person (if not already present), link the capture to the person, and spawn any skipped commitments for that person (High/Medium confidence with no existing SpawnedCommitmentId). The raw name used as alias SHALL be validated for uniqueness among the user's people.
+The system SHALL allow an authenticated user to resolve an unresolved person mention by sending a POST to `/api/captures/{id}/resolve-person-mention` with `rawName` and `personId`. The system SHALL update the extraction's PersonMention with the resolved PersonId, add the raw name as an alias on the person (if not already present), link the capture to the person, and spawn any skipped commitments for that person (High/Medium confidence with no existing SpawnedCommitmentId). The raw name used as alias SHALL be validated for uniqueness among the user's people.
 
 #### Scenario: Resolve and spawn skipped commitments
 

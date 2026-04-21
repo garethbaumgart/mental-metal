@@ -19,7 +19,7 @@ The existing extraction prompt instructs the AI to return a structured JSON resp
 
 **Non-Goals:**
 - Client-side heuristic detection before submission
-- User override UI for the detected type (manual type selection in Quick Capture is a separate UI gap, out of scope)
+- User override UI for the detected type
 - Reclassification of `AudioRecording` captures (set by the audio pipeline, must not be overwritten)
 - Retroactive reclassification of already-processed captures
 
@@ -77,7 +77,7 @@ The field is added to the JSON schema at the end of the response object. Fallbac
 
 ## Risks / Trade-offs
 
-- **[Risk] AI misclassifies content** -- Mitigation: keep original type as fallback if `detected_type` is null or unrecognized; the AI prompt includes clear classification criteria; users can still manually set type via Advanced section before capture
+- **[Risk] AI misclassifies content** -- Mitigation: keep original type as fallback if `detected_type` is null or unrecognized; the AI prompt includes clear classification criteria
 - **[Risk] EF JSONB serialization of new field** -- Mitigation: `AiExtraction` is persisted as JSONB via `ToJson()`, so adding `DetectedCaptureType` requires no schema migration; existing rows simply lack the field and deserialize as null
 - **[Trade-off] No retroactive reclassification** -- Existing captures keep their original type. Acceptable because only newly processed captures benefit, and the backlog of mislabelled captures is small.
 

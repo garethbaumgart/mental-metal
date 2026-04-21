@@ -611,10 +611,13 @@ export class CaptureDetailComponent implements OnInit {
         this.quickCreateSubmitting.set(false);
         const detail = err?.error?.error ?? 'Unknown error';
         if (err.status === 409) {
+          const isAlias = detail.toLowerCase().includes('alias');
           this.messageService.add({
             severity: 'warn',
-            summary: 'Conflict',
-            detail,
+            summary: isAlias ? 'Alias Conflict' : 'Duplicate Person Name',
+            detail: isAlias
+              ? detail
+              : `${detail} Try linking to the existing person instead.`,
           });
         } else {
           this.messageService.add({ severity: 'error', summary: 'Failed to create person', detail });

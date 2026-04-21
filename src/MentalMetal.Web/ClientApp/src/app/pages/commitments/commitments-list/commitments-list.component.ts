@@ -340,7 +340,13 @@ export class CommitmentsListComponent implements OnInit {
 
   private applyOptimisticUpdate(updated: Commitment): void {
     const statusFilter = this.selectedStatus();
-    const matchesFilter = statusFilter === null || updated.status === statusFilter;
+    const directionFilter = this.selectedDirection();
+    const overdueFilter = this.selectedOverdue();
+
+    const matchesStatus = statusFilter === null || updated.status === statusFilter;
+    const matchesDirection = directionFilter === null || updated.direction === directionFilter;
+    const matchesOverdue = overdueFilter === null || updated.isOverdue === overdueFilter;
+    const matchesFilter = matchesStatus && matchesDirection && matchesOverdue;
 
     this.commitments.update((list) => {
       if (matchesFilter) {

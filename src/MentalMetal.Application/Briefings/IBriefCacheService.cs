@@ -12,10 +12,10 @@ public interface IBriefCacheService
     void SetWeeklyBrief(Guid userId, DateOnly weekStart, WeeklyBriefResponse brief);
 
     /// <summary>
-    /// Invalidates the cached daily brief and recent weekly briefs (current
-    /// week plus 3 prior weeks) for a user. Older weekly briefs are left to
-    /// expire via TTL. Call when captures are processed so the next request
-    /// regenerates fresh data.
+    /// Removes the cached daily brief (keyed by today's UTC date) and the
+    /// 4 most recent weekly briefs (current week plus 3 prior weeks) for a
+    /// user. Older weekly briefs are left to expire via TTL. Call when
+    /// captures are processed so the next request regenerates fresh data.
     /// </summary>
     void InvalidateForUser(Guid userId);
 }

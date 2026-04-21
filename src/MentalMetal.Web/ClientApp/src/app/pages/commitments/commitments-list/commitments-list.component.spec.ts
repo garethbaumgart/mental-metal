@@ -152,16 +152,17 @@ describe('CommitmentsListComponent', () => {
     const c1 = makeCommitment({ id: 'c1', description: 'Done task', status: 'Completed' });
     fixture.detectChanges();
 
-    // Set the status filter to Completed before init loads
-    fixture.componentInstance['selectedStatus'].set('Completed');
+    // Set the status filter to Completed before init loads (direct signal access)
+    fixture.componentInstance.selectedStatus.set('Completed');
 
     http.expectOne((r) => r.url === '/api/people').flush([makePerson()]);
     // The init request with "Open" filter
     http.expectOne((r) => r.url.startsWith('/api/commitments')).flush([]);
     fixture.detectChanges();
 
-    // Trigger filter change to load Completed
-    fixture.componentInstance['onFilterChange']();
+    // Trigger filter change to load Completed — onFilterChange is protected,
+    // so bracket notation is the only option without making it public.
+    (fixture.componentInstance as unknown as { onFilterChange(): void }).onFilterChange();
     http.expectOne((r) => r.url.startsWith('/api/commitments')).flush([c1]);
     fixture.detectChanges();
 

@@ -742,6 +742,12 @@ app.MapGet("/api/briefing/weekly", async (
     GenerateWeeklyBriefHandler handler,
     CancellationToken cancellationToken) =>
 {
+    if (weekOf is { } w)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        if (w < today.AddDays(-52 * 7) || w > today.AddDays(7))
+            return Results.BadRequest(new { error = "weekOf must be within the last 52 weeks or at most one week in the future." });
+    }
     var response = await handler.HandleAsync(weekOf, forceRefresh: false, cancellationToken);
     return Results.Ok(response);
 }).RequireAuthorization();
@@ -751,6 +757,12 @@ app.MapPost("/api/briefing/weekly/refresh", async (
     GenerateWeeklyBriefHandler handler,
     CancellationToken cancellationToken) =>
 {
+    if (weekOf is { } w)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        if (w < today.AddDays(-52 * 7) || w > today.AddDays(7))
+            return Results.BadRequest(new { error = "weekOf must be within the last 52 weeks or at most one week in the future." });
+    }
     var response = await handler.HandleAsync(weekOf, forceRefresh: true, cancellationToken);
     return Results.Ok(response);
 }).RequireAuthorization();
