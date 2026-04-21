@@ -30,7 +30,7 @@ The system SHALL, after successful extraction, automatically spawn Commitment en
 
 ### Requirement: AiExtraction value object
 
-The system SHALL define an `AiExtraction` value object embedded on the Capture aggregate with the following properties: Summary (string, required), PeopleMentioned (list of person mentions with RawName, optional PersonId, and optional Context), Commitments (list of extracted commitments with description, direction, confidence level, PersonRawName, optional PersonId, optional due date, optional source character offsets: SourceStartOffset and SourceEndOffset, and optional SpawnedCommitmentId), Decisions (list of strings), Risks (list of strings), InitiativeTags (list of initiative tags with RawName, optional InitiativeId, and optional Context), and ExtractedAt (DateTimeOffset, required).
+The system SHALL define an `AiExtraction` value object embedded on the Capture aggregate with the following properties: Summary (string, required), PeopleMentioned (list of person mentions with RawName, optional PersonId, and optional Context), Commitments (list of extracted commitments with description, direction, confidence level, PersonRawName, optional PersonId, optional due date, optional source character offsets: SourceStartOffset and SourceEndOffset, and optional SpawnedCommitmentId), Decisions (list of strings), Risks (list of strings), InitiativeTags (list of initiative tags with RawName, optional InitiativeId, and optional Context), ExtractedAt (DateTimeOffset, required), and DetectedCaptureType (nullable CaptureType indicating the AI's content classification).
 
 #### Scenario: AiExtraction with all fields populated
 

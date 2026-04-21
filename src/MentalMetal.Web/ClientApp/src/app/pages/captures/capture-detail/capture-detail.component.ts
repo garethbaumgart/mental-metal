@@ -615,9 +615,7 @@ export class CaptureDetailComponent implements OnInit {
           this.messageService.add({
             severity: 'warn',
             summary: isAlias ? 'Alias Conflict' : 'Duplicate Person Name',
-            detail: isAlias
-              ? detail
-              : `${detail} Try linking to the existing person instead.`,
+            detail,
           });
         } else {
           this.messageService.add({ severity: 'error', summary: 'Failed to create person', detail });
