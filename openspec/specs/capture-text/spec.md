@@ -347,13 +347,13 @@ The Capture aggregate SHALL expose a `Reclassify(CaptureType newType)` method th
 
 #### Scenario: No-op when new type matches current type
 
-- **WHEN** `Reclassify(CaptureType.QuickNote)` is called on a capture with type `QuickNote`
+- **WHEN** `Reclassify(CaptureType.QuickNote)` is called on a capture with type `QuickNote` and status `Processing`
 - **THEN** the capture's `CaptureType` remains `QuickNote`
 - **AND** no domain event is raised
 
 #### Scenario: Reject reclassification to AudioRecording
 
-- **WHEN** `Reclassify(CaptureType.AudioRecording)` is called on any capture
+- **WHEN** `Reclassify(CaptureType.AudioRecording)` is called on a capture with type `QuickNote` and status `Processing`
 - **THEN** the system throws a domain exception indicating that reclassification to AudioRecording is not allowed
 
 #### Scenario: Reject reclassification when not in Processing status
@@ -368,7 +368,7 @@ The Capture aggregate SHALL expose a `Reclassify(CaptureType newType)` method th
 
 ### Requirement: Capture detail view
 
-The frontend SHALL provide a detail view for a single capture showing the full raw content, metadata (type, status, title, source, timestamps), and linked people and initiatives. The detail view SHALL allow editing the title and source, and linking/unlinking people and initiatives. When the capture has been processed and the `AiExtraction` contains a non-null `DetectedCaptureType`, the detail view SHALL display a "Detected as: {type}" indicator near the type badge. The indicator compares `DetectedCaptureType` against the capture's current persisted `CaptureType` -- if they match (i.e., the capture was reclassified or was already correct), the indicator serves as confirmation; if they differ (which would only happen if reclassification was skipped, e.g., for AudioRecording captures), the indicator highlights the discrepancy.
+The frontend SHALL provide a detail view for a single capture showing the full raw content, metadata (type, status, title, source, timestamps), and linked people and initiatives. The detail view SHALL allow editing the title and source, and linking/unlinking people and initiatives. When the capture has been processed and the `AiExtraction` contains a non-null `DetectedCaptureType`, the detail view SHALL display a "Detected as: {type}" indicator near the type badge. The indicator compares `DetectedCaptureType` against the capture's current persisted `CaptureType` -- if they match (i.e., the capture was reclassified or was already correct), the indicator serves as confirmation; if they differ (which would only happen if reclassification was skipped, e.g., for AudioRecording captures), the indicator SHALL use a warning-style visual treatment (e.g., `--p-yellow-500` text colour) to highlight the type mismatch.
 
 #### Scenario: View capture detail
 
@@ -393,7 +393,7 @@ The frontend SHALL provide a detail view for a single capture showing the full r
 #### Scenario: Display detected type for AudioRecording capture
 
 - **WHEN** a user views a processed `AudioRecording` capture whose `AiExtraction.DetectedCaptureType` is `Transcript`
-- **THEN** the detail view shows the type badge as "AudioRecording" and displays a "Detected as: Transcript" indicator highlighting the discrepancy
+- **THEN** the detail view shows the type badge as "AudioRecording" and displays a "Detected as: Transcript" indicator with warning-style visual treatment
 
 #### Scenario: No detected type indicator when DetectedCaptureType is null
 
