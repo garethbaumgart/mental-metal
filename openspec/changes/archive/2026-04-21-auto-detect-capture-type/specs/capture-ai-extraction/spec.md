@@ -69,7 +69,7 @@ The system SHALL define an `AiExtraction` value object embedded on the Capture a
 
 #### Scenario: AiExtraction with all fields populated
 
-- **WHEN** a transcript yields commitments, delegations, observations, decisions, and risks
+- **WHEN** a transcript yields commitments, decisions, risks, and initiative tags
 - **THEN** the AiExtraction value object contains all extracted items with their respective properties
 - **AND** each commitment includes SourceStartOffset and SourceEndOffset
 - **AND** DetectedCaptureType is set to the type the AI classified the content as
