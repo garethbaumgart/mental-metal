@@ -15,7 +15,7 @@ The `AutoExtractCaptureHandler` SHALL orchestrate the extraction pipeline: (1) l
 #### Scenario: Successful extraction from a transcript
 
 - **WHEN** the processing pipeline runs on a Transcript capture containing a multi-topic meeting transcript
-- **THEN** the AI extracts a summary, commitments, delegations, decisions, risks, observations, and suggested person/initiative links
+- **THEN** the AI extracts a summary, commitments, decisions, risks, initiative tags, and suggested person/initiative links
 - **AND** each extracted commitment includes `source_start_offset` and `source_end_offset`
 - **AND** the AI returns `detected_type` of "Transcript"
 
@@ -69,9 +69,10 @@ The system SHALL define an `AiExtraction` value object embedded on the Capture a
 
 #### Scenario: AiExtraction with all fields populated
 
-- **WHEN** a transcript yields commitments, decisions, risks, and initiative tags
-- **THEN** the AiExtraction value object contains all extracted items with their respective properties
+- **WHEN** a transcript yields a summary, people mentioned, commitments, decisions, risks, and initiative tags
+- **THEN** the AiExtraction value object contains Summary, PeopleMentioned, Commitments, Decisions, Risks, and InitiativeTags with their respective properties populated
 - **AND** each commitment includes SourceStartOffset and SourceEndOffset
+- **AND** ExtractedAt is populated
 - **AND** DetectedCaptureType is set to the type the AI classified the content as
 
 #### Scenario: AiExtraction with minimal content
